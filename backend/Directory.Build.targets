@@ -1,0 +1,12 @@
+<Project>
+  <Target
+    Name="EnsureWorkspaceDockerCompose"
+    BeforeTargets="Build"
+    Condition="'$(MSBuildProjectName)' == 'Pulse.Api' and Exists('$(MSBuildThisFileDirectory)docker-compose.yml')">
+
+    <Copy
+      SourceFiles="$(MSBuildThisFileDirectory)docker-compose.yml"
+      DestinationFiles="$(MSBuildThisFileDirectory)../docker-compose.yml"
+      SkipUnchangedFiles="true" />
+  </Target>
+</Project>
