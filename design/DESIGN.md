@@ -1,6 +1,6 @@
 ---
 name: "Pulse"
-description: "Açık kayıt, kronolojik kısa gönderi, tek seviyeli yanıt, beğeni, takip ve kullanıcı profili özelliklerine sahip Material 3 mikroblog platformu."
+description: "Açık kayıt, kronolojik kısa gönderi, tek seviyeli yanıt, beğeni, takip, kullanıcı profili, engelleme, şikâyet ve moderasyon özelliklerine sahip Material 3 mikroblog platformu."
 colors:
   primary: "#6750A4"
   primary-hover: "#5B4595"
@@ -103,13 +103,22 @@ components:
   state-panel:
     maxWidth: 360px
     iconSize: 48px
+  safety-action-menu:
+    minTouchTarget: 44px
+  report-sheet:
+    radius: "{rounded.lg}"
+    maxDescriptionLength: 500
+  moderation-card:
+    padding: "{spacing.lg}"
+    radius: "{rounded.md}"
+    border: "{colors.border}"
 ---
 
 ## Overview
 
 Pulse, herkesin davet kodu, e-posta domain kısıtı veya yönetici onayı olmadan kayıt olabildiği açık bir mikroblog platformudur.
 
-MVP kapsamında:
+Temel kapsam:
 
 - Kayıt olma ve JWT ile oturum açma
 - Kronolojik ana akış
@@ -119,18 +128,25 @@ MVP kapsamında:
 - Tek seviyeli yanıt
 - Takip etme ve takibi bırakma
 - Kullanıcı profili ve gönderi listesi
+- Başka kullanıcıyı engelleme ve engeli kaldırma
+- Gönderi veya kullanıcı hesabını şikâyet etme
+- Şikâyetlerin yetkili moderatör tarafından incelendiği moderasyon kuyruğu
+- Architect API kontratında tanımlanan moderasyon aksiyonları
 
-Özel mesaj, bildirim merkezi, anket, medya gönderisi, yer imi, yeniden paylaşım, alıntı paylaşım, hashtag trendleri ve çok seviyeli thread MVP kapsamına dahil değildir.
+Özel mesaj, bildirim merkezi, anket, medya gönderisi, yer imi, yeniden paylaşım, alıntı paylaşım, hashtag trendleri ve çok seviyeli thread kapsam dışıdır.
 
 Flutter uygulaması `ThemeData(useMaterial3: true)` ve semantik `ColorScheme` token'larıyla uygulanır.
+
+UI katmanı API endpoint, role, report reason, moderation status veya moderation action değeri üretmez. Bu değerler canonical `docs/api-contract.md` sözleşmesinden map edilir.
 
 ## Colors
 
 - Birincil CTA ve seçili navigasyon için `{colors.primary}` kullanılır.
 - Seçili navigasyon arka planı `{colors.primary-container}` kullanır.
 - Beğeninin seçili durumu `{colors.tertiary}` kullanır.
-- Silme ve kritik hatalar `{colors.error}` kullanır.
+- Silme ve kritik destructive aksiyonlar `{colors.error}` kullanır.
 - Başarı mesajları `{colors.success}` kullanır.
+- Uyarı ve inceleme durumlarında `{colors.warning}` kullanılabilir.
 - Gövde metni `{colors.text-primary}`, metadata `{colors.text-secondary}` kullanır.
 - Bileşen kodunda sabit renk yazılmaz.
 - Dark mode aynı semantik token adlarıyla ayrı `ColorScheme` üretir.
@@ -139,8 +155,9 @@ Flutter uygulaması `ThemeData(useMaterial3: true)` ve semantik `ColorScheme` to
 
 - Gönderi metni `{typography.body-md}` kullanır.
 - Görünen ad `{typography.title-md}` kullanır.
-- Kullanıcı adı ve zaman `{typography.body-sm}` kullanır.
+- Kullanıcı adı, zaman, reason/status metadata `{typography.body-sm}` kullanır.
 - Sayfa başlıkları `{typography.title-lg}` veya `{typography.headline-lg}` kullanır.
+- Buton, chip ve navigation etiketleri `{typography.label-md}` kullanır.
 - Dinamik metin ölçeklendirme desteklenir.
 - Önemli içerikler sabit yükseklik nedeniyle kesilmez.
 
@@ -153,12 +170,15 @@ Flutter uygulaması `ThemeData(useMaterial3: true)` ve semantik `ColorScheme` to
 - Minimum dokunma alanı 44x44px'tir.
 - Akışlar `CustomScrollView` ve `SliverList` ile uygulanır.
 - Klavye açıldığında form CTA'sı erişilebilir kalır.
+- Bottom sheet ve dialog genişlikleri büyük ekranlarda içerik genişliğini gereksiz büyütmez.
+- Moderasyon kuyruğu mobilde tek kolon, geniş ekranda yine maksimum içerik genişliği içinde tutulur.
 
 ## Elevation
 
 - Gönderi kartları elevation 0 ve 1px outline kullanır.
 - Modal bottom sheet elevation 3 kullanır.
 - Floating snackbar elevation 6 kullanır.
+- Dialog Material 3 varsayılan modal elevation davranışını kullanır.
 - Aynı yüzeyde yoğun gölge ve border birlikte kullanılmaz.
 
 ## Shapes
@@ -166,6 +186,7 @@ Flutter uygulaması `ThemeData(useMaterial3: true)` ve semantik `ColorScheme` to
 - Kartlar `{rounded.md}` veya `{rounded.lg}` kullanır.
 - Inputlar `{rounded.md}` kullanır.
 - Avatarlar ve ana CTA'lar `{rounded.pill}` kullanır.
+- Bottom sheet `{components.report-sheet.radius}` kullanır.
 - Aynı ekranda üçten fazla farklı radius değeri kullanılmaz.
 
 ## User flows
@@ -181,6 +202,14 @@ Flutter uygulaması `ThemeData(useMaterial3: true)` ve semantik `ColorScheme` to
 - Başka profil → Takip Et veya Takibi Bırak.
 - Takip edilen hesap yoksa genel/public akış veya kullanıcının kendi gönderileri gösterilir.
 - Aktif route yeniden navigation stack'e eklenmez.
+- Gönderi → overflow güvenlik menüsü → “Şikâyet Et” → şikâyet bottom sheet → neden → opsiyonel açıklama → “Şikâyet Et”.
+- Başka kullanıcı profili → güvenlik menüsü → “Şikâyet Et” → şikâyet bottom sheet.
+- Başka kullanıcı profili → güvenlik menüsü → “Kullanıcıyı Engelle” → confirmation dialog → “Engelle”.
+- Engellenmiş kullanıcı profili → “Engeli Kaldır” → engelleme durumu kaldırılır.
+- Engelleme veya engeli kaldırma tamamlandığında ekran backend'in güncel sonucuna göre yenilenir.
+- Şikâyet başarılı olduğunda mevcut içerik ekranı korunur ve başarı snackbar'ı gösterilir.
+- Moderator yetkili kullanıcı → Moderasyon → Moderasyon Kuyruğu → Şikâyet Detayı → canonical kontratta izin verilen moderasyon aksiyonu.
+- Moderator olmayan kullanıcıya moderation navigation destination veya moderation action gösterilmez.
 
 ## Components
 
@@ -199,7 +228,8 @@ Scaffold
 │   │       └── Column (ad, @kullanıcı)
 │   ├── destinations[]
 │   │   ├── NavigationDrawerDestination ("Ana Akış")
-│   │   └── NavigationDrawerDestination ("Profil")
+│   │   ├── NavigationDrawerDestination ("Profil")
+│   │   └── moderator ise NavigationDrawerDestination ("Moderasyon")
 │   └── footer: ListTile (logout, "Çıkış yap")
 ├── bottomNavigationBar: NavigationBar
 │   └── destinations: "Ana Akış", "Profil"
@@ -212,17 +242,17 @@ fluttertemplates kaynağı: Navigation Drawer — https://fluttertemplates.dev/w
 
 Kurallar:
 
-Drawer, kalıcı sidebar ve alt navigasyon aynı destination modelini kullanır.
+Drawer ve kalıcı sidebar aynı destination listesini paylaşır.
 
-Yalnızca bir destination seçili olabilir.
+Aktif route ikinci kez stack'e eklenmez.
 
-Geniş ekranda alt navigasyon gizlenir.
+Moderator destination yalnızca yetkili kullanıcıya görünür.
 
-401 genel error state yerine oturum açma akışına yönlendirilir.
+Küçük ekranda ana Bottom Navigation iki öğeli kalır; moderasyon route'u yetkili kullanıcı için drawer/menu üzerinden açılabilir.
 
-Çıkış işleminde navigation stack temizlenir.
+401 genel error state olarak render edilmez; merkezi login akışına yönlendirilir.
 
-Gönderi kartı
+Gönderi listesi satırı
 
 Token: {components.post-card}
 
@@ -232,36 +262,35 @@ Widget hierarchy:
 SliverList
 └── item: Card
     └── InkWell
-        └── Row (crossAxisAlignment: start)
-            ├── CircleAvatar
-            └── Expanded
-                └── Column (crossAxisAlignment: start)
-                    ├── Row
-                    │   ├── Text (görünen ad)
-                    │   ├── Text (@kullanıcı · zaman)
-                    │   └── kendi gönderisiyse IconButton (more)
-                    ├── Text (gönderi içeriği)
-                    └── Row
-                        ├── IconButton + count (yanıt)
-                        ├── IconButton + count (beğeni)
-                        └── Spacer
+        └── Padding
+            └── Row
+                ├── CircleAvatar
+                └── Expanded
+                    └── Column
+                        ├── Row
+                        │   ├── Text(displayName)
+                        │   ├── Text(@username)
+                        │   ├── Text(createdAt)
+                        │   └── PopupMenuButton
+                        ├── Text(content)
+                        └── Row
+                            ├── IconButton(reply) + replyCount
+                            └── IconButton(like) + likeCount
 ```
 
-fluttertemplates kaynağı: Core Card / Social Feed — https://fluttertemplates.dev/widgets/social
+fluttertemplates kaynağı: Core / Card — https://fluttertemplates.dev/widgets
 
 Kurallar:
 
-Kartın boş alanı Gönderi Detayı'nı açar.
+Gönderi kartına dokunmak Gönderi Detayı'nı açar.
 
-Gönderi metni en fazla 280 karakterdir.
+Gönderinin kendi sahibine silme aksiyonu gösterilebilir.
 
-Beğeni optimistic uygulanabilir; hata halinde geri alınır.
+Başkasının gönderisinde güvenlik menüsünde “Şikâyet Et” aksiyonu bulunabilir.
 
-Silme yalnızca gönderi sahibinde görünür.
+Like durumu API cevabıyla senkronize edilir.
 
-Silme işlemi onay dialog'u gerektirir.
-
-Yanıta yanıt ve iç içe thread oluşturulmaz.
+Empty state'te boş SliverList yerine state panel gösterilir.
 
 Gönderi oluşturucu
 
@@ -270,118 +299,226 @@ Token: {components.composer}, {components.primary-button}
 Widget hierarchy:
 
 ```
-Form (key: _formKey)
-└── Column
-    ├── Row
-    │   ├── CircleAvatar
-    │   └── Expanded
-    │       └── TextFormField
-    │           ├── maxLength: 280
-    │           ├── minLines: 3
-    │           └── maxLines: null
-    └── Row
-        ├── Text ("Herkese açık")
-        ├── Spacer
-        ├── Text (kalan/280)
-        └── FilledButton ("Yayınla")
+Scaffold
+├── AppBar
+│   ├── leading: close/back
+│   └── action: FilledButton("Gönder")
+└── SafeArea
+    └── Padding
+        └── Form
+            └── Column
+                ├── Row
+                │   ├── CircleAvatar
+                │   └── Expanded
+                │       └── TextFormField
+                │           ├── multiline
+                │           └── maxLength: 280
+                ├── character counter
+                └── validation message
 ```
 
-fluttertemplates kaynağı: Forms / Inputs / Validation — https://fluttertemplates.dev/widgets/forms
+fluttertemplates kaynağı: Forms / Inputs & Validation — https://fluttertemplates.dev/widgets/forms
 
 Kurallar:
 
-Trim uygulanmış metin boşken “Yayınla” devre dışıdır.
+İçerik alanı API kontratındaki content alanına map edilir.
 
-Loading sırasında butonun onPressed değeri null olur.
+description, title, text veya body alternatif post alanı olarak kullanılmaz.
 
-Sayaç her zaman gösterilir.
+Boş veya yalnızca whitespace içerik gönderilmez.
 
-Hata halinde taslak korunur.
+Maksimum 280 karakterdir.
 
-Başarılı gönderimden sonra form temizlenir.
+Loading sırasında gönder CTA'sı disabled olur.
 
-Yanıt oluştururken ana gönderi özeti salt okunur gösterilir.
+Ağ hatasında yazılmış taslak korunur.
 
-Profil başlığı
+Profil özeti
 
 Token: {components.profile-summary}
 
 Widget hierarchy:
 
 ```
-CustomScrollView
-├── SliverAppBar
-│   ├── title: Text (profil adı)
-│   ├── leading: back veya drawer
-│   └── actions: kendi profilinde edit
-├── SliverToBoxAdapter
-│   └── Padding
-│       └── Column
-│           ├── Row
-│           │   ├── CircleAvatar (large)
-│           │   ├── Spacer
-│           │   └── FilledButton
-│           │       └── "Takip Et" | "Takibi Bırak" | "Profili Düzenle"
-│           ├── Text (ad)
-│           ├── Text (@kullanıcı)
-│           ├── Text (bio)
-│           ├── Row (takip edilen + takipçi)
-│           └── Divider
-└── SliverList (post-card)
+Column
+├── Row
+│   ├── CircleAvatar(size: 80)
+│   └── actions
+│       ├── kendi profili: OutlinedButton("Profili Düzenle")
+│       └── başka profil: FilledButton | OutlinedButton
+│           └── "Takip Et" | "Takibi Bırak"
+├── Text(displayName)
+├── Text(@username)
+├── Text(bio, optional)
+├── Row
+│   ├── Text(followingCount)
+│   └── Text(followerCount)
+└── Divider
 ```
 
-fluttertemplates kaynağı: Profile / Dashboard Cards — https://fluttertemplates.dev/widgets/profile
+fluttertemplates kaynağı: Profile / Profile Header — https://fluttertemplates.dev/widgets/profile
 
 Kurallar:
 
-Kendi profilinde takip butonu gösterilmez.
+Kullanıcının kendi profilinde follow ve block aksiyonu gösterilmez.
 
-Takip işlemi optimistic uygulanabilir ve hata halinde geri alınır.
+Başka kullanıcı profilinde güvenlik menüsü ayrıca bulunur.
 
-Avatar URL boşsa veya yüklenemezse baş harfler gösterilir.
+Profil gönderileri mevcut gönderi kartı component'iyle listelenir.
 
-Bio boşsa gereksiz boş alan ayrılmaz.
+Profil güncellendi. snackbar metni korunur.
 
-Gönderiler kronolojik sıralanır.
+Güvenlik aksiyon menüsü
 
-Auth formu
-
-Token: {components.input}, {components.primary-button}
+Token: {components.safety-action-menu}
 
 Widget hierarchy:
 
 ```
-Scaffold
-└── SafeArea
-    └── Center
-        └── SingleChildScrollView
-            └── Form (key: _formKey)
-                └── Column
-                    ├── Text ("Pulse")
-                    ├── TextFormField (e-posta)
-                    ├── TextFormField (kullanıcı adı — kayıt)
-                    ├── TextFormField (ad — kayıt)
-                    ├── TextFormField (şifre, obscureText)
-                    ├── FilledButton
-                    │   └── "Oturum Aç" | "Hesap Oluştur"
-                    └── TextButton
-                        └── "Hesabın yok mu? Kayıt ol"
-                            | "Zaten hesabın var mı? Oturum aç"
+PopupMenuButton | MenuAnchor
+└── menuChildren
+    ├── gönderi bağlamı
+    │   └── MenuItemButton
+    │       ├── Icon(flag_outlined)
+    │       └── Text("Şikâyet Et")
+    └── başka kullanıcı profili
+        ├── MenuItemButton
+        │   ├── Icon(flag_outlined)
+        │   └── Text("Şikâyet Et")
+        └── MenuItemButton
+            ├── Icon(block)
+            └── Text("Kullanıcıyı Engelle" | "Engeli Kaldır")
 ```
 
-fluttertemplates kaynağı: Forms / Inputs / Validation — https://fluttertemplates.dev/widgets/forms
+fluttertemplates kaynağı: Dialogs & Sheets / Menus — https://fluttertemplates.dev/widgets/dialogs
 
 Kurallar:
 
-Kayıt ekranında davet kodu veya yönetici onayı alanı bulunmaz.
+Minimum dokunma alanı 44x44px'tir.
 
-Form CTA'sı body içinde tam genişliktedir.
+Kullanıcı kendi hesabını engelleyemez.
 
-Validator mesajı ilgili alanın altında gösterilir.
+Engelleme destructive/security aksiyonu olarak görsel olarak ayrıştırılır.
 
-Genel ağ hatası alan validation hatası gibi gösterilmez.
+Şikâyet ve engelleme, mevcut post/profile widget'larını çoğaltmadan eklenir.
 
-Şifre yalnızca kullanıcı eylemiyle görünür yapılır.
+UI kendi block/report endpoint veya enum değerini tanımlamaz.
+
+Şikâyet bottom sheet
+
+Token: {components.report-sheet}, {components.input}, {components.primary-button}
+
+Widget hierarchy:
+
+```
+showModalBottomSheet
+└── SafeArea
+    └── Padding
+        └── Form
+            └── Column(mainAxisSize: min)
+                ├── drag handle
+                ├── Text("Şikâyet Et")
+                ├── Text("Neden şikâyet ediyorsun?")
+                ├── RadioGroup | RadioListTile[]
+                │   └── canonical API kontratındaki reason seçenekleri
+                ├── TextFormField
+                │   ├── label: "Açıklama (isteğe bağlı)"
+                │   ├── multiline
+                │   └── maxLength: 500
+                └── FilledButton("Şikâyet Et")
+```
+
+fluttertemplates kaynağı: Dialogs & Sheets / Modal Bottom Sheet — https://fluttertemplates.dev/widgets/dialogs
+
+Kurallar:
+
+Gönderi ve kullanıcı şikâyeti aynı component'i kullanır.
+
+Hedef türü component parametresidir; duplicate form oluşturulmaz.
+
+Reason değerleri canonical API kontratından map edilir.
+
+Kullanıcıya görünen reason etiketleri Türkçedir.
+
+Reason seçilmeden submit aktif olmaz.
+
+Opsiyonel açıklama en fazla 500 karakterdir.
+
+Submit sırasında CTA disabled olur.
+
+Ağ hatasında reason ve açıklama korunur.
+
+Başarıda sheet kapanır ve “Şikâyetiniz alındı” snackbar'ı gösterilir.
+
+Engelleme onay dialogu
+
+Token: {components.safety-action-menu}, {colors.error}
+
+Widget hierarchy:
+
+```
+showDialog
+└── AlertDialog
+    ├── title: Text("Kullanıcı engellensin mi?")
+    ├── content: Text(
+    │       "Bu kullanıcının içerik ve etkileşimleri bloklama kurallarına göre sınırlandırılacak."
+    │   )
+    └── actions
+        ├── TextButton("İptal")
+        └── FilledButton("Engelle")
+```
+
+fluttertemplates kaynağı: Dialogs & Sheets / Alert Dialog — https://fluttertemplates.dev/widgets/dialogs
+
+Kurallar:
+
+Engelleme mutation'ı confirmation olmadan başlamaz.
+
+Loading sırasında “Engelle” tekrar tetiklenemez.
+
+İşlem başarılı olduğunda backend sonucu yeniden okunur.
+
+Başarı snackbar'ı: “Kullanıcı engellendi.”
+
+Engeli kaldırma başarı snackbar'ı: “Engel kaldırıldı.”
+
+API tarafından belirlenen görünürlük/etkileşim kuralları UI tarafından yeniden yorumlanmaz.
+
+Moderasyon kuyruğu kartı
+
+Token: {components.moderation-card}
+
+Widget hierarchy:
+
+```
+CustomScrollView
+└── SliverList
+    └── Card
+        └── Padding
+            └── Column(crossAxis: start)
+                ├── Row
+                │   ├── target summary
+                │   └── status badge
+                ├── Text(report reason)
+                ├── Text(report description, optional)
+                ├── Text(metadata)
+                └── action area
+                    └── canonical API kontratındaki moderator actions
+```
+
+fluttertemplates kaynağı: Core / Cards — https://fluttertemplates.dev/widgets
+
+Kurallar:
+
+Yalnızca moderator yetkili kullanıcıya gösterilir.
+
+Status ve action değerleri docs/api-contract.md ile birebir map edilir.
+
+UI yeni role, status veya moderation action üretmez.
+
+Şikâyet kaydı işlendiğinde backend'in güncel sonucuna göre kart güncellenir veya kuyruktan çıkarılır.
+
+İçeriğin moderation sonrası görünürlüğü Architect mimarisi ve API kontratındaki kurala tabidir.
 
 Empty state
 
@@ -391,25 +528,25 @@ Widget hierarchy:
 
 ```
 Center
-└── ConstrainedBox (maxWidth: 360)
-    └── Column (mainAxisSize: min)
+└── ConstrainedBox(maxWidth: 360)
+    └── Column(mainAxisSize: min)
         ├── Icon
-        ├── Text (başlık)
-        ├── Text (açıklama)
-        └── FilledButton.tonal (birincil CTA)
+        ├── Text(title)
+        ├── Text(description)
+        └── optional FilledButton.tonal | FilledButton
 ```
 
 fluttertemplates kaynağı: States & Errors / Empty State — https://fluttertemplates.dev/widgets/states
 
 Kurallar:
 
-Kayıt yok anlamındaki 404 empty state olarak ele alınır.
-
 Kayıt yokken hata olarak gösterilmemelidir.
 
-Birincil CTA body içinde bulunur.
+Kayıt yok anlamındaki 404 empty state olarak ele alınır.
 
-Empty, loading ve error aynı anda gösterilmez.
+Ağ/5xx hatası empty state değildir.
+
+Birincil oluşturma CTA'sı empty state body içinde bulunur; yalnız AppBar'a taşınmaz.
 
 Loading state
 
@@ -419,193 +556,327 @@ Widget hierarchy:
 
 ```
 Scaffold body
-├── oturum kontrolü: Center
-│   └── CircularProgressIndicator
-└── liste yükleme: ListView
-    └── skeleton Card placeholders
+├── oturum kontrolü: Center(CircularProgressIndicator)
+└── liste:
+    CustomScrollView
+    └── SliverList
+        └── skeleton Card placeholders
 ```
 
 fluttertemplates kaynağı: States & Errors / Loading State — https://fluttertemplates.dev/widgets/states
 
 Kurallar:
 
-Oturum kontrolü tamamlanmadan login veya feed gösterilmez.
+Loading sırasında önceki kullanıcıya ait veri gösterilmez.
 
-Kullanıcı değiştiğinde önceki kullanıcı verisi gösterilmez.
+Mutation butonları loading sırasında tekrar tetiklenemez.
 
-İlk yüklemede skeleton kullanılır.
-
-Submit loading yalnızca ilgili formu kilitler.
+Form ekranlarında kullanıcının mevcut taslağı loading nedeniyle silinmez.
 
 Error state
 
-Token: {components.state-panel}
+Token: {components.state-panel}, {colors.error}
 
 Widget hierarchy:
 
 ```
 Center
-└── ConstrainedBox
+└── ConstrainedBox(maxWidth: 360)
     └── Column
-        ├── Icon (error_outline)
-        ├── Text (başlık)
-        ├── Text (açıklama)
-        └── OutlinedButton ("Tekrar Dene")
+        ├── Icon(error_outline)
+        ├── Text(title)
+        ├── Text(description, optional)
+        └── OutlinedButton("Tekrar Dene")
 ```
 
 fluttertemplates kaynağı: States & Errors / Error State — https://fluttertemplates.dev/widgets/states
 
 Kurallar:
 
-Ağ, zaman aşımı veya beklenmeyen sunucu hatasında gösterilir.
-
-401 merkezi login akışına gider.
+401 genel error state yerine oturum açma akışına yönlendirilir.
 
 Kayıt yok anlamındaki 404 error state değildir.
 
-Retry duplicate route oluşturmaz.
+Validation hataları ilgili input altında gösterilir.
 
-Silme onayı
-
-Token: {components.primary-button}
-
-Widget hierarchy:
-
-```
-showDialog
-└── AlertDialog
-    ├── title: Text ("Gönderi silinsin mi?")
-    ├── content: Text ("Bu işlem geri alınamaz.")
-    └── actions
-        ├── TextButton ("İptal")
-        └── FilledButton ("Sil")
-```
-
-fluttertemplates kaynağı: Dialogs & Sheets / Alert Dialog — https://fluttertemplates.dev/widgets/dialogs
-
-Kurallar:
-
-Yalnızca gönderi sahibi açabilir.
-
-Silme sürerken aksiyonlar devre dışıdır.
-
-Başarısız işlemde gönderi kartı korunur.
-
-“Sil” destructive renkte gösterilir.
+Ağ hatasında form taslağı korunur.
 
 Success snackbar
 
-Token: {components.state-panel}
+Token: {colors.success}
 
 Widget hierarchy:
 
 ```
 ScaffoldMessenger.showSnackBar
 └── SnackBar
-    ├── content: Text
-    └── behavior: floating
+    └── Text(successMessage)
 ```
 
 fluttertemplates kaynağı: Dialogs & Sheets / Snackbars — https://fluttertemplates.dev/widgets/dialogs
 
 Kurallar:
 
-Aynı işlem için birden fazla snackbar eklenmez.
+Mobilde behavior: SnackBarBehavior.floating.
 
-Başarı mesajları kısa ve işlem odaklıdır.
+İşlem türüne özgü doğrulanabilir Türkçe mesaj kullanılır.
 
-Beğeni değişiminde sürekli snackbar gösterilmez.
+Başarı mesajı hata veya validation mesajı yerine kullanılmaz.
 
-Screen states
+Screen States
 
 Ana Akış
 
-Empty state: Başlık: "Akış henüz boş". Açıklama: "İlk gönderini paylaşarak konuşmayı başlat." CTA: "Gönderi Oluştur".
+Empty state
 
-Fallback: Takip edilen kullanıcı yoksa public akış veya kendi gönderileri gösterilir.
+Başlık: "Akış henüz boş"
 
-Error state: "Akış yüklenemedi". CTA: "Tekrar Dene".
+Açıklama: "İlk gönderini paylaşarak konuşmayı başlat."
 
-Success: Yeni gönderi: "Gönderin yayınlandı." Silme: "Gönderi silindi."
+Birincil CTA: "Gönderi Oluştur"
 
-CTA konumu: FAB ve empty-state body CTA.
+Error state
 
-Gönderi Detayı
+Ağ veya 5xx: "Akış yüklenemedi"
 
-Empty state: Başlık: "Henüz yanıt yok". Açıklama: "İlk yanıtı sen yaz." CTA: "Yanıtla".
+CTA: "Tekrar Dene"
 
-Error state: Ana gönderi bulunamazsa "Gönderi bulunamadı". Yanıt listesi boşsa hata gösterilmez.
+Kayıt yok anlamındaki 404 hata olarak gösterilmemelidir.
 
-Success: "Yanıtın yayınlandı."
+401 oturum açma akışına yönlendirilir.
 
-CTA konumu: Gönderi içeriğinin altında body içinde.
+Success
+
+Gönderi oluşturma başarılı: "Gönderi paylaşıldı."
+
+App bar vs body CTA
+
+Empty durumda ana CTA body içinde "Gönderi Oluştur".
+
+Normal durumda FAB kullanılabilir.
+
+Aynı ekranda iki eşdeğer primary CTA kullanılmaz.
+
+Gönderi Detayı ve Yanıtlar
+
+Empty state
+
+Başlık: "Henüz yanıt yok"
+
+Açıklama: "İlk yanıtı sen yaz."
+
+CTA: "Yanıtla"
+
+Error state
+
+Ana gönderi bulunamazsa: "Gönderi bulunamadı"
+
+Ağ hatasında: "Gönderi yüklenemedi"
+
+CTA: "Tekrar Dene"
+
+Yanıt listesinin boş olması error değildir.
+
+Success
+
+Yanıt başarılı: "Yanıt gönderildi."
+
+App bar vs body CTA
+
+"Yanıtla" aksiyonu body içinde gönderi/yanıt bağlamında bulunur.
 
 Profil
 
-Kendi profilim empty: "Henüz gönderin yok". CTA: "Gönderi Oluştur".
+Empty state
 
-Başka profil empty: "Henüz gönderi yok". CTA: "Ana Akışa Dön".
+Başlık: "Henüz gönderi yok"
 
-Error state: "Profil yüklenemedi". Kullanıcı bulunamazsa "Kullanıcı bulunamadı".
+Açıklama: "Bu kullanıcının henüz gönderisi yok."
 
-Success: "Kullanıcı takip edildi.", "Takip bırakıldı.", "Profil güncellendi."
+Kendi profilinde CTA: "Gönderi Oluştur"
 
-CTA konumu: Profil başlığı body alanı.
+Başka profilde zorunlu primary empty CTA yoktur.
 
-Oturum Aç ve Kayıt Ol
+Error state
 
-Error state: Alan validation hataları ilgili input altında gösterilir.
+Ağ/5xx: "Profil yüklenemedi"
 
-Login 401: "E-posta veya şifre hatalı."
+Kullanıcı bulunamazsa: "Kullanıcı bulunamadı"
 
-Login success: "Oturum açıldı."
+CTA: "Tekrar Dene"
 
-Register success, JWT varsa: "Hesabın oluşturuldu." ve Ana Akış.
+401 login akışına yönlendirilir.
 
-Register success, JWT yoksa: "Hesabın oluşturuldu. Oturum açabilirsin." ve Login.
+Success
 
-CTA konumu: Form body içinde tam genişlikte.
+Profil güncelleme: "Profil güncellendi."
 
-Gönderi Oluştur
+Takip başarılı: "Takip edildi."
 
-Empty: Ayrı empty ekranı yoktur; buton devre dışıdır.
+Takibi bırakma başarılı: "Takip bırakıldı."
 
-Validation: "Gönderi boş olamaz." veya "Gönderi en fazla 280 karakter olabilir."
+App bar vs body CTA
 
-Error state: Ağ hatasında taslak korunur.
+"Profili Düzenle" profil header içinde secondary aksiyondur.
 
-Success: "Gönderin yayınlandı."
+Follow aksiyonu başka kullanıcı profil header'ında bulunur.
 
-CTA konumu: Composer body alanı.
+Gönderi Oluşturma
+
+Empty state
+
+Form başlangıcı ayrı API empty state değildir.
+
+Error state
+
+Validation hataları ilgili input altında gösterilir.
+
+Ağ hatasında taslak korunur.
+
+401 login akışına yönlendirilir.
+
+Success
+
+Snackbar: "Gönderi paylaşıldı."
+
+App bar vs body CTA
+
+Gönder CTA'sı tek primary aksiyondur.
+
+Loading veya invalid durumda disabled olur.
+
+Şikâyet Formu
+
+Empty state
+
+Formun başlangıçta reason seçilmemiş olması API empty state değildir.
+
+Error state
+
+Ağ/5xx: "Şikâyet gönderilemedi. Tekrar deneyin."
+
+Validation reason alanına yakın gösterilir.
+
+401 login akışına yönlendirilir.
+
+Hata halinde seçili reason ve açıklama korunur.
+
+Success
+
+Snackbar: "Şikâyetiniz alındı"
+
+App bar vs body CTA
+
+Birincil CTA bottom sheet body içinde "Şikâyet Et".
+
+AppBar üzerinde duplicate CTA bulunmaz.
+
+Kullanıcı Engelleme
+
+Empty state
+
+Uygulanmaz; engellenmemiş durum normal profil state'idir.
+
+Error state
+
+Ağ veya sunucu hatasında mevcut profil korunur.
+
+İşlem tekrar denenebilir.
+
+401 login akışına yönlendirilir.
+
+Success
+
+Engelleme: "Kullanıcı engellendi."
+
+Engeli kaldırma: "Engel kaldırıldı."
+
+App bar vs body CTA
+
+Engelleme profilin primary CTA'sı değildir.
+
+Güvenlik/overflow menüsünden başlatılır.
+
+Moderasyon Kuyruğu
+
+Empty state
+
+Başlık: "Bekleyen şikâyet yok"
+
+Açıklama: "İncelenecek yeni şikâyet bulunmuyor."
+
+Birincil CTA yoktur.
+
+Error state
+
+Ağ/5xx başlığı: "Moderasyon kuyruğu yüklenemedi"
+
+Açıklama: "Şikâyetler alınırken bir sorun oluştu."
+
+CTA: "Tekrar Dene"
+
+Kayıt bulunmaması error değildir.
+
+401 login akışına yönlendirilir.
+
+Moderator yetkisi olmayan kullanıcıya moderation içeriği render edilmez.
+
+403 normal empty state gibi gösterilmez.
+
+Success
+
+Moderasyon aksiyonu sonrası kayıt backend'in güncel status/action sonucuna göre yenilenir.
+
+Kullanıcıya gösterilecek aksiyon başarı metni canonical action'ın Türkçe karşılığıdır.
+
+Design katmanı yeni moderation status veya action değeri üretmez.
+
+App bar vs body CTA
+
+AppBar yalnız sayfa başlığı ve ikincil yenileme kontrolünü taşıyabilir.
+
+Moderasyon kararları ilgili şikâyet kartı veya detay body alanında gösterilir.
 
 Do's and Don'ts
 
 Do
 
-Material 3 ColorScheme, TextTheme, NavigationBar, NavigationDrawer, FilledButton ve Card kullan.
+Material 3 semantik token'larını kullan.
 
-Her veri durumu için yalnızca bir loading, empty veya error görünümü göster.
+Feed, profile ve moderation listelerinde mevcut reusable kart/state bileşenlerini paylaş.
 
-Optimistic aksiyonları hata halinde geri al.
+404 kayıt-yok durumunu ilgili ekranda empty state olarak ele al.
 
-İkon butonlarına tooltip ve semantic label ekle.
+401 durumunu merkezi login akışına gönder.
 
-Dokunma alanlarını en az 44x44px tut.
+Kullanıcı taslaklarını ağ hatasında koru.
 
-Avatar URL hatasında baş harf fallback'i göster.
+Engelleme gibi etkili mutation'larda confirmation kullan.
 
-Don't
+Moderator-only UI'ı role/authorization sonucuna göre gizle.
 
-Başka bir sosyal ağın logosunu veya birebir görsel kimliğini kullanma.
+Report reason, moderation status ve moderation action değerlerini canonical API kontratından map et.
 
-MVP dışı mesaj, bildirim, trend, medya, anket, yer imi veya yeniden paylaşım ekleme.
+Başarı, hata ve empty metinlerini QA'nın birebir assert edebileceği biçimde sabit tut.
 
-Başkasının gönderisinde silme aksiyonu gösterme.
+Minimum 44x44px dokunma alanını koru.
 
-404 kayıt yok durumunu ağ hatası gibi gösterme.
+Don'ts
 
-401 sonrasında eski kullanıcı verisini ekranda tutma.
+API kontratında bulunmayan endpoint, enum, status, role veya moderation action üretme.
 
-Ana CTA'yı yalnızca app bar ikonuna dönüştürme.
+Engelleme davranışının backend business rule'larını UI içinde yeniden tanımlama.
 
-280 karakter sınırını yalnızca backend validation'a bırakma.
+Kayıt yok durumunu "yüklenemedi" error state'e dönüştürme.
+
+401'i normal retry paneli olarak gösterme.
+
+Moderator olmayan kullanıcıya moderation navigation veya action gösterme.
+
+Kullanıcının kendi profilinde "Kullanıcıyı Engelle" gösterme.
+
+Aynı şikâyet formunu gönderi ve kullanıcı için ayrı ayrı kopyalama.
+
+Gönderi alanını description, title, text veya body adıyla yeniden adlandırma.
+
+Çok seviyeli thread, DM, medya gönderisi veya kapsam dışı yeni özellik ekleme.
