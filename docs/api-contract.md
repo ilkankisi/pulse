@@ -58,21 +58,18 @@ http://127.0.0.1:5000
 
 Backend aşağıdakileri desteklemelidir:
 
+```
 Origin: http://127.0.0.1:8080
-
 Header: Authorization
-
 Header: Content-Type
-
 Method: GET
-
 Method: POST
-
 Method: PUT
-
 Method: DELETE
-
 Method: OPTIONS
+```
+
+Tarayıcı OPTIONS preflight istekleri başarılı cevaplanmalıdır.
 
 4. JWT yapılandırması
 
@@ -107,13 +104,15 @@ Production secret repoda bulunmamalıdır.
 
 Anonim endpoint'ler:
 
+```
 GET /health
-
 POST /api/v1/auth/register
-
 POST /api/v1/auth/login
+```
 
 Diğer endpoint'ler Bearer token gerektirir.
+
+/api/v1/moderation/** endpoint'leri ayrıca Moderator rolü gerektirir.
 
 5. Ortak HTTP kuralları
 
@@ -153,8 +152,8 @@ KodAnlam
 400Validation, geçersiz JSON veya iş kuralı
 401Token yok, geçersiz veya süresi dolmuş
 403Kaynak sahipliği veya yetki hatası
-404Path ile seçilen kaynak bulunamadı
-409Benzersizlik veya ilişki çakışması
+404Path ile seçilen kaynak bulunamadı veya güvenlik nedeniyle görünmez
+409Benzersizlik veya durum/ilişki çakışması
 500Beklenmeyen sunucu hatası
 
 Geçersiz JSON:
@@ -183,6 +182,16 @@ PostsDELETE/api/v1/posts/{postId}Bearer204
 RepliesPOST/api/v1/posts/{postId}/repliesBearer201
 LikesPOST/api/v1/posts/{postId}/likesBearer200
 LikesDELETE/api/v1/posts/{postId}/likesBearer200
+BlocksPOST/api/v1/profiles/{username}/blockBearer200
+BlocksDELETE/api/v1/profiles/{username}/blockBearer204
+BlocksGET/api/v1/blocksBearer200
+ReportsPOST/api/v1/reportsBearer201
+ModerationGET/api/v1/moderation/reportsModerator200
+ModerationGET/api/v1/moderation/reports/{reportId}Moderator200
+ModerationPOST/api/v1/moderation/reports/{reportId}/resolveModerator200
+ModerationPOST/api/v1/moderation/reports/{reportId}/dismissModerator200
+
+Moderator, geçerli Bearer token ile birlikte Moderator rolünün zorunlu olduğunu ifade eder.
 
 7. Yasak legacy yollar
 
@@ -203,6 +212,8 @@ Aşağıdaki yollar backend tarafından map edilmemelidir:
 
 Mobil repository bu yolları fallback olarak kullanmamalıdır.
 
+Aynı davranış için birden fazla route tanımlanması yasaktır.
+
 8. Health
 
 GET /health
@@ -211,7 +222,13 @@ Auth: Anonim
 
 İstek gövdesi: Yok
 
-Başarı: 200 OK
+Başarı:
+
+```
+200 OK
+```
+
+Yanıt:
 
 ```
 {
@@ -262,79 +279,20 @@ tokenTypestringHayır
 expiresInintegerHayır
 userAuthUserResponseHayır
 
-expiresAt kullanılmaz.
+tokenType:
 
-9.3 PostAuthorResponse
+```
+Bearer
+```
+
+9.3 AuthorResponse
 
 ```
 {
-  "id": 1,
-  "username": "ilkan",
-  "displayName": "İlkan",
+  "id": 2,
+  "username": "ada",
+  "displayName": "Ada",
   "avatarUrl": null
-}
-```
-
-9.4 PostResponse
-
-```
-{
-  "id": 10,
-  "author": {
-    "id": 1,
-    "username": "ilkan",
-    "displayName": "İlkan",
-    "avatarUrl": null
-  },
-  "content": "Pulse üzerindeki ilk gönderim.",
-  "parentPostId": null,
-  "createdAt": "2026-08-05T10:20:00Z",
-  "likeCount": 3,
-  "replyCount": 1,
-  "isLikedByCurrentUser": false
-}
-```
-
-AlanTürNull
-idintegerHayır
-authorPostAuthorResponseHayır
-contentstringHayır
-parentPostIdintegerEvet
-createdAtstring date-timeHayır
-likeCountintegerHayır
-replyCountintegerHayır
-isLikedByCurrentUserbooleanHayır
-
-Aşağıdaki alanlar güncel PostResponse tipinde bulunmaz:
-
-description
-
-media
-
-replyToPostId
-
-repostCount
-
-isReposted
-
-isBookmarked
-
-updatedAt
-
-9.5 ProfileResponse
-
-```
-{
-  "id": 1,
-  "username": "ilkan",
-  "displayName": "İlkan",
-  "bio": "Flutter ve .NET geliştiricisi",
-  "avatarUrl": null,
-  "createdAt": "2026-08-05T10:00:00Z",
-  "postCount": 4,
-  "followerCount": 12,
-  "followingCount": 8,
-  "isFollowedByCurrentUser": false
 }
 ```
 
@@ -342,13 +300,81 @@ AlanTürNull
 idintegerHayır
 usernamestringHayır
 displayNamestringHayır
-biostringEvet
 avatarUrlstringEvet
-createdAtstring date-timeHayır
-postCountintegerHayır
-followerCountintegerHayır
-followingCountintegerHayır
-isFollowedByCurrentUserbooleanHayır
+
+9.4 PostResponse
+
+```
+{
+  "id": 15,
+  "author": {
+    "id": 2,
+    "username": "ada",
+    "displayName": "Ada",
+    "avatarUrl": null
+  },
+  "content": "Merhaba Pulse.",
+  "parentPostId": null,
+  "createdAt": "2026-08-08T12:00:00Z",
+  "likeCount": 4,
+  "replyCount": 1,
+  "isLikedByMe": false
+}
+```
+
+AlanTürNull
+idintegerHayır
+authorAuthorResponseHayır
+contentstringHayır
+parentPostIdintegerEvet
+createdAtUTC ISO 8601 stringHayır
+likeCountintegerHayır
+replyCountintegerHayır
+isLikedByMebooleanHayır
+
+9.5 ReportTargetType
+
+Tam string değerleri:
+
+```
+Post
+User
+```
+
+Başka casing veya alias kullanılmaz.
+
+9.6 ReportReason
+
+Tam string değerleri:
+
+```
+Spam
+Harassment
+HateSpeech
+Violence
+SexualContent
+Impersonation
+Other
+```
+
+9.7 ReportStatus
+
+Tam string değerleri:
+
+```
+Pending
+Resolved
+Dismissed
+```
+
+9.8 ModerationAction
+
+Tam string değerleri:
+
+```
+NoAction
+RemovePost
+```
 
 10. Auth
 
@@ -360,72 +386,99 @@ Create semantiği:
 
 Gövdede kullanıcı kimliği bulunmaz.
 
-Davet kodu bulunmaz.
+Backend yeni integer id üretir.
 
-Yönetici onayı gerekmez.
+İstek gövdesi:
 
-İstek:
+AlanTürZorunlu
+usernamestringEvet
+displayNamestringEvet
+passwordstringEvet
+
+Golden request:
 
 ```
 {
   "username": "ilkan",
-  "email": "ilkan@example.com",
-  "password": "StrongPassword123!",
-  "displayName": "İlkan"
+  "displayName": "İlkan",
+  "password": "ExamplePassword123!"
 }
 ```
 
-AlanTürZorunlu
-usernamestringEvet
-emailstringEvet
-passwordstringEvet
-displayNamestringEvet
+Başarı:
 
-Başarı: 201 Created
+```
+201 Created
+```
 
-Yanıt: AuthResponse
+Golden response:
 
-Hatalar:
+```
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "tokenType": "Bearer",
+  "expiresIn": 3600,
+  "user": {
+    "id": 1,
+    "username": "ilkan",
+    "displayName": "İlkan",
+    "avatarUrl": null
+  }
+}
+```
 
-400: validation
+Username benzersizlik çakışması:
 
-409: username veya e-posta kullanımda
+```
+409 Conflict
+```
 
 10.2 POST /api/v1/auth/login
 
 Auth: Anonim
 
-İstek:
-
-```
-{
-  "login": "ilkan",
-  "password": "StrongPassword123!"
-}
-```
+İstek gövdesi:
 
 AlanTürZorunlu
-loginstringEvet
+usernamestringEvet
 passwordstringEvet
 
-login alanı kullanıcı adı veya e-posta kabul eder.
-
-Mobil aşağıdaki alternatif isteği göndermemelidir:
+Golden request:
 
 ```
 {
-  "email": "ilkan@example.com",
-  "password": "StrongPassword123!"
+  "username": "ilkan",
+  "password": "ExamplePassword123!"
 }
 ```
 
-Başarı: 200 OK
+Başarı:
 
-Yanıt: AuthResponse
+```
+200 OK
+```
 
-Hata:
+Golden response:
 
-401: kullanıcı bilgileri geçersiz
+```
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "tokenType": "Bearer",
+  "expiresIn": 3600,
+  "user": {
+    "id": 1,
+    "username": "ilkan",
+    "displayName": "İlkan",
+    "avatarUrl": null
+  }
+}
+```
+
+Geçersiz credential:
+
+```
+401 Unauthorized
+```
 
 11. Profile
 
@@ -435,50 +488,86 @@ Auth: Bearer
 
 İstek gövdesi: Yok
 
-Başarı: 200 OK
+Başarı:
 
-Yanıt: ProfileResponse
+```
+200 OK
+```
 
-Hatalar:
+Golden response:
 
-401: token yok veya geçersiz
+```
+{
+  "id": 1,
+  "username": "ilkan",
+  "displayName": "İlkan",
+  "bio": null,
+  "avatarUrl": null,
+  "followerCount": 10,
+  "followingCount": 4,
+  "isFollowing": false
+}
+```
 
-404: oturum kullanıcısı bulunamadı
-
-Bu endpoint için 404 empty state değildir.
+AlanTürNull
+idintegerHayır
+usernamestringHayır
+displayNamestringHayır
+biostringEvet
+avatarUrlstringEvet
+followerCountintegerHayır
+followingCountintegerHayır
+isFollowingbooleanHayır
 
 11.2 PUT /api/v1/me
 
 Auth: Bearer
 
-İstek:
+Update semantiği:
+
+Oturum sahibi güncellenir.
+
+Gövdede id bulunmaz.
+
+Gövdede username bulunmaz.
+
+İstek alanları:
+
+AlanTürZorunluNull
+displayNamestringEvetHayır
+biostringEvetEvet
+avatarUrlstringEvetEvet
+
+Golden request:
 
 ```
 {
   "displayName": "İlkan Kişi",
-  "bio": "Flutter ve .NET geliştiricisi",
+  "bio": "Pulse kullanıcısı",
   "avatarUrl": null
 }
 ```
 
-AlanTürZorunlu
-displayNamestringEvet
-biostring veya nullHayır
-avatarUrlstring veya nullHayır
+Başarı:
 
-Gövdede bulunmaması gereken alanlar:
+```
+200 OK
+```
 
-id
+Golden response:
 
-username
-
-email
-
-userId
-
-Başarı: 200 OK
-
-Yanıt: güncel ProfileResponse
+```
+{
+  "id": 1,
+  "username": "ilkan",
+  "displayName": "İlkan Kişi",
+  "bio": "Pulse kullanıcısı",
+  "avatarUrl": null,
+  "followerCount": 10,
+  "followingCount": 4,
+  "isFollowing": false
+}
+```
 
 11.3 GET /api/v1/profiles/{username}
 
@@ -486,42 +575,86 @@ Auth: Bearer
 
 İstek gövdesi: Yok
 
-Başarı: 200 OK
+Başarı:
 
-Yanıt: ProfileResponse
+```
+200 OK
+```
 
-Hata:
+Golden response:
 
-404: kullanıcı bulunamadı
+```
+{
+  "id": 2,
+  "username": "ada",
+  "displayName": "Ada",
+  "bio": null,
+  "avatarUrl": null,
+  "followerCount": 20,
+  "followingCount": 8,
+  "isFollowing": true
+}
+```
 
-12. Follow
+Kullanıcı bulunamazsa:
+
+```
+404 Not Found
+```
+
+Oturum sahibi ile hedef arasında block ilişkisi nedeniyle profil görünmezse:
+
+```
+404 Not Found
+```
+
+Response block ilişkisinin varlığını ayrıca açıklamaz.
+
+12. Follows
 
 12.1 POST /api/v1/profiles/{username}/follow
 
 Auth: Bearer
 
-İstek gövdesi: Yok
+Create semantiği:
 
-Başarı: 200 OK
+Hedef path içindeki username ile belirlenir.
+
+İstek gövdesi yoktur.
+
+Golden request:
+
+```
+POST /api/v1/profiles/ada/follow
+Authorization: Bearer <accessToken>
+```
+
+Başarı:
+
+```
+200 OK
+```
+
+Golden response:
 
 ```
 {
-  "userId": 2,
-  "isFollowing": true,
-  "followerCount": 13
+  "username": "ada",
+  "isFollowing": true
 }
 ```
 
-AlanTür
-userIdinteger
-isFollowingboolean
-followerCountinteger
+Kullanıcı bulunamazsa:
 
-Hatalar:
+```
+404 Not Found
+```
 
-400: kullanıcı kendisini takip etmeye çalıştı
+Block ilişkisi varsa:
 
-404: hedef kullanıcı bulunamadı
+```
+404 Not Found
+```
 
 12.2 DELETE /api/v1/profiles/{username}/follow
 
@@ -529,83 +662,76 @@ Auth: Bearer
 
 İstek gövdesi: Yok
 
-Başarı: 200 OK
+Başarı:
+
+```
+200 OK
+```
+
+Golden response:
 
 ```
 {
-  "userId": 2,
-  "isFollowing": false,
-  "followerCount": 12
+  "username": "ada",
+  "isFollowing": false
 }
 ```
 
-Mobil 204 veya gövdesiz response beklememelidir.
-
 13. Feed
 
-GET /api/v1/feed
+13.1 GET /api/v1/feed
 
 Auth: Bearer
 
 İstek gövdesi: Yok
 
-Başarı: 200 OK
-
-Response doğrudan PostResponse dizisidir:
+Başarı:
 
 ```
-[
-  {
-    "id": 10,
-    "author": {
-      "id": 1,
-      "username": "ilkan",
-      "displayName": "İlkan",
-      "avatarUrl": null
-    },
-    "content": "Pulse üzerindeki ilk gönderim.",
-    "parentPostId": null,
-    "createdAt": "2026-08-05T10:20:00Z",
-    "likeCount": 3,
-    "replyCount": 1,
-    "isLikedByCurrentUser": false
-  }
-]
+200 OK
+```
+
+Golden response:
+
+```
+{
+  "items": [
+    {
+      "id": 15,
+      "author": {
+        "id": 2,
+        "username": "ada",
+        "displayName": "Ada",
+        "avatarUrl": null
+      },
+      "content": "Merhaba Pulse.",
+      "parentPostId": null,
+      "createdAt": "2026-08-08T12:00:00Z",
+      "likeCount": 4,
+      "replyCount": 1,
+      "isLikedByMe": false
+    }
+  ]
+}
 ```
 
 Boş feed:
 
 ```
-[]
+{
+  "items": []
+}
 ```
 
-Empty/error kuralları:
+Boş feed 404 değildir.
 
-200 ve []: empty state
+Feed:
 
-200 ve dolu dizi: success
+kronolojik olarak createdAt DESC sıralanır,
 
-401: unauthorized
+soft-delete postları içermez,
 
-403: error
-
-404: route veya API error
-
-500: server error
-
-Connection failure: error
-
-JSON parse failure: error
-
-Mobil repository 404 yanıtını boş listeye dönüştürmemelidir.
-
-Mobil repository aşağıdaki fallback yollarını çağırmamalıdır:
-
-```
-/api/v1/posts
-/feed
-/posts
-```
+block ilişkisi bulunan kullanıcıların postlarını içermez.
 
 14. Posts
 
@@ -613,46 +739,64 @@ Mobil repository aşağıdaki fallback yollarını çağırmamalıdır:
 
 Auth: Bearer
 
-İstek:
+Create semantiği:
 
-```
-{
-  "content": "Pulse üzerindeki ilk gönderim."
-}
-```
+Gövdede id yoktur.
 
-AlanTürZorunluKural
-contentstringEvetTrim sonrası 1–280 karakter
+Author id gövdeden alınmaz; token üzerinden belirlenir.
 
-Gövdede bulunmaması gereken alanlar:
+İstek alanları:
 
-id
-
-authorId
-
-parentPostId
-
-likeCount
-
-replyCount
-
-Başarı: 201 Created
-
-Yanıt: PostResponse
-
-Hatalar:
-
-400: content boş veya 280 karakterden uzun
-
-401: token geçersiz
+AlanTürZorunlu
+contentstringEvet
 
 Golden request:
 
 ```
 {
-  "content": "Pulse üzerindeki ilk gönderim."
+  "content": "Merhaba Pulse."
 }
 ```
+
+Geçersiz request:
+
+```
+{
+  "title": "Merhaba Pulse."
+}
+```
+
+Başarı:
+
+```
+201 Created
+```
+
+Golden response:
+
+```
+{
+  "id": 15,
+  "author": {
+    "id": 1,
+    "username": "ilkan",
+    "displayName": "İlkan",
+    "avatarUrl": null
+  },
+  "content": "Merhaba Pulse.",
+  "parentPostId": null,
+  "createdAt": "2026-08-08T12:00:00Z",
+  "likeCount": 0,
+  "replyCount": 0,
+  "isLikedByMe": false
+}
+```
+
+Validation:
+
+content boş olamaz.
+
+content 280 karakteri aşamaz.
 
 14.2 DELETE /api/v1/posts/{postId}
 
@@ -660,13 +804,29 @@ Auth: Bearer
 
 İstek gövdesi: Yok
 
-Başarı: 204 No Content
+Yalnızca gönderi sahibi kendi gönderisini silebilir.
 
-Hatalar:
+Başarı:
 
-403: gönderi başka kullanıcıya ait
+```
+204 No Content
+```
 
-404: gönderi bulunamadı
+Post bulunamazsa:
+
+```
+404 Not Found
+```
+
+Başkasının postunu silme:
+
+```
+403 Forbidden
+```
+
+Bu endpoint standart kullanıcı sahiplik silmesidir.
+
+Moderasyon kaldırması için bu endpoint kullanılmaz.
 
 15. Replies
 
@@ -674,48 +834,60 @@ POST /api/v1/posts/{postId}/replies
 
 Auth: Bearer
 
-İstek:
+Create semantiği:
 
-```
-{
-  "content": "Bu gönderiye katılıyorum."
-}
-```
+Parent post path içindeki postId ile belirlenir.
 
-AlanTürZorunluKural
-contentstringEvetTrim sonrası 1–280 karakter
+Gövdede id veya parentPostId bulunmaz.
 
-Başarı: 201 Created
+İstek alanları:
 
-Yanıt: PostResponse
-
-Yanıtta:
-
-```
-{
-  "parentPostId": 10
-}
-```
-
-Kurallar:
-
-Üst gönderi kimliği path'ten alınır.
-
-Request gövdesinde parentPostId bulunmaz.
-
-Üst gönderi bulunamazsa 404.
-
-Üst gönderi zaten bir yanıtsa 400.
-
-İkinci seviye yanıt desteklenmez.
+AlanTürZorunlu
+contentstringEvet
 
 Golden request:
 
 ```
 {
-  "content": "Bu gönderiye katılıyorum."
+  "content": "Katılıyorum."
 }
 ```
+
+Başarı:
+
+```
+201 Created
+```
+
+Golden response:
+
+```
+{
+  "id": 16,
+  "author": {
+    "id": 1,
+    "username": "ilkan",
+    "displayName": "İlkan",
+    "avatarUrl": null
+  },
+  "content": "Katılıyorum.",
+  "parentPostId": 15,
+  "createdAt": "2026-08-08T12:05:00Z",
+  "likeCount": 0,
+  "replyCount": 0,
+  "isLikedByMe": false
+}
+```
+
+Kurallar:
+
+content maksimum 280 karakter.
+
+Parent bulunamazsa 404.
+
+Soft-delete edilmiş parent için 404.
+
+Block nedeniyle görünmeyen parent için 404.
 
 16. Likes
 
@@ -725,20 +897,29 @@ Auth: Bearer
 
 İstek gövdesi: Yok
 
-Başarı: 200 OK
+Başarı:
+
+```
+200 OK
+```
+
+Golden response:
 
 ```
 {
-  "postId": 10,
+  "postId": 15,
   "isLiked": true,
-  "likeCount": 4
+  "likeCount": 5
 }
 ```
 
-AlanTür
-postIdinteger
-isLikedboolean
-likeCountinteger
+Post bulunamaz veya görünmezse:
+
+```
+404 Not Found
+```
+
+Aynı kullanıcının tekrar like isteği idempotenttir.
 
 16.2 DELETE /api/v1/posts/{postId}/likes
 
@@ -746,118 +927,945 @@ Auth: Bearer
 
 İstek gövdesi: Yok
 
-Başarı: 200 OK
+Başarı:
+
+```
+200 OK
+```
+
+Golden response:
 
 ```
 {
-  "postId": 10,
+  "postId": 15,
   "isLiked": false,
-  "likeCount": 3
+  "likeCount": 4
 }
 ```
 
-Mobil like ve unlike işlemlerinde 204 beklememelidir.
+Like bulunmasa da işlem idempotent olarak başarılı kabul edilir.
 
-17. Golden JSON örnekleri
+17. Blocks
 
-Register
+17.1 POST /api/v1/profiles/{username}/block
+
+Auth: Bearer
+
+Create semantiği:
+
+Hedef path içindeki username ile belirlenir.
+
+İstek gövdesi yoktur.
+
+Gövdede id veya username gönderilmez.
+
+Golden request:
+
+```
+POST /api/v1/profiles/otheruser/block
+Authorization: Bearer <accessToken>
+```
+
+Başarı:
+
+```
+200 OK
+```
+
+Golden response:
 
 ```
 {
-  "username": "ilkan",
-  "email": "ilkan@example.com",
-  "password": "StrongPassword123!",
-  "displayName": "İlkan"
+  "username": "otheruser",
+  "isBlocked": true
 }
 ```
 
-Login
+Yanıt alanları:
+
+AlanTürZorunluNull
+usernamestringEvetHayır
+isBlockedbooleanEvetHayır
+
+Kurallar:
+
+Kullanıcı kendisini engellerse 400.
+
+Hedef kullanıcı bulunamazsa 404.
+
+Aynı block tekrar oluşturulursa ikinci kayıt açılmaz.
+
+Tekrarlanan create yine 200 döndürür.
+
+Block oluşturulduğunda iki kullanıcı arasındaki mevcut follow ilişkileri kaldırılır.
+
+17.2 DELETE /api/v1/profiles/{username}/block
+
+Auth: Bearer
+
+İstek gövdesi: Yok
+
+Golden request:
+
+```
+DELETE /api/v1/profiles/otheruser/block
+Authorization: Bearer <accessToken>
+```
+
+Başarı:
+
+```
+204 No Content
+```
+
+Yanıt gövdesi: Yok
+
+Kurallar:
+
+Block yoksa işlem idempotent olarak yine 204 döndürür.
+
+Engelin kaldırılması eski follow ilişkilerini geri oluşturmaz.
+
+17.3 GET /api/v1/blocks
+
+Auth: Bearer
+
+İstek gövdesi: Yok
+
+Read semantiği:
+
+Yalnızca oturum sahibinin engellediği kullanıcılar döndürülür.
+
+Başarı:
+
+```
+200 OK
+```
+
+Golden response:
 
 ```
 {
-  "login": "ilkan",
-  "password": "StrongPassword123!"
+  "items": [
+    {
+      "id": 22,
+      "username": "otheruser",
+      "displayName": "Other User",
+      "avatarUrl": null,
+      "blockedAt": "2026-08-08T12:00:00Z"
+    }
+  ]
 }
 ```
 
-Profil güncelleme
+Yanıt alanları:
+
+AlanTürZorunluNull
+itemsarrayEvetHayır
+items[].idintegerEvetHayır
+items[].usernamestringEvetHayır
+items[].displayNamestringEvetHayır
+items[].avatarUrlstringEvetEvet
+items[].blockedAtUTC ISO 8601 stringEvetHayır
+
+Empty state:
+
+```
+{
+  "items": []
+}
+```
+
+Kayıt yokken 404 kullanılmaz.
+
+18. Reports
+
+18.1 POST /api/v1/reports
+
+Auth: Bearer
+
+Create semantiği:
+
+Gövdede report id bulunmaz.
+
+Reporter kimliği token üzerinden belirlenir.
+
+Hedef targetType ve targetId ile belirlenir.
+
+İstek alanları:
+
+AlanTürZorunluNull
+targetTypeReportTargetTypeEvetHayır
+targetIdintegerEvetHayır
+reasonReportReasonEvetHayır
+detailsstringHayırEvet
+
+details maksimum 500 karakterdir.
+
+Golden post-report request:
+
+```
+{
+  "targetType": "Post",
+  "targetId": 15,
+  "reason": "Harassment",
+  "details": "Repeated targeted insults."
+}
+```
+
+Golden user-report request:
+
+```
+{
+  "targetType": "User",
+  "targetId": 22,
+  "reason": "Impersonation",
+  "details": null
+}
+```
+
+Alternatif request alanları geçersizdir:
+
+```
+postId
+userId
+reportType
+categoryCode
+targetIdentifier
+```
+
+Başarı:
+
+```
+201 Created
+```
+
+Golden response:
+
+```
+{
+  "id": 41,
+  "targetType": "Post",
+  "targetId": 15,
+  "reason": "Harassment",
+  "details": "Repeated targeted insults.",
+  "status": "Pending",
+  "createdAt": "2026-08-08T12:15:00Z"
+}
+```
+
+Yanıt alanları:
+
+AlanTürZorunluNull
+idintegerEvetHayır
+targetTypeReportTargetTypeEvetHayır
+targetIdintegerEvetHayır
+reasonReportReasonEvetHayır
+detailsstringEvetEvet
+statusReportStatusEvetHayır
+createdAtUTC ISO 8601 stringEvetHayır
+
+HTTP semantiği:
+
+Target bulunamazsa 404.
+
+Kullanıcı kendi hesabını şikâyet ederse 400.
+
+Kullanıcı kendi postunu şikâyet ederse 400.
+
+Aynı reporter ve target için Pending report varsa 409.
+
+Geçersiz enum 400.
+
+details 500 karakteri aşarsa 400.
+
+Report oluşturulması hedefi otomatik kaldırmaz.
+
+19. Moderation
+
+Tüm endpoint'ler:
+
+```
+Authorization: Bearer <accessToken>
+```
+
+ve Moderator rolü gerektirir.
+
+Normal User rolü:
+
+```
+403 Forbidden
+```
+
+19.1 GET /api/v1/moderation/reports
+
+Auth: Moderator
+
+İstek gövdesi: Yok
+
+Opsiyonel query:
+
+```
+status=Pending
+status=Resolved
+status=Dismissed
+```
+
+Query verilmezse:
+
+```
+Pending
+```
+
+Başarı:
+
+```
+200 OK
+```
+
+Golden response:
+
+```
+{
+  "items": [
+    {
+      "id": 41,
+      "reporterUserId": 7,
+      "targetType": "Post",
+      "targetId": 15,
+      "reason": "Harassment",
+      "details": "Repeated targeted insults.",
+      "status": "Pending",
+      "createdAt": "2026-08-08T12:15:00Z",
+      "resolvedAt": null,
+      "resolvedByUserId": null
+    }
+  ]
+}
+```
+
+Yanıt alanları:
+
+AlanTürZorunluNull
+itemsarrayEvetHayır
+items[].idintegerEvetHayır
+items[].reporterUserIdintegerEvetHayır
+items[].targetTypeReportTargetTypeEvetHayır
+items[].targetIdintegerEvetHayır
+items[].reasonReportReasonEvetHayır
+items[].detailsstringEvetEvet
+items[].statusReportStatusEvetHayır
+items[].createdAtUTC ISO 8601 stringEvetHayır
+items[].resolvedAtUTC ISO 8601 stringEvetEvet
+items[].resolvedByUserIdintegerEvetEvet
+
+Empty state:
+
+```
+{
+  "items": []
+}
+```
+
+Boş kuyruk 404 değildir.
+
+19.2 GET /api/v1/moderation/reports/{reportId}
+
+Auth: Moderator
+
+İstek gövdesi: Yok
+
+Başarı:
+
+```
+200 OK
+```
+
+Golden response:
+
+```
+{
+  "id": 41,
+  "reporterUserId": 7,
+  "targetType": "Post",
+  "targetId": 15,
+  "reason": "Harassment",
+  "details": "Repeated targeted insults.",
+  "status": "Pending",
+  "createdAt": "2026-08-08T12:15:00Z",
+  "resolvedAt": null,
+  "resolvedByUserId": null
+}
+```
+
+Report bulunamazsa:
+
+```
+404 Not Found
+```
+
+19.3 POST /api/v1/moderation/reports/{reportId}/resolve
+
+Auth: Moderator
+
+Update semantiği:
+
+Report path içindeki reportId ile belirlenir.
+
+Gövdede report id bulunmaz.
+
+İstek alanları:
+
+AlanTürZorunluNull
+actionModerationActionEvetHayır
+notestringHayırEvet
+
+note maksimum 500 karakterdir.
+
+Golden RemovePost request:
+
+```
+{
+  "action": "RemovePost",
+  "note": "Content violates harassment policy."
+}
+```
+
+Golden NoAction request:
+
+```
+{
+  "action": "NoAction",
+  "note": null
+}
+```
+
+Başarı:
+
+```
+200 OK
+```
+
+Golden response:
+
+```
+{
+  "id": 41,
+  "status": "Resolved",
+  "action": "RemovePost",
+  "resolvedAt": "2026-08-08T12:30:00Z",
+  "resolvedByUserId": 3
+}
+```
+
+Yanıt alanları:
+
+AlanTürZorunluNull
+idintegerEvetHayır
+statusReportStatusEvetHayır
+actionModerationActionEvetHayır
+resolvedAtUTC ISO 8601 stringEvetHayır
+resolvedByUserIdintegerEvetHayır
+
+Kurallar:
+
+Report bulunamazsa 404.
+
+Report Pending değilse 409.
+
+RemovePost yalnızca targetType=Post için geçerlidir.
+
+RemovePost bir User report için kullanılırsa 400.
+
+RemovePost fiziksel DELETE yapmaz.
+
+NoAction target kaynağı değiştirmez.
+
+Başarılı işlem audit kaydı oluşturur.
+
+19.4 POST /api/v1/moderation/reports/{reportId}/dismiss
+
+Auth: Moderator
+
+Update semantiği:
+
+Report path içindeki reportId ile belirlenir.
+
+Gövdede id bulunmaz.
+
+İstek alanları:
+
+AlanTürZorunluNull
+notestringHayırEvet
+
+note maksimum 500 karakterdir.
+
+Golden request:
+
+```
+{
+  "note": "No policy violation found."
+}
+```
+
+Başarı:
+
+```
+200 OK
+```
+
+Golden response:
+
+```
+{
+  "id": 41,
+  "status": "Dismissed",
+  "resolvedAt": "2026-08-08T12:35:00Z",
+  "resolvedByUserId": 3
+}
+```
+
+Yanıt alanları:
+
+AlanTürZorunluNull
+idintegerEvetHayır
+statusReportStatusEvetHayır
+resolvedAtUTC ISO 8601 stringEvetHayır
+resolvedByUserIdintegerEvetHayır
+
+Kurallar:
+
+Report bulunamazsa 404.
+
+Report Pending değilse 409.
+
+Dismiss target kaynağını değiştirmez.
+
+Başarılı işlem audit kaydı oluşturur.
+
+20. Block görünürlük semantiği
+
+Block ilişkisi aşağıdaki mevcut kaynaklarda server-side uygulanır:
+
+```
+GET /api/v1/feed
+GET /api/v1/profiles/{username}
+POST /api/v1/profiles/{username}/follow
+POST /api/v1/posts/{postId}/likes
+POST /api/v1/posts/{postId}/replies
+```
+
+Kurallar:
+
+Engelli hesapların postları feed'den filtrelenir.
+
+İki kullanıcı arasında block varsa yeni follow oluşturulamaz.
+
+Block nedeniyle görünmeyen profile erişim 404 döndürür.
+
+Block nedeniyle görünmeyen post üzerinde like/reply 404 döndürür.
+
+Response block ilişkisinin varlığını ayrıca açıklamaz.
+
+Block oluşturulduğunda iki yöndeki mevcut follow ilişkileri kaldırılır.
+
+Unblock eski follow ilişkisini geri getirmez.
+
+21. Moderasyon ile kaldırılmış gönderi semantiği
+
+RemovePost sonucunda soft-delete edilmiş post:
+
+feed'de dönmez,
+
+normal görünür post kabul edilmez,
+
+yeni like kabul etmez,
+
+yeni reply kabul etmez.
+
+Görünmeyen soft-delete post için ilişkili kaynak işlemleri:
+
+```
+404 Not Found
+```
+
+Mobil istemci moderasyon kaldırması için:
+
+```
+DELETE /api/v1/posts/{postId}
+```
+
+endpoint'ini kullanmaz.
+
+Standart DELETE endpoint'inin gönderi sahipliği semantiği değişmez.
+
+22. HTTP Create / Update / Read kuralları
+
+Create
+
+Yeni kaynak create işlemi:
+
+```
+POST /collection
+```
+
+Gövdede server tarafından üretilecek kaynak kimliği bulunmaz.
+
+Bu kural:
+
+register,
+
+posts,
+
+replies,
+
+block,
+
+reports
+
+create akışları için geçerlidir.
+
+Update
+
+Mevcut kaynağın güncellenmesi canonical path üzerinden yapılır.
+
+Örnek:
+
+```
+PUT /api/v1/me
+```
+
+Moderasyon state transition işlemleri action endpoint'leri üzerinden gerçekleştirilir:
+
+```
+POST /api/v1/moderation/reports/{reportId}/resolve
+POST /api/v1/moderation/reports/{reportId}/dismiss
+```
+
+Request body içinde path kimliği tekrar edilmez.
+
+Read
+
+Tek kaynağın path ile seçildiği GET endpoint'lerinde kayıt bulunamazsa:
+
+```
+404 Not Found
+```
+
+Collection endpoint'lerinde kayıt olmaması:
+
+```
+200 OK
+```
+
+ve boş collection döndürür.
+
+Örnek:
+
+```
+{
+  "items": []
+}
+```
+
+Bu davranış özellikle:
+
+```
+GET /api/v1/feed
+GET /api/v1/blocks
+GET /api/v1/moderation/reports
+```
+
+için empty state anlamına gelir.
+
+23. Golden sample kuralı
+
+Backend integration testindeki PostAsJsonAsync ve PutAsJsonAsync request gövdeleri bu dokümandaki golden JSON ile aynı alan adlarını kullanmalıdır.
+
+Özellikle:
+
+Post:
+
+```
+{
+  "content": "Merhaba Pulse."
+}
+```
+
+Reply:
+
+```
+{
+  "content": "Katılıyorum."
+}
+```
+
+Profile update:
 
 ```
 {
   "displayName": "İlkan Kişi",
-  "bio": "Flutter ve .NET geliştiricisi",
+  "bio": "Pulse kullanıcısı",
   "avatarUrl": null
 }
 ```
 
-Gönderi oluşturma
+Report:
 
 ```
 {
-  "content": "Pulse üzerindeki ilk gönderim."
+  "targetType": "Post",
+  "targetId": 15,
+  "reason": "Harassment",
+  "details": "Repeated targeted insults."
 }
 ```
 
-Yanıt oluşturma
+Moderation resolve:
 
 ```
 {
-  "content": "Bu gönderiye katılıyorum."
+  "action": "RemovePost",
+  "note": "Content violates harassment policy."
 }
 ```
 
-18. Backend Agent düzeltme aktarımı
+Mobil bu alanların yerine alternatif property isimleri kullanamaz.
 
-Dosya veya alanDüzeltme
-Program.csDuplicate ve unprefixed route map edilmemeli
-Endpoints/MvpEndpoints.csLegacy /me, /feed, /posts, /profiles kaldırılmalı
-Endpoints/AuthEndpoints.csRegister/login anonim kalmalı
-Endpoints/ProfileEndpoints.csCanonical me/profile/follow yolları kullanılmalı
-Endpoints/FeedEndpoints.cs/api/v1/feed, Bearer auth ve doğrudan JSON dizi
-Endpoints/PostEndpointRoutes.csCreate/delete/reply/like yolları matrise uymalı
-Contracts/ApiContracts.cscontent, integer ID, login, expiresIn alanları kullanılmalı
+24. Enum casing kuralı
 
-19. Mobile Agent düzeltme aktarımı
+Enum string değerleri case-sensitive canonical değerler olarak değerlendirilir.
 
-AlanDüzeltme
-Auth requestlogin alanını kullan
-Auth responseexpiresIn alanını parse et
-Profile repository/api/v1/me ve /api/v1/profiles/{username}
-Feed repositoryYalnızca /api/v1/feed
-Feed fallbackKaldır
-Feed 404Empty değil error
-Post modelicontent, parentPostId, integer ID
-Like response200 + response gövdesini parse et
-Follow response200 + response gövdesini parse et
+ReportTargetType:
 
-20. Sözleşme doğrulama kriterleri
+```
+Post
+User
+```
 
-/health anonim olarak 200 döndürür.
+ReportReason:
 
-Health gövdesi tam olarak {"status":"ok"} olur.
+```
+Spam
+Harassment
+HateSpeech
+Violence
+SexualContent
+Impersonation
+Other
+```
 
-Register ve login anonimdir.
+ReportStatus:
 
-Diğer endpoint'ler Bearer token ister.
+```
+Pending
+Resolved
+Dismissed
+```
 
-Canonical olmayan yollar çalışmaz.
+ModerationAction:
 
-Tüm kimlikler integer'dır.
+```
+NoAction
+RemovePost
+```
 
-Gönderi alanı content olur.
+Aşağıdaki örnekler canonical değildir:
 
-content en fazla 280 karakterdir.
+```
+post
+user
+spam
+harassment
+pending
+resolved
+remove_post
+removePost
+```
 
-İkinci seviye yanıt reddedilir.
+25. Kimlik kararı
 
-Feed response'u doğrudan JSON dizisidir.
+Güncel Pulse MVP kaynak kimlikleri integer'dır.
 
-Feed empty state yalnızca 200 ve [] ile oluşur.
+Backend:
 
-Mobil feed fallback route kullanmaz.
+```
+int Id
+```
 
-Login isteği login alanını kullanır.
+Mobil:
 
-Token süresi expiresIn alanından okunur.
+```
+final int id;
+```
 
-Like ve follow işlemleri 200 response gövdelerini parse eder.
+API:
+
+```
+{
+  "id": 1
+}
+```
+
+UUID string kullanılmaz.
+
+26. Gönderi alan adları
+
+Bir gönderinin canonical temel alanları:
+
+```
+id
+author
+content
+parentPostId
+createdAt
+likeCount
+replyCount
+isLikedByMe
+```
+
+Kullanıcı tarafından oluşturulan metin alanı:
+
+```
+content
+```
+
+Geçersiz alternatifler:
+
+```
+title
+description
+text
+body
+```
+
+Mobil UI bir gönderi başlığı benzeri görsel öğe üretse bile backend request/response alanını title olarak değiştirmez.
+
+27. Güvenlik ve moderasyon hata örnekleri
+
+Self-block:
+
+```
+{
+  "error": "You cannot block yourself.",
+  "field": null
+}
+```
+
+Duplicate pending report:
+
+```
+{
+  "error": "A pending report already exists for this target.",
+  "field": null
+}
+```
+
+Geçersiz report reason:
+
+```
+{
+  "error": "Invalid report reason.",
+  "field": "reason"
+}
+```
+
+Geçersiz moderation action:
+
+```
+{
+  "error": "Invalid moderation action.",
+  "field": "action"
+}
+```
+
+Moderator rolü yok:
+
+```
+{
+  "error": "You are not authorized to perform this action.",
+  "field": null
+}
+```
+
+Daha önce sonuçlandırılmış report:
+
+```
+{
+  "error": "The report has already been resolved.",
+  "field": null
+}
+```
+
+28. Authorization özeti
+
+Anonim:
+
+```
+GET /health
+POST /api/v1/auth/register
+POST /api/v1/auth/login
+```
+
+Bearer:
+
+```
+GET /api/v1/me
+PUT /api/v1/me
+GET /api/v1/profiles/{username}
+POST /api/v1/profiles/{username}/follow
+DELETE /api/v1/profiles/{username}/follow
+GET /api/v1/feed
+POST /api/v1/posts
+DELETE /api/v1/posts/{postId}
+POST /api/v1/posts/{postId}/replies
+POST /api/v1/posts/{postId}/likes
+DELETE /api/v1/posts/{postId}/likes
+POST /api/v1/profiles/{username}/block
+DELETE /api/v1/profiles/{username}/block
+GET /api/v1/blocks
+POST /api/v1/reports
+```
+
+Bearer + Moderator:
+
+```
+GET /api/v1/moderation/reports
+GET /api/v1/moderation/reports/{reportId}
+POST /api/v1/moderation/reports/{reportId}/resolve
+POST /api/v1/moderation/reports/{reportId}/dismiss
+```
+
+29. Tek kaynak kuralı
+
+Bu doküman backend ve mobil arasında API sözleşmesinin tek kaynağıdır.
+
+Backend DTO alanı ile mobil model alanı farklı isim kullanamaz.
+
+Aynı davranış için ikinci route tanımlanamaz.
+
+Legacy fallback kullanılamaz.
+
+Yeni modül eklendiğinde:
+
+ayrı endpoint bölümü,
+
+HTTP method + path,
+
+auth,
+
+request body alanları,
+
+response body alanları,
+
+enum listeleri,
+
+golden request,
+
+golden response,
+
+HTTP semantiği,
+
+empty-state/404 anlamı
+
+bu dosyada açık şekilde tanımlanmadan implementasyona başlanmamalıdır.

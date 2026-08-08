@@ -24,6 +24,14 @@ MVP aşağıdaki yetenekleri kapsar:
 - Gönderi beğenme
 - Beğeniyi kaldırma
 - Bir gönderiye tek seviyeli yanıt yazma
+- Kullanıcı engelleme
+- Kullanıcı engelini kaldırma
+- Engellenen kullanıcıları listeleme
+- Gönderi şikâyeti oluşturma
+- Kullanıcı şikâyeti oluşturma
+- Moderatör şikâyet kuyruğu
+- Moderatör şikâyet detayı
+- Moderasyon kararı verme
 - Loading, empty, unauthorized ve error durumları
 
 Aşağıdaki özellikler güncel MVP endpoint matrisine dahil değildir:
@@ -32,12 +40,26 @@ Aşağıdaki özellikler güncel MVP endpoint matrisine dahil değildir:
 - Bildirimler
 - Yer imleri
 - Yeniden paylaşım
-- Kullanıcı engelleme
-- Şikâyet yönetimi
 - Medya yükleme
 - Çok seviyeli yanıt ağacı
+- Otomatik yapay zekâ moderasyonu
+- Otomatik medya tarama
+- IP tabanlı engelleme
 
 Bu özellikler ayrı bir mimari ve API kontratı oluşturulmadan backend veya mobil uygulamada zorunlu kabul edilmez.
+
+### 2.1 Güvenlik ve moderasyon kapsamı
+
+Güvenlik ve Moderasyon fazının amacı kullanıcıların istenmeyen hesaplarla etkileşimini sonlandırabilmesi ve topluluk kurallarını ihlal ettiği düşünülen kullanıcı veya gönderileri moderasyon kuyruğuna iletebilmesidir.
+
+Bu fazda:
+
+- Engelleme işlemi kullanıcılar arasında yönlü bir ilişki oluşturur.
+- Şikâyet oluşturulması hedef kaynağı otomatik kaldırmaz.
+- Moderasyon kararı yalnızca `Moderator` rolüne sahip kullanıcı tarafından verilebilir.
+- Moderasyon işlemleri server-side yetkilendirilir.
+- Moderasyon sonucu kaldırılan gönderiler fiziksel olarak silinmez; audit gereksinimi nedeniyle soft-delete uygulanır.
+- Moderasyon kararları denetlenebilir bir kayıt olarak saklanır.
 
 ## 3. Teknoloji yığını
 
@@ -104,6 +126,8 @@ OPTIONS
 
 Tarayıcı preflight OPTIONS istekleri başarılı şekilde cevaplanmalıdır.
 
+Flutter web istemcisinden http://127.0.0.1:5000 API adresine yapılan Bearer token içeren isteklerin CORS nedeniyle engellenmemesi zorunludur.
+
 6. Sistem bileşenleri
 
 ```
@@ -121,12 +145,17 @@ ASP.NET Core Web API
             +-- Replies
             +-- Likes
             +-- Follows
+            +-- Blocks
+            +-- Reports
+            +-- Moderation
             |
             v
        PostgreSQL
 ```
 
 Sistem ilk sürümde modüler monolit olarak geliştirilir.
+
+Güvenlik ve Moderasyon fazı için ayrı mikroservis zorunlu değildir.
 
 7. Backend katmanları
 
@@ -150,6 +179,9 @@ backend/
       Feed/
       Posts/
       Follows/
+      Blocks/
+      Reports/
+      Moderation/
       Common/
 
     Pulse.Domain/
@@ -176,6 +208,32 @@ Pulse.Infrastructure -> Pulse.Domain
 ```
 
 Domain katmanı ASP.NET Core, Entity Framework Core veya HTTP ayrıntılarına bağımlı olmamalıdır.
+
+7.1 Güvenlik ve moderasyon backend sorumlulukları
+
+Backend:
+
+Kullanıcı kimliğini JWT üzerinden belirler.
+
+Block ilişkisini kalıcı olarak saklar.
+
+Block görünürlük ve etkileşim kurallarını server-side uygular.
+
+Kullanıcı kendisini engellemeye çalıştığında isteği reddeder.
+
+Yeni block oluşturulduğunda iki kullanıcı arasındaki mevcut follow ilişkilerini kaldırır.
+
+Şikâyet request doğrulamasını yapar.
+
+Aynı reporter ve aynı target için ikinci Pending şikâyeti engeller.
+
+Moderasyon endpoint'lerinde Moderator rolünü doğrular.
+
+Moderasyon kararını ve audit kaydını aynı transaction sınırında işler.
+
+Moderasyonla kaldırılan postları feed ve etkileşim sorgularından filtreler.
+
+Mobil istemcinin UI tabanlı güvenlik kararlarına güvenmez.
 
 8. Mobil katmanlar
 
@@ -216,27 +274,66 @@ mobile/
         data/
         domain/
         presentation/
+
+      moderation/
+        data/
+        domain/
+        presentation/
 ```
 
-Mobil istemci backend JSON alanlarını yeniden adlandırmaz.
+Mobil istemci backend kontratındaki camelCase alanları birebir kullanır.
 
-Güncel Pulse gönderi alanı:
+Mobil katman:
 
-```
-content
-```
+endpoint isimleri uydurmaz,
 
-Mobil modelde description, title, text veya body alanı oluşturulmaz.
+canonical endpoint yerine legacy fallback kullanmaz,
 
-9. Orchestrator sağlık kontrolü
+backend alanlarını yeniden adlandırmaz,
 
-Workspace başlatma işlemi aşağıdaki endpoint'e bağlıdır:
+token yoksa korumalı kaynağa anonim istek göndermez,
+
+server-side authorization yerine yalnızca UI gizlemeye güvenmez.
+
+8.1 Güvenlik ve moderasyon mobil sorumlulukları
+
+Mobil:
+
+Profil üzerinden kullanıcıyı engelleme aksiyonunu sunabilir.
+
+Engelli kullanıcı için engeli kaldırma aksiyonunu sunabilir.
+
+Engellenen kullanıcıları listeleyebilir.
+
+Profil üzerinden kullanıcı şikâyeti formunu açabilir.
+
+Gönderi üzerinden gönderi şikâyeti formunu açabilir.
+
+Başarılı şikâyet oluşturulmasını hedef içeriğin kaldırıldığı şeklinde yorumlamaz.
+
+401 durumunda mevcut oturum yenileme/login davranışını kullanır.
+
+403 durumunu yetki hatası olarak işler.
+
+404 durumunda gizlenen veya bulunamayan kaynağın nedenini istemci tarafında tahmin etmez.
+
+Moderasyon ekranlarının görünürlüğünü rol bilgisi mevcutsa sınırlandırabilir; nihai karar yine backend'indir.
+
+9. Health endpoint
+
+Orchestrator backend'i aşağıdaki endpoint ile kontrol eder:
 
 ```
 GET /health
 ```
 
 Başarı:
+
+```
+200 OK
+```
+
+Gövde:
 
 ```
 {
@@ -246,26 +343,26 @@ Başarı:
 
 Kurallar:
 
-HTTP durum kodu 200 olmalıdır.
+/health /api/v1 altında değildir.
 
-Endpoint /api/v1 altında değildir.
+Kimlik doğrulama gerektirmez.
 
-Endpoint anonimdir.
+JWT doğrulamasına bağımlı değildir.
 
-Bearer token istemez.
+Kullanıcı CRUD endpoint'lerinden ayrı bir orchestrator sağlık kontrolüdür.
 
-CRUD endpoint'lerinden bağımsızdır.
+Workspace başlangıcı bu endpoint'in başarılı olmasına bağlıdır.
 
-10. JWT yapılandırması
+10. JWT ve yerel orchestrator başlangıcı
 
-Orchestrator backend'i şu ortamda başlatır:
+Orchestrator backend'i aşağıdaki çalışma biçimiyle başlatır:
 
 ```
 dotnet run --no-launch-profile
 ASPNETCORE_ENVIRONMENT=Development
 ```
 
-appsettings.Development.json aşağıdaki ayarları içermelidir:
+Development ortamında appsettings.Development.json içinde aşağıdaki ayarlar bulunmalıdır:
 
 ```
 {
@@ -279,57 +376,50 @@ appsettings.Development.json aşağıdaki ayarları içermelidir:
 
 Kurallar:
 
-Development anahtarı en az 32 byte olmalıdır.
+Jwt:Key en az 32 byte olmalıdır.
 
-Development ortamı production secret eksikliği nedeniyle çökmemelidir.
+Development ortamı production secret bulunmadığı için çökmemelidir.
 
-Production ortamında Jwt:Key environment variable veya secret store üzerinden sağlanmalıdır.
+Development değeri yalnızca yerel geliştirme içindir.
 
-Production secret repoda tutulmamalıdır.
+Production ortamında Jwt:Key environment variable veya secret store üzerinden verilmelidir.
 
-Anonim endpoint'ler:
+Production secret repoya commit edilmez.
 
-GET /health
+GET /health anonimdir.
 
-POST /api/v1/auth/register
+POST /api/v1/auth/register anonimdir.
 
-POST /api/v1/auth/login
+POST /api/v1/auth/login anonimdir.
 
-Diğer tüm güncel Pulse endpoint'leri Bearer token gerektirir.
+Diğer kullanıcı kaynakları Bearer token gerektirir.
 
-11. Canonical endpoint sınırı
+/api/v1/moderation/** kaynakları ayrıca Moderator rolü gerektirir.
 
-Uygulamanın canonical endpoint grupları:
-
-```
-/health
-/api/v1/auth/*
-/api/v1/me
-/api/v1/profiles/*
-/api/v1/feed
-/api/v1/posts/*
-```
-
-Aşağıdaki legacy yollar map edilmemelidir:
+Korumalı istek:
 
 ```
-/register
-/login
-/me
-/feed
-/posts
-/profiles/{username}
-/api/v1/auth/me
-/api/v1/users/{username}
-/api/v1/users/me
-/api/v1/users/{username}/follow
+Authorization: Bearer <token>
 ```
 
-Aynı davranış için birden fazla route tanımlanması yasaktır.
+10.1 Roller
 
-12. Kimlik kararı
+Canonical roller:
 
-Güncel Pulse MVP kaynak kimlikleri integer'dır.
+```
+User
+Moderator
+```
+
+User standart uygulama kullanıcısıdır.
+
+Moderator, standart kullanıcı haklarına ek olarak moderasyon kuyruğunu okuyabilir ve şikâyet sonuçlandırabilir.
+
+Geçerli Bearer token olup gerekli rol bulunmadığında backend 403 Forbidden döndürür.
+
+11. Kimlik modeli
+
+Pulse kaynak kimlikleri integer'dır.
 
 Backend:
 
@@ -351,11 +441,11 @@ API:
 }
 ```
 
-UUID string kullanılmaz.
+UUID string kaynak kimliği olarak kullanılmaz.
 
-13. Gönderi modeli
+12. Gönderi modeli
 
-Bir gönderi aşağıdaki temel alanlardan oluşur:
+Bir gönderinin temel alanları:
 
 id
 
@@ -371,212 +461,636 @@ likeCount
 
 replyCount
 
-isLikedByCurrentUser
+Gönderinin kullanıcı tarafından girilen metin alanı yalnızca content adını kullanır.
+
+Maksimum uzunluk:
+
+```
+280 karakter
+```
+
+Alternatif alan isimleri kullanılmaz:
+
+title
+
+description
+
+text
+
+body
+
+Tek seviyeli reply modeli kullanılır.
+
+Yeni reply yalnızca kök gönderiye bağlıdır. Çok seviyeli reply ağacı bu kapsamda yoktur.
+
+13. Profil modeli
+
+Profil oturum sahibi veya başka bir kullanıcı için görüntülenebilir.
+
+Canonical kaynak yolları:
+
+```
+GET /api/v1/me
+PUT /api/v1/me
+GET /api/v1/profiles/{username}
+```
+
+Legacy /api/v1/users/... yolları kullanılmaz.
+
+Profil alanlarının HTTP sözleşmesi docs/api-contract.md içinde tanımlanır.
+
+14. Feed
+
+Feed kronolojiktir.
+
+Temel sıra:
+
+```
+createdAt DESC
+```
+
+Feed yalnızca kullanıcının görmeye yetkili olduğu gönderileri döndürür.
+
+Aşağıdaki gönderiler feed'den filtrelenir:
+
+soft-delete edilmiş gönderiler,
+
+oturum sahibi ile arasında block ilişkisi bulunan kullanıcıların gönderileri.
+
+Block filtresi iki yönlü görünürlük uygular. A kullanıcısının B'yi engellemiş olması halinde A ve B birbirlerinin gönderilerini feed içinde görmez.
+
+15. Takip
+
+Follow ilişkisi kullanıcılar arasında yönlüdür.
+
+Canonical endpoint'ler:
+
+```
+POST /api/v1/profiles/{username}/follow
+DELETE /api/v1/profiles/{username}/follow
+```
+
+Block ilişkisi bulunan iki kullanıcı arasında yeni follow oluşturulamaz.
+
+Yeni block oluşturulduğunda iki yönlü mevcut follow kayıtları kaldırılır.
+
+Engelin kaldırılması silinen follow kayıtlarını otomatik geri getirmez.
+
+16. Beğeni
+
+Bir kullanıcı aynı gönderiyi en fazla bir kez beğenebilir.
+
+Canonical endpoint'ler:
+
+```
+POST /api/v1/posts/{postId}/likes
+DELETE /api/v1/posts/{postId}/likes
+```
+
+Aşağıdaki gönderilere yeni beğeni oluşturulamaz:
+
+soft-delete edilmiş gönderi,
+
+block nedeniyle kullanıcıya görünmeyen gönderi.
+
+17. Yanıtlar
+
+Canonical endpoint:
+
+```
+POST /api/v1/posts/{postId}/replies
+```
+
+Yanıt alanı:
+
+```
+content
+```
+
+Maksimum:
+
+```
+280 karakter
+```
+
+Aşağıdaki gönderilere reply oluşturulamaz:
+
+soft-delete edilmiş gönderi,
+
+block nedeniyle kullanıcıya görünmeyen gönderi.
+
+18. Kullanıcı engelleme
+
+Engelleme yönlü bir ilişkidir.
+
+Örnek:
+
+```
+A -> B
+```
+
+A, B'yi engellediğinde:
+
+A ve B birbirlerinin gönderilerini feed içinde görmez.
+
+A ve B birbirini takip edemez.
+
+Mevcut A -> B ve B -> A follow ilişkileri kaldırılır.
+
+A ve B birbirlerinin gönderilerine yeni like veremez.
+
+A ve B birbirlerinin gönderilerine yeni reply oluşturamaz.
+
+Doğrudan görünmez profile erişim 404 Not Found olarak değerlendirilir.
+
+Görünürlük sebebi response içinde açıklanmaz. Böylece başka kullanıcıya block ilişkisinin ayrıntıları gereksiz şekilde sızdırılmaz.
+
+Kullanıcı kendisini engelleyemez.
+
+Aynı kullanıcıyı tekrar engelleme idempotenttir ve ikinci block kaydı oluşturmaz.
+
+Engeli kaldırma da idempotenttir.
+
+18.1 Block veri modeli
+
+```
+user_blocks
+  blocker_user_id
+  blocked_user_id
+  created_at
+```
+
+Anahtar:
+
+```
+PRIMARY KEY (blocker_user_id, blocked_user_id)
+```
+
+Foreign key'ler:
+
+```
+blocker_user_id -> users.id
+blocked_user_id -> users.id
+```
+
+blocker_user_id ve blocked_user_id eşit olamaz.
+
+19. Şikâyet sistemi
+
+Bir şikâyet tam olarak bir hedefe yönelir.
+
+Hedef tipleri:
+
+```
+Post
+User
+```
+
+Canonical ReportReason değerleri:
+
+```
+Spam
+Harassment
+HateSpeech
+Violence
+SexualContent
+Impersonation
+Other
+```
+
+Canonical ReportStatus değerleri:
+
+```
+Pending
+Resolved
+Dismissed
+```
 
 Kurallar:
 
-content zorunludur.
+Kullanıcı kendi hesabını şikâyet edemez.
 
-Trim sonrası boş olamaz.
+Kullanıcı kendi gönderisini şikâyet edemez.
 
-En fazla 280 karakterdir.
+Aynı reporter ve aynı hedef için açık Pending şikâyet varken ikinci kayıt oluşturulamaz.
 
-Ana gönderide parentPostId null olur.
+Duplicate pending istek 409 Conflict döndürür.
 
-Yanıtta parentPostId üst gönderinin kimliğidir.
+details opsiyoneldir.
 
-Bir yanıta tekrar yanıt oluşturulamaz.
+details en fazla 500 karakterdir.
 
-14. Feed mimarisi
+Şikâyet oluşturulması hedef kaynağı otomatik kaldırmaz.
 
-Mobil feed repository'sinin tek kaynağı:
-
-```
-GET /api/v1/feed
-Authorization: Bearer <token>
-```
-
-Başarılı response doğrudan JSON dizisidir:
+19.1 Report veri modeli
 
 ```
-[]
+reports
+  id
+  reporter_user_id
+  target_type
+  target_post_id
+  target_user_id
+  reason
+  details
+  status
+  created_at
+  resolved_at
+  resolved_by_user_id
 ```
 
-Durum ayrımı:
+Kurallar:
 
-Loading: istek devam ediyor.
+target_type=Post:
 
-Success: 200 ve en az bir gönderi.
+```
+target_post_id NOT NULL
+target_user_id NULL
+```
 
-Empty: yalnızca 200 ve boş JSON dizisi.
+target_type=User:
 
-Unauthorized: 401.
+```
+target_user_id NOT NULL
+target_post_id NULL
+```
 
-Error: 403, 404, 500, bağlantı veya parse hatası.
+Veritabanı constraint'i aynı report için iki hedefin birden dolu olmasını engeller.
 
-Mobil feed repository aşağıdaki fallback yollarını denemez:
+20. Moderasyon
 
-/api/v1/posts
+Moderasyon endpoint'leri yalnızca Moderator rolüne açıktır.
 
-/feed
+Canonical moderasyon aksiyonları:
 
-/posts
+```
+NoAction
+RemovePost
+```
 
-404 yanıtının boş listeye dönüştürülmesi yasaktır. Bu davranış backend ile mobil arasındaki route hatasını gizler.
+20.1 NoAction
 
-15. Auth akışı
+NoAction:
+
+raporu Resolved yapar,
+
+hedef gönderi veya kullanıcı üzerinde değişiklik yapmaz,
+
+audit kaydı oluşturur.
+
+20.2 RemovePost
+
+RemovePost yalnızca Post hedefli rapor için kullanılabilir.
+
+Yanlış target tipi için:
+
+```
+400 Bad Request
+```
+
+RemovePost fiziksel DELETE uygulamaz.
+
+Gönderi soft-delete edilir.
+
+Önerilen alan:
+
+```
+posts.deleted_at timestamptz NULL
+```
+
+Soft-delete sonrası gönderi:
+
+feed'e girmez,
+
+doğrudan görünür kaynak olarak değerlendirilmez,
+
+yeni like kabul etmez,
+
+yeni reply kabul etmez.
+
+20.3 Dismiss
+
+Dismiss işlemi:
+
+raporu Dismissed yapar,
+
+hedef kaynağı değiştirmez,
+
+audit kaydı oluşturur.
+
+20.4 Moderasyon concurrency
+
+Yalnızca Pending durumundaki rapor sonuçlandırılabilir.
+
+Daha önce Resolved veya Dismissed olan rapor için yeni resolve/dismiss isteği:
+
+```
+409 Conflict
+```
+
+20.5 Moderasyon audit modeli
+
+```
+moderation_actions
+  id
+  report_id
+  moderator_user_id
+  action
+  note
+  created_at
+```
+
+note nullable ve en fazla 500 karakterdir.
+
+Moderasyon kararı, report durum değişikliği ve gerekli post soft-delete işlemi aynı transaction sınırında gerçekleştirilmelidir.
+
+21. Veritabanı
+
+Ana kalıcı veri deposu PostgreSQL'dir.
+
+Güvenlik ve Moderasyon için gereken ek tablolar:
+
+```
+user_blocks
+reports
+moderation_actions
+```
+
+Mevcut kullanıcı, gönderi, takip, beğeni ve reply tabloları korunur.
+
+Önerilen ilişkiler:
+
+```
+users 1 --- * user_blocks (blocker)
+users 1 --- * user_blocks (blocked)
+
+users 1 --- * reports (reporter)
+users 1 --- * reports (target user)
+posts 1 --- * reports (target post)
+
+reports 1 --- * moderation_actions
+users 1 --- * moderation_actions (moderator)
+```
+
+Index gereksinimleri:
+
+```
+user_blocks(blocker_user_id, blocked_user_id) UNIQUE
+reports(status, created_at)
+reports(reporter_user_id, target_type, target_post_id)
+reports(reporter_user_id, target_type, target_user_id)
+moderation_actions(report_id)
+```
+
+Duplicate Pending report kontrolü application katmanında yapılmalı ve mümkün olan yerde veritabanı bütünlük mekanizmalarıyla desteklenmelidir.
+
+22. Redis ve MinIO
+
+Bu Güvenlik ve Moderasyon fazı için:
+
+Redis zorunlu değildir.
+
+MinIO zorunlu değildir.
+
+PostgreSQL kalıcı block/report/moderation verileri için yeterlidir.
+
+İleride rate limiting, distributed cache veya medya moderasyonu eklenirse Redis/MinIO ihtiyacı ayrı görevde yeniden değerlendirilir.
+
+Architect docker-compose.yml yazmaz.
+
+Altyapı gereksinimlerinin compose karşılığı Infra Agent sorumluluğundadır.
+
+23. HTTP hata semantiği
+
+Genel anlamlar:
+
+```
+400 Validation veya iş kuralı hatası
+401 Token yok/geçersiz/süresi dolmuş
+403 Kimliği doğrulanmış kullanıcının yetkisi yetersiz
+404 Kaynak bulunamadı veya güvenlik nedeniyle görünmez
+409 Mevcut durumla çakışan işlem
+500 Beklenmeyen backend hatası
+```
+
+Block nedeniyle gizlenen bir kaynağın varlığını açıklamak yerine 404 kullanılabilir.
+
+Moderation rol eksikliği 403 olarak kalır.
+
+24. Ekran envanteri
+
+Anonim ekranlar:
+
+Login
+
+Register
+
+Token gerektiren standart ekranlar:
+
+Feed
+
+Profil
+
+Gönderi oluşturma
+
+Gönderi detayı
+
+Kullanıcı şikâyet formu
+
+Gönderi şikâyet formu
+
+Engellenen kullanıcılar
+
+Moderator rolü gerektiren ekranlar:
+
+Moderasyon kuyruğu
+
+Moderasyon şikâyet detayı
+
+Moderasyon karar ekranı
+
+25. Kullanıcı akışı
 
 ```
 Mermaid
 ```
 
-Register ve login yanıtı token ile kullanıcı özetini birlikte döndürür.
+Geçiş kuralları:
 
-Mobil:
+Login -> Register
 
-accessToken değerini güvenli storage'a yazar.
+Register -> Login
 
-tokenType değerinin Bearer olduğunu kabul eder.
+Login -> Feed
 
-Token süresini expiresIn saniye alanından hesaplar.
+Feed -> Profil
 
-401 durumunda token'ı temizler.
+Feed -> Gönderi detayı
 
-16. Ekran envanteri
+Feed -> Gönderi oluşturma
 
-16.1 Anonim ekranlar
+Profil -> Follow/Unfollow
 
-Auth Gate
+Profil -> Block/Unblock
 
-Giriş
+Profil -> Kullanıcı şikâyeti
 
-Kayıt
+Gönderi detayı -> Like/Unlike
 
-16.2 Token gerektiren ekranlar
+Gönderi detayı -> Reply
 
-Ana Feed
+Gönderi detayı -> Gönderi şikâyeti
 
-Gönderi Oluşturma
+Ayarlar -> Engellenen kullanıcılar
 
-Yanıt Oluşturma
+Engellenen kullanıcılar -> Profil
 
-Kendi Profili
+Feed -> Logout -> Login
 
-Başka Kullanıcı Profili
+Moderasyon kuyruğu -> Şikâyet detayı
 
-Profil Düzenleme
+Şikâyet detayı -> Moderasyon kararı
 
-17. Ekran geçişleri
+Moderasyon kararı -> Moderasyon kuyruğu
 
-```
-Mermaid
-```
+Token gerektiren route token olmadan açılmaya çalışılırsa login ekranına dönülür.
 
-Kurallar:
+Moderator route'u standart User rolüyle açılmamalıdır. Backend erişim kontrolü yine zorunludur.
 
-Token yoksa korumalı ekran giriş ekranına yönlendirilir.
+26. API kontratı tek kaynak kuralı
 
-Geçerli token varken giriş ve kayıt ekranı açılmaz.
+HTTP path, request body, response body, enum değeri veya JSON alan adı konusunda docs/api-contract.md tek kaynaktır.
 
-401 yanıtında oturum kapatılır.
+Backend ve mobil:
 
-403 oturumu kapatmaz.
+alternatif alan adı üretemez,
 
-Liste empty state'i hata ekranı değildir.
+endpoint alias/fallback tanımlayamaz,
 
-18. Backend sorumlulukları
+farklı enum casing kullanamaz.
 
-Canonical endpoint mapping
+JSON alanları camelCase'dir.
 
-JWT doğrulama
+Paylaşılan enum string değerleri API kontratındaki casing ile birebir kullanılır.
 
-Kaynak sahipliği kontrolü
+27. Test stratejisi
 
-Şifre hashleme
+Backend integration testleri en az aşağıdakileri doğrulamalıdır:
 
-Request validation
+/health anonim 200
 
-280 karakter doğrulaması
+register/login anonim
 
-Tek seviyeli yanıt kuralı
+korumalı endpoint token gereksinimi
 
-Follow ve like ilişki yönetimi
+block create/remove
 
-Sayaç üretimi
+self-block reddi
 
-Tutarlı hata response'u
+block sonrası follow temizliği
 
-Feed için 200 ve JSON dizi response'u
+block sonrası feed görünürlüğü
 
-Kullanıcı izolasyonu
+report create
 
-19. Mobil sorumlulukları
+self-report reddi
 
-Canonical endpoint'leri kullanma
+duplicate pending report 409
 
-DTO alanlarını birebir parse etme
+normal kullanıcının moderation endpoint'inden 403 alması
 
-Integer kimlik kullanma
+moderator pending queue
 
-Token'ı güvenli saklama
+resolve NoAction
 
-Loading, empty, unauthorized ve error durumlarını ayırma
+resolve RemovePost
 
-401 durumunda auth gate'e dönme
+dismiss
 
-Feed fallback uygulamama
+ikinci moderation kararında 409
 
-Optimistic like/follow işlemi uygulanıyorsa hata halinde state'i geri alma
+soft-delete postun feed/like/reply akışından çıkarılması
 
-20. Backend dosya bazlı hizalama
+Backend integration testlerindeki PostAsJsonAsync ve PutAsJsonAsync gövdeleri docs/api-contract.md golden JSON örnekleriyle aynı alan adlarını kullanmalıdır.
 
-Backend Agent aşağıdaki alanları kontrol etmelidir:
+Mobil testleri en az:
 
-Dosya veya alanGereken davranış
-Program.csDuplicate ve unprefixed route kaydı bulunmamalı
-Endpoints/MvpEndpoints.csLegacy /me, /feed, /posts, /profiles route'ları kaldırılmalı
-Endpoints/AuthEndpoints.csYalnızca register ve login anonim olmalı
-Endpoints/ProfileEndpoints.cs/api/v1/me ve /api/v1/profiles/{username} kullanılmalı
-Endpoints/FeedEndpoints.cs/api/v1/feed, Bearer auth, 200 JSON dizi
-Endpoints/PostEndpointRoutes.csCreate, delete, reply ve like yolları canonical olmalı
-Contracts/ApiContracts.csInteger kimlik, content, login, expiresIn alanları kullanılmalı
+block/unblock sonucu
 
-21. Mobil dosya bazlı hizalama
+report request alanları
 
-Mobile Agent aşağıdaki alanları kontrol etmelidir:
+unauthorized yönlendirme
 
-AlanGereken davranış
-Auth repositoryLogin request alanı login olmalı
-Auth response modeliToken süresi expiresIn alanından okunmalı
-Profile repository/api/v1/me ve /api/v1/profiles/{username} kullanılmalı
-Feed repositoryYalnızca /api/v1/feed çağırmalı
-Feed hata eşleme404 error state olmalı
-Post modelicontent, parentPostId, integer id kullanılmalı
-Like repository200 + LikeResponse parse edilmeli
-Follow repository200 + FollowResponse parse edilmeli
+forbidden moderasyon durumu
 
-22. Mimari doğrulama kriterleri
+loading/empty/error durumları
 
-/health anonim olarak 200 ve {"status":"ok"} döndürür.
+üzerinde canonical kontratı doğrulamalıdır.
 
-Flutter web origin'i için CORS ve OPTIONS çalışır.
+28. Güvenlik ilkeleri
 
-Development JWT ayarları production secret gerektirmeden yüklenir.
+Şifreler düz metin saklanmaz.
 
-Register ve login anonimdir.
+JWT production secret repoda tutulmaz.
 
-Diğer endpoint'ler Bearer token ister.
+Authorization yalnızca mobil UI ile uygulanmaz.
 
-Yalnızca canonical /api/v1 route'ları çalışır.
+Moderasyon yetkisi backend'de role göre doğrulanır.
 
-Kimlikler backend, mobil ve JSON içinde integer'dır.
+Block ilişkisi server-side sorgularda uygulanır.
 
-Gönderi alanı content değeridir.
+Kullanıcı girdileri doğrulanır.
 
-Gönderi 280 karakteri aşamaz.
+Moderasyon notu ve report details alanları güvenilmeyen kullanıcı girdisi kabul edilir.
 
-İkinci seviye yanıt oluşturulamaz.
+SQL oluşturmak için kullanıcı girdisi birleştirilmez; EF Core parametreli sorgular kullanılır.
 
-Feed empty state yalnızca 200 ve [] ile oluşur.
+Hata response'ları gereksiz iç sistem ayrıntısı içermez.
 
-Feed repository fallback route kullanmaz.
+Block nedeniyle gizlenen kaynağın varlığı kullanıcıya açık edilmez.
+
+Moderasyon aksiyonları audit için kalıcı olarak saklanır.
+
+29. Mimari karar özeti
+
+Mimari: modüler monolit
+
+Backend: .NET 8 ASP.NET Core
+
+Mobil: Flutter
+
+Veritabanı: PostgreSQL
+
+Auth: JWT Bearer
+
+Kimlik: integer
+
+JSON: camelCase
+
+Post metni: content
+
+Maksimum post/reply: 280 karakter
+
+Health: anonim GET /health
+
+Development JWT fallback: zorunlu
+
+Flutter web CORS origin: http://127.0.0.1:8080
+
+API adresi: http://127.0.0.1:5000
+
+Block ilişkisi: yönlü
+
+Block görünürlüğü: iki taraf için etkileşim/görünürlük kısıtı
+
+Report hedefleri: Post, User
+
+Report durumları: Pending, Resolved, Dismissed
+
+Moderator aksiyonları: NoAction, RemovePost
+
+Moderasyon kaldırması: soft-delete
+
+Redis: bu fazda zorunlu değil
+
+MinIO: bu fazda zorunlu değil
