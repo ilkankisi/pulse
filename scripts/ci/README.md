@@ -10,7 +10,7 @@ Ana pipeline: [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)
 |-----|------|
 | `backend-test` | `backend/` → `dotnet restore`, `build`, `test` (.NET 8) |
 | `mobile-test` | `mobile/` → `flutter pub get`, `analyze`, `test` |
-| `compose-validate` | `docker compose config` ile kök compose doğrulama |
+| `compose-validate` | `docker compose --env-file .env.example config` (`.env` CI'da yok) |
 
 ## Gerekli GitHub Secrets
 
@@ -31,7 +31,7 @@ python scripts/verify_ci_setup.py --workspace path/to/workspace
 Workspace kökünden compose:
 
 ```bash
-docker compose -f docker-compose.yml config
+docker compose --env-file .env.example -f docker-compose.yml config
 ```
 
 Backend / mobile komutları orchestrator verify ile aynı dizinlerde çalışır (`backend/`, `mobile/`).
