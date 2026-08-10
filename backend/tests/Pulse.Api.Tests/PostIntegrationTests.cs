@@ -55,7 +55,7 @@ public sealed class PostIntegrationTests
             body.GetProperty("replyCount").GetInt32());
 
         Assert.False(
-            body.GetProperty("isLikedByCurrentUser").GetBoolean());
+            body.GetProperty("isLikedByMe").GetBoolean());
     }
 
     [Fact]

@@ -155,6 +155,7 @@ app.MapGet(
 app.MapAuthEndpoints();
 app.MapPostEndpoints();
 app.MapFeedEndpoints();
+app.MapMeEndpoints();
 app.MapProfileEndpoints();
 app.MapFollowEndpoints();
 app.MapSecurityModerationEndpoints();

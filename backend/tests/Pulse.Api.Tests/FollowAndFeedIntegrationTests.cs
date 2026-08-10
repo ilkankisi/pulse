@@ -40,15 +40,11 @@ public sealed class FollowAndFeedIntegrationTests
             .ReadFromJsonAsync<JsonElement>();
 
         Assert.Equal(
-            target.UserId,
-            followedBody.GetProperty("userId").GetInt32());
+            target.Username,
+            followedBody.GetProperty("username").GetString());
 
         Assert.True(
             followedBody.GetProperty("isFollowing").GetBoolean());
-
-        Assert.Equal(
-            1,
-            followedBody.GetProperty("followerCount").GetInt32());
 
         using var unfollowRequest =
             ApiTestHelpers.CreateAuthorizedRequest(
@@ -66,10 +62,6 @@ public sealed class FollowAndFeedIntegrationTests
 
         Assert.False(
             unfollowedBody.GetProperty("isFollowing").GetBoolean());
-
-        Assert.Equal(
-            0,
-            unfollowedBody.GetProperty("followerCount").GetInt32());
     }
 
     [Fact]
@@ -90,8 +82,10 @@ public sealed class FollowAndFeedIntegrationTests
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var posts = await response.Content
+        var feedBody = await response.Content
             .ReadFromJsonAsync<JsonElement>();
+
+        var posts = feedBody.GetProperty("items");
 
         Assert.True(posts.GetArrayLength() >= 2);
 
@@ -145,8 +139,10 @@ public sealed class FollowAndFeedIntegrationTests
 
         Assert.Equal(HttpStatusCode.OK, feedResponse.StatusCode);
 
-        var posts = await feedResponse.Content
+        var feedBody = await feedResponse.Content
             .ReadFromJsonAsync<JsonElement>();
+
+        var posts = feedBody.GetProperty("items");
 
         var contents = posts
             .EnumerateArray()

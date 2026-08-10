@@ -1,8 +1,13 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/pulse_repository.dart';
+import '../data/safety_moderation_api.dart';
+import '../domain/moderation_models.dart';
 import '../domain/pulse_models.dart';
+import 'blocked_users_page.dart';
+import 'report_sheet.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({
@@ -38,6 +43,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   bool _isLoadingProfile = true;
   bool _isLoadingPosts = true;
+  bool _isBlocked = false;
 
   bool get _isOwnProfile =>
       widget.isCurrentUser ??
@@ -176,6 +182,113 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     await _loadPosts();
   }
 
+  Future<void> _toggleBlock() async {
+    final username = _profileUsername;
+
+    if (username == null || _isOwnProfile) {
+      return;
+    }
+
+    try {
+      if (_isBlocked) {
+        await ref.read(safetyModerationApiProvider).unblockUser(username);
+      } else {
+        await ref.read(safetyModerationApiProvider).blockUser(username);
+      }
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isBlocked = !_isBlocked;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isBlocked
+                ? '@$username engellendi.'
+                : '@$username engeli kaldırıldı.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } on DioException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      if (error.response?.statusCode == 401) {
+        widget.onUnauthorized?.call();
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('İşlem tamamlanamadı. Tekrar deneyin.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _reportUser() async {
+    final profile = _profile;
+
+    if (profile == null || _isOwnProfile) {
+      return;
+    }
+
+    final sent = await ReportSheet.show(
+      context,
+      targetType: ReportTargetType.user,
+      targetId: profile.id,
+      onUnauthorized: widget.onUnauthorized,
+    );
+
+    if (!mounted || !sent) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Şikâyet gönderildi.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _reportPost(PulsePost post) async {
+    final sent = await ReportSheet.show(
+      context,
+      targetType: ReportTargetType.post,
+      targetId: post.id,
+      onUnauthorized: widget.onUnauthorized,
+    );
+
+    if (!mounted || !sent) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Şikâyet gönderildi.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _openBlockedUsers() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) {
+          return BlockedUsersPage(onUnauthorized: widget.onUnauthorized);
+        },
+      ),
+    );
+  }
+
   Future<void> _editProfile() async {
     final profile = _profile;
 
@@ -208,10 +321,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     setState(() {
       _profile = updatedProfile;
     });
-
-    if (!mounted) {
-      return;
-    }
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -328,6 +437,36 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             ],
                           ),
                         ),
+                        if (!_isOwnProfile)
+                          PopupMenuButton<_ProfileSafetyAction>(
+                            tooltip: 'Güvenlik seçenekleri',
+                            onSelected: (action) {
+                              switch (action) {
+                                case _ProfileSafetyAction.block:
+                                  _toggleBlock();
+                                  break;
+                                case _ProfileSafetyAction.report:
+                                  _reportUser();
+                                  break;
+                              }
+                            },
+                            itemBuilder: (_) {
+                              return [
+                                PopupMenuItem<_ProfileSafetyAction>(
+                                  value: _ProfileSafetyAction.block,
+                                  child: Text(
+                                    _isBlocked
+                                        ? 'Engeli Kaldır'
+                                        : 'Kullanıcıyı Engelle',
+                                  ),
+                                ),
+                                const PopupMenuItem<_ProfileSafetyAction>(
+                                  value: _ProfileSafetyAction.report,
+                                  child: Text('Kullanıcıyı Şikâyet Et'),
+                                ),
+                              ];
+                            },
+                          ),
                       ],
                     ),
                     const SizedBox(height: 20),
@@ -351,10 +490,21 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     ),
                     if (_isOwnProfile) ...[
                       const SizedBox(height: 20),
-                      OutlinedButton.icon(
-                        onPressed: _editProfile,
-                        icon: const Icon(Icons.edit_outlined),
-                        label: const Text('Profili Düzenle'),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: _editProfile,
+                            icon: const Icon(Icons.edit_outlined),
+                            label: const Text('Profili Düzenle'),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: _openBlockedUsers,
+                            icon: const Icon(Icons.block_outlined),
+                            label: const Text('Engellenen Hesaplar'),
+                          ),
+                        ],
                       ),
                     ],
                     const SizedBox(height: 24),
@@ -393,7 +543,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                           Text(
                             'Gönderiler yüklenemedi',
                             style: Theme.of(context).textTheme.titleLarge,
-                            textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 8),
                           FilledButton(
@@ -422,15 +571,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                           Text(
                             'Henüz gönderi yok',
                             style: Theme.of(context).textTheme.titleLarge,
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            _isOwnProfile
-                                ? 'Paylaştığın gönderiler burada görünecek.'
-                                : 'Bu kullanıcı henüz bir gönderi paylaşmadı.',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                            textAlign: TextAlign.center,
                           ),
                         ],
                       ),
@@ -449,7 +589,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       padding: EdgeInsets.only(
                         bottom: index == _posts.length - 1 ? 0 : 12,
                       ),
-                      child: _ProfilePostCard(post: post),
+                      child: _ProfilePostCard(
+                        post: post,
+                        onReport: _isOwnProfile
+                            ? null
+                            : () => _reportPost(post),
+                      ),
                     );
                   }, childCount: _posts.length),
                 ),
@@ -473,7 +618,6 @@ class _ProfileStat extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('$value', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 2),
         Text(label, style: Theme.of(context).textTheme.bodySmall),
       ],
     );
@@ -481,9 +625,10 @@ class _ProfileStat extends StatelessWidget {
 }
 
 class _ProfilePostCard extends StatelessWidget {
-  const _ProfilePostCard({required this.post});
+  const _ProfilePostCard({required this.post, this.onReport});
 
   final PulsePost post;
+  final VoidCallback? onReport;
 
   @override
   Widget build(BuildContext context) {
@@ -519,26 +664,35 @@ class _ProfilePostCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 2,
-                    crossAxisAlignment: WrapCrossAlignment.center,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        post.author.displayName,
-                        style: Theme.of(context).textTheme.titleMedium,
+                      Expanded(
+                        child: Wrap(
+                          spacing: 6,
+                          runSpacing: 2,
+                          children: [
+                            Text(
+                              post.author.displayName,
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            Text(
+                              '@${post.author.username}',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
                       ),
-                      Text(
-                        '@${post.author.username}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
+                      if (onReport != null)
+                        IconButton(
+                          tooltip: 'Gönderiyi şikâyet et',
+                          onPressed: onReport,
+                          icon: const Icon(Icons.flag_outlined),
+                        ),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    post.content,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
+                  Text(post.content),
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -549,17 +703,11 @@ class _ProfilePostCard extends StatelessWidget {
                         size: 18,
                       ),
                       const SizedBox(width: 4),
-                      Text(
-                        '${post.likeCount}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
+                      Text('${post.likeCount}'),
                       const SizedBox(width: 20),
                       const Icon(Icons.chat_bubble_outline, size: 18),
                       const SizedBox(width: 4),
-                      Text(
-                        '${post.replyCount}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
+                      Text('${post.replyCount}'),
                     ],
                   ),
                 ],
@@ -571,6 +719,8 @@ class _ProfilePostCard extends StatelessWidget {
     );
   }
 }
+
+enum _ProfileSafetyAction { block, report }
 
 class _EditProfileDialog extends StatefulWidget {
   const _EditProfileDialog({required this.profile, required this.onSave});
@@ -670,7 +820,6 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
               key: const ValueKey<String>('profile-display-name-field'),
               controller: _displayNameController,
               enabled: !_isSaving,
-              textInputAction: TextInputAction.next,
               decoration: const InputDecoration(labelText: 'Görünen ad'),
             ),
             const SizedBox(height: 12),
@@ -680,7 +829,6 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
               enabled: !_isSaving,
               minLines: 2,
               maxLines: 4,
-              textInputAction: TextInputAction.newline,
               decoration: const InputDecoration(labelText: 'Biyografi'),
             ),
             const SizedBox(height: 12),
@@ -688,23 +836,13 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
               key: const ValueKey<String>('profile-avatar-url-field'),
               controller: _avatarUrlController,
               enabled: !_isSaving,
-              keyboardType: TextInputType.url,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) {
-                if (!_isSaving) {
-                  _save();
-                }
-              },
               decoration: const InputDecoration(labelText: 'Avatar URL'),
             ),
             if (_errorMessage != null) ...[
               const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  _errorMessage!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
+              Text(
+                _errorMessage!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ],
           ],

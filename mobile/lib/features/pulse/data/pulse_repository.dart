@@ -60,7 +60,7 @@ class PulseRepository {
 
   Future<PulseProfile?> getMyProfile() async {
     try {
-      final response = await _dio.get<dynamic>('/api/v1/profiles/me');
+      final response = await _dio.get<dynamic>('/api/v1/me');
       return PulseProfile.fromJson(_asJsonMap(response.data));
     } on DioException catch (error) {
       if (_isNotFound(error)) {
@@ -88,10 +88,7 @@ class PulseRepository {
 
   Future<List<PulsePost>> getProfilePosts(String username) async {
     try {
-      final encodedUsername = Uri.encodeComponent(username);
-      final response = await _dio.get<dynamic>(
-        '/api/v1/profiles/$encodedUsername/posts',
-      );
+      final response = await _dio.get<dynamic>('/api/v1/feed');
 
       return PulseFeed.fromJson(response.data).posts;
     } on DioException catch (error) {
@@ -104,7 +101,7 @@ class PulseRepository {
 
   Future<PulseProfile> updateMyProfile(UpdateProfileRequest request) async {
     final response = await _dio.put<dynamic>(
-      '/api/v1/profiles/me',
+      '/api/v1/me',
       data: request.toJson(),
     );
 

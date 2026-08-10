@@ -47,7 +47,17 @@ public sealed record PostResponse(
     DateTimeOffset CreatedAt,
     int LikeCount,
     int ReplyCount,
-    bool IsLikedByCurrentUser);
+    bool IsLikedByMe);
+
+public sealed record ProfileContractResponse(
+    int Id,
+    string Username,
+    string DisplayName,
+    string? Bio,
+    string? AvatarUrl,
+    int FollowerCount,
+    int FollowingCount,
+    bool IsFollowing);
 
 public sealed record ProfileResponse(
     int Id,
@@ -63,9 +73,11 @@ public sealed record ProfileResponse(
     bool IsCurrentUser);
 
 public sealed record FollowResponse(
-    int UserId,
-    bool IsFollowing,
-    int FollowerCount);
+    string Username,
+    bool IsFollowing);
+
+public sealed record FeedListResponse(
+    IReadOnlyList<PostResponse> Items);
 
 public sealed record LikeResponse(
     int PostId,

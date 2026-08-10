@@ -61,7 +61,11 @@ class PulsePost {
       author: PulseAuthor.fromJson(Map<String, dynamic>.from(authorValue)),
       likeCount: _optionalInt(json, const ['likeCount', 'likesCount']),
       replyCount: _optionalInt(json, const ['replyCount', 'repliesCount']),
-      isLiked: _optionalBool(json, const ['isLiked', 'likedByCurrentUser']),
+      isLiked: _optionalBool(json, const [
+        'isLikedByMe',
+        'isLiked',
+        'likedByCurrentUser',
+      ]),
       canDelete: _optionalBool(json, const [
         'canDelete',
         'isOwnedByCurrentUser',

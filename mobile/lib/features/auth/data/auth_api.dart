@@ -54,7 +54,7 @@ class AuthApi {
   }
 
   Future<AuthUser> getCurrentUser() async {
-    final response = await _dio.get<dynamic>('/api/v1/profiles/me');
+    final response = await _dio.get<dynamic>('/api/v1/me');
     return AuthUser.fromJson(_asJsonMap(response.data));
   }
 

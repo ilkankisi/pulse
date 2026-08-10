@@ -28,37 +28,37 @@ Geçersiz gönderi alanları:
 
 Geçersiz kimlik biçimi:
 
-```json
+~~~json
 {
   "id": "225ebeca-5e61-4327-83d3-c8ffc6d29410"
 }
-```
+~~~
 
 Geçerli kimlik biçimi:
 
-```
+~~~json
 {
   "id": 1
 }
-```
+~~~
 
-3. Yerel adresler ve CORS
+## 3. Yerel adresler ve CORS
 
 Flutter web:
 
-```
+~~~text
 http://127.0.0.1:8080
-```
+~~~
 
 Backend API:
 
-```
+~~~text
 http://127.0.0.1:5000
-```
+~~~
 
 Backend aşağıdakileri desteklemelidir:
 
-```
+~~~text
 Origin: http://127.0.0.1:8080
 Header: Authorization
 Header: Content-Type
@@ -67,22 +67,22 @@ Method: POST
 Method: PUT
 Method: DELETE
 Method: OPTIONS
-```
+~~~
 
-Tarayıcı OPTIONS preflight istekleri başarılı cevaplanmalıdır.
+Tarayıcı `OPTIONS` preflight istekleri başarılı cevaplanmalıdır.
 
-4. JWT yapılandırması
+## 4. JWT yapılandırması
 
 Orchestrator başlangıcı:
 
-```
+~~~text
 dotnet run --no-launch-profile
 ASPNETCORE_ENVIRONMENT=Development
-```
+~~~
 
 Development ayarları:
 
-```
+~~~json
 {
   "Jwt": {
     "Key": "development-only-key-at-least-32-bytes",
@@ -90,114 +90,113 @@ Development ayarları:
     "Audience": "Pulse.Client"
   }
 }
-```
+~~~
 
 Kurallar:
 
-Jwt:Key en az 32 byte olmalıdır.
-
-Development ortamı production secret eksikliği nedeniyle çökmemelidir.
-
-Production anahtarı environment variable veya secret store üzerinden sağlanmalıdır.
-
-Production secret repoda bulunmamalıdır.
+- `Jwt:Key` en az 32 byte olmalıdır.
+- Development ortamı production secret eksikliği nedeniyle çökmemelidir.
+- Production anahtarı environment variable veya secret store üzerinden sağlanmalıdır.
+- Production secret repoda bulunmamalıdır.
 
 Anonim endpoint'ler:
 
-```
+~~~text
 GET /health
 POST /api/v1/auth/register
 POST /api/v1/auth/login
-```
+~~~
 
 Diğer endpoint'ler Bearer token gerektirir.
 
-/api/v1/moderation/** endpoint'leri ayrıca Moderator rolü gerektirir.
+`/api/v1/moderation/**` endpoint'leri ayrıca `Moderator` rolü gerektirir.
 
-5. Ortak HTTP kuralları
+## 5. Ortak HTTP kuralları
 
-5.1 JSON Content-Type
+### 5.1 JSON Content-Type
 
-```
+~~~http
 Content-Type: application/json
-```
+~~~
 
-5.2 Authorization
+### 5.2 Authorization
 
-```
+~~~http
 Authorization: Bearer <accessToken>
-```
+~~~
 
-5.3 Hata response'u
+### 5.3 Hata response'u
 
-```
+~~~json
 {
   "error": "Açıklayıcı hata mesajı.",
   "field": null
 }
-```
+~~~
 
 Belirli alan hatası:
 
-```
+~~~json
 {
   "error": "Content must not exceed 280 characters.",
   "field": "content"
 }
-```
+~~~
 
 Standart durum kodları:
 
-KodAnlam
-400Validation, geçersiz JSON veya iş kuralı
-401Token yok, geçersiz veya süresi dolmuş
-403Kaynak sahipliği veya yetki hatası
-404Path ile seçilen kaynak bulunamadı veya güvenlik nedeniyle görünmez
-409Benzersizlik veya durum/ilişki çakışması
-500Beklenmeyen sunucu hatası
+| Kod | Anlam |
+|---|---|
+| 400 | Validation, geçersiz JSON veya iş kuralı |
+| 401 | Token yok, geçersiz veya süresi dolmuş |
+| 403 | Kaynak sahipliği veya yetki hatası |
+| 404 | Path ile seçilen kaynak bulunamadı veya güvenlik nedeniyle görünmez |
+| 409 | Benzersizlik veya durum/ilişki çakışması |
+| 500 | Beklenmeyen sunucu hatası |
 
 Geçersiz JSON:
 
-```
+~~~json
 {
   "error": "Request body contains invalid JSON.",
   "field": null
 }
-```
+~~~
 
-6. Canonical endpoint matrisi
+## 6. Canonical endpoint matrisi
 
-ModülHTTPPathAuthBaşarı
-HealthGET/healthAnonim200
-AuthPOST/api/v1/auth/registerAnonim201
-AuthPOST/api/v1/auth/loginAnonim200
-ProfileGET/api/v1/meBearer200
-ProfilePUT/api/v1/meBearer200
-ProfileGET/api/v1/profiles/{username}Bearer200
-FollowPOST/api/v1/profiles/{username}/followBearer200
-FollowDELETE/api/v1/profiles/{username}/followBearer200
-FeedGET/api/v1/feedBearer200
-PostsPOST/api/v1/postsBearer201
-PostsDELETE/api/v1/posts/{postId}Bearer204
-RepliesPOST/api/v1/posts/{postId}/repliesBearer201
-LikesPOST/api/v1/posts/{postId}/likesBearer200
-LikesDELETE/api/v1/posts/{postId}/likesBearer200
-BlocksPOST/api/v1/profiles/{username}/blockBearer200
-BlocksDELETE/api/v1/profiles/{username}/blockBearer204
-BlocksGET/api/v1/blocksBearer200
-ReportsPOST/api/v1/reportsBearer201
-ModerationGET/api/v1/moderation/reportsModerator200
-ModerationGET/api/v1/moderation/reports/{reportId}Moderator200
-ModerationPOST/api/v1/moderation/reports/{reportId}/resolveModerator200
-ModerationPOST/api/v1/moderation/reports/{reportId}/dismissModerator200
+| Modül | HTTP | Path | Auth | Başarı |
+|---|---|---|---|---|
+| Health | GET | `/health` | Anonim | 200 |
+| Auth | POST | `/api/v1/auth/register` | Anonim | 201 |
+| Auth | POST | `/api/v1/auth/login` | Anonim | 200 |
+| Profile | GET | `/api/v1/me` | Bearer | 200 |
+| Profile | PUT | `/api/v1/me` | Bearer | 200 |
+| Profile | GET | `/api/v1/profiles/{username}` | Bearer | 200 |
+| Follow | POST | `/api/v1/profiles/{username}/follow` | Bearer | 200 |
+| Follow | DELETE | `/api/v1/profiles/{username}/follow` | Bearer | 200 |
+| Feed | GET | `/api/v1/feed` | Bearer | 200 |
+| Posts | POST | `/api/v1/posts` | Bearer | 201 |
+| Posts | DELETE | `/api/v1/posts/{postId}` | Bearer | 204 |
+| Replies | POST | `/api/v1/posts/{postId}/replies` | Bearer | 201 |
+| Likes | POST | `/api/v1/posts/{postId}/likes` | Bearer | 200 |
+| Likes | DELETE | `/api/v1/posts/{postId}/likes` | Bearer | 200 |
+| Blocks | POST | `/api/v1/profiles/{username}/block` | Bearer | 200 |
+| Blocks | DELETE | `/api/v1/profiles/{username}/block` | Bearer | 204 |
+| Blocks | GET | `/api/v1/blocks` | Bearer | 200 |
+| Reports | POST | `/api/v1/reports` | Bearer | 201 |
+| Moderation | GET | `/api/v1/moderation/reports` | Moderator | 200 |
+| Moderation | GET | `/api/v1/moderation/reports/{reportId}` | Moderator | 200 |
+| Moderation | POST | `/api/v1/moderation/reports/{reportId}/resolve` | Moderator | 200 |
+| Moderation | POST | `/api/v1/moderation/reports/{reportId}/dismiss` | Moderator | 200 |
 
-Moderator, geçerli Bearer token ile birlikte Moderator rolünün zorunlu olduğunu ifade eder.
+`Moderator`, geçerli Bearer token ile birlikte `Moderator` rolünün zorunlu olduğunu ifade eder.
 
-7. Yasak legacy yollar
+## 7. Yasak legacy yollar
 
 Aşağıdaki yollar backend tarafından map edilmemelidir:
 
-```
+~~~text
 /register
 /login
 /me
@@ -208,15 +207,15 @@ Aşağıdaki yollar backend tarafından map edilmemelidir:
 /api/v1/users/{username}
 /api/v1/users/me
 /api/v1/users/{username}/follow
-```
+~~~
 
 Mobil repository bu yolları fallback olarak kullanmamalıdır.
 
 Aynı davranış için birden fazla route tanımlanması yasaktır.
 
-8. Health
+## 8. Health
 
-GET /health
+### GET /health
 
 Auth: Anonim
 
@@ -224,42 +223,43 @@ Auth: Anonim
 
 Başarı:
 
-```
+~~~http
 200 OK
-```
+~~~
 
 Yanıt:
 
-```
+~~~json
 {
   "status": "ok"
 }
-```
+~~~
 
-Response kesin olarak küçük harfli status alanını ve "ok" değerini içermelidir.
+Response kesin olarak küçük harfli `status` alanını ve `"ok"` değerini içermelidir.
 
-9. Paylaşılan tipler
+## 9. Paylaşılan tipler
 
-9.1 AuthUserResponse
+### 9.1 AuthUserResponse
 
-```
+~~~json
 {
   "id": 1,
   "username": "ilkan",
   "displayName": "İlkan",
   "avatarUrl": null
 }
-```
+~~~
 
-AlanTürNull
-idintegerHayır
-usernamestringHayır
-displayNamestringHayır
-avatarUrlstringEvet
+| Alan | Tür | Null |
+|---|---|---|
+| `id` | integer | Hayır |
+| `username` | string | Hayır |
+| `displayName` | string | Hayır |
+| `avatarUrl` | string | Evet |
 
-9.2 AuthResponse
+### 9.2 AuthResponse
 
-```
+~~~json
 {
   "accessToken": "eyJhbGciOiJIUzI1NiIs...",
   "tokenType": "Bearer",
@@ -271,40 +271,38 @@ avatarUrlstringEvet
     "avatarUrl": null
   }
 }
-```
+~~~
 
-AlanTürNull
-accessTokenstringHayır
-tokenTypestringHayır
-expiresInintegerHayır
-userAuthUserResponseHayır
+| Alan | Tür | Null |
+|---|---|---|
+| `accessToken` | string | Hayır |
+| `tokenType` | string | Hayır |
+| `expiresIn` | integer | Hayır |
+| `user` | AuthUserResponse | Hayır |
 
-tokenType:
+`tokenType` değeri `Bearer`'dır.
 
-```
-Bearer
-```
+### 9.3 AuthorResponse
 
-9.3 AuthorResponse
-
-```
+~~~json
 {
   "id": 2,
   "username": "ada",
   "displayName": "Ada",
   "avatarUrl": null
 }
-```
+~~~
 
-AlanTürNull
-idintegerHayır
-usernamestringHayır
-displayNamestringHayır
-avatarUrlstringEvet
+| Alan | Tür | Null |
+|---|---|---|
+| `id` | integer | Hayır |
+| `username` | string | Hayır |
+| `displayName` | string | Hayır |
+| `avatarUrl` | string | Evet |
 
-9.4 PostResponse
+### 9.4 PostResponse
 
-```
+~~~json
 {
   "id": 15,
   "author": {
@@ -320,100 +318,93 @@ avatarUrlstringEvet
   "replyCount": 1,
   "isLikedByMe": false
 }
-```
+~~~
 
-AlanTürNull
-idintegerHayır
-authorAuthorResponseHayır
-contentstringHayır
-parentPostIdintegerEvet
-createdAtUTC ISO 8601 stringHayır
-likeCountintegerHayır
-replyCountintegerHayır
-isLikedByMebooleanHayır
+| Alan | Tür | Null |
+|---|---|---|
+| `id` | integer | Hayır |
+| `author` | AuthorResponse | Hayır |
+| `content` | string | Hayır |
+| `parentPostId` | integer | Evet |
+| `createdAt` | UTC ISO 8601 string | Hayır |
+| `likeCount` | integer | Hayır |
+| `replyCount` | integer | Hayır |
+| `isLikedByMe` | boolean | Hayır |
 
-9.5 ReportTargetType
+### 9.5 ReportTargetType
 
-Tam string değerleri:
+Tam canonical string değerleri:
 
-```
-Post
-User
-```
+- `Post`
+- `User`
 
 Başka casing veya alias kullanılmaz.
 
-9.6 ReportReason
+### 9.6 ReportReason
 
-Tam string değerleri:
+Tam canonical string değerleri:
 
-```
-Spam
-Harassment
-HateSpeech
-Violence
-SexualContent
-Impersonation
-Other
-```
+- `Spam`
+- `Harassment`
+- `HateSpeech`
+- `Violence`
+- `SexualContent`
+- `Impersonation`
+- `Other`
 
-9.7 ReportStatus
+### 9.7 ReportStatus
 
-Tam string değerleri:
+Tam canonical string değerleri:
 
-```
-Pending
-Resolved
-Dismissed
-```
+- `Pending`
+- `Resolved`
+- `Dismissed`
 
-9.8 ModerationAction
+### 9.8 ModerationAction
 
-Tam string değerleri:
+Tam canonical string değerleri:
 
-```
-NoAction
-RemovePost
-```
+- `NoAction`
+- `RemovePost`
 
-10. Auth
+## 10. Auth
 
-10.1 POST /api/v1/auth/register
+### 10.1 POST /api/v1/auth/register
 
 Auth: Anonim
 
 Create semantiği:
 
-Gövdede kullanıcı kimliği bulunmaz.
-
-Backend yeni integer id üretir.
+- Gövdede kullanıcı kimliği bulunmaz.
+- Backend yeni integer id üretir.
 
 İstek gövdesi:
 
-AlanTürZorunlu
-usernamestringEvet
-displayNamestringEvet
-passwordstringEvet
+| Alan | Tür | Zorunlu |
+|---|---|---|
+| `username` | string | Evet |
+| `displayName` | string | Evet |
+| `password` | string | Evet |
 
 Golden request:
 
-```
+~~~json
 {
   "username": "ilkan",
   "displayName": "İlkan",
   "password": "ExamplePassword123!"
 }
-```
+~~~
 
 Başarı:
 
-```
+~~~http
 201 Created
-```
+~~~
 
 Golden response:
 
-```
+~~~json
 {
   "accessToken": "eyJhbGciOiJIUzI1NiIs...",
   "tokenType": "Bearer",
@@ -425,42 +416,43 @@ Golden response:
     "avatarUrl": null
   }
 }
-```
+~~~
 
 Username benzersizlik çakışması:
 
-```
+~~~http
 409 Conflict
-```
+~~~
 
-10.2 POST /api/v1/auth/login
+### 10.2 POST /api/v1/auth/login
 
 Auth: Anonim
 
 İstek gövdesi:
 
-AlanTürZorunlu
-usernamestringEvet
-passwordstringEvet
+| Alan | Tür | Zorunlu |
+|---|---|---|
+| `username` | string | Evet |
+| `password` | string | Evet |
 
 Golden request:
 
-```
+~~~json
 {
   "username": "ilkan",
   "password": "ExamplePassword123!"
 }
-```
+~~~
 
 Başarı:
 
-```
+~~~http
 200 OK
-```
+~~~
 
 Golden response:
 
-```
+~~~json
 {
   "accessToken": "eyJhbGciOiJIUzI1NiIs...",
   "tokenType": "Bearer",
@@ -472,17 +464,17 @@ Golden response:
     "avatarUrl": null
   }
 }
-```
+~~~
 
 Geçersiz credential:
 
-```
+~~~http
 401 Unauthorized
-```
+~~~
 
-11. Profile
+## 11. Profile
 
-11.1 GET /api/v1/me
+### 11.1 GET /api/v1/me
 
 Auth: Bearer
 
@@ -490,13 +482,13 @@ Auth: Bearer
 
 Başarı:
 
-```
+~~~http
 200 OK
-```
+~~~
 
 Golden response:
 
-```
+~~~json
 {
   "id": 1,
   "username": "ilkan",
@@ -507,56 +499,56 @@ Golden response:
   "followingCount": 4,
   "isFollowing": false
 }
-```
+~~~
 
-AlanTürNull
-idintegerHayır
-usernamestringHayır
-displayNamestringHayır
-biostringEvet
-avatarUrlstringEvet
-followerCountintegerHayır
-followingCountintegerHayır
-isFollowingbooleanHayır
+| Alan | Tür | Null |
+|---|---|---|
+| `id` | integer | Hayır |
+| `username` | string | Hayır |
+| `displayName` | string | Hayır |
+| `bio` | string | Evet |
+| `avatarUrl` | string | Evet |
+| `followerCount` | integer | Hayır |
+| `followingCount` | integer | Hayır |
+| `isFollowing` | boolean | Hayır |
 
-11.2 PUT /api/v1/me
+### 11.2 PUT /api/v1/me
 
 Auth: Bearer
 
 Update semantiği:
 
-Oturum sahibi güncellenir.
-
-Gövdede id bulunmaz.
-
-Gövdede username bulunmaz.
+- Oturum sahibi güncellenir.
+- Gövdede id bulunmaz.
+- Gövdede username bulunmaz.
 
 İstek alanları:
 
-AlanTürZorunluNull
-displayNamestringEvetHayır
-biostringEvetEvet
-avatarUrlstringEvetEvet
+| Alan | Tür | Zorunlu | Null |
+|---|---|---|---|
+| `displayName` | string | Evet | Hayır |
+| `bio` | string | Evet | Evet |
+| `avatarUrl` | string | Evet | Evet |
 
 Golden request:
 
-```
+~~~json
 {
   "displayName": "İlkan Kişi",
   "bio": "Pulse kullanıcısı",
   "avatarUrl": null
 }
-```
+~~~
 
 Başarı:
 
-```
+~~~http
 200 OK
-```
+~~~
 
 Golden response:
 
-```
+~~~json
 {
   "id": 1,
   "username": "ilkan",
@@ -567,9 +559,9 @@ Golden response:
   "followingCount": 4,
   "isFollowing": false
 }
-```
+~~~
 
-11.3 GET /api/v1/profiles/{username}
+### 11.3 GET /api/v1/profiles/{username}
 
 Auth: Bearer
 
@@ -577,13 +569,13 @@ Auth: Bearer
 
 Başarı:
 
-```
+~~~http
 200 OK
-```
+~~~
 
 Golden response:
 
-```
+~~~json
 {
   "id": 2,
   "username": "ada",
@@ -594,69 +586,68 @@ Golden response:
   "followingCount": 8,
   "isFollowing": true
 }
-```
+~~~
 
 Kullanıcı bulunamazsa:
 
-```
+~~~http
 404 Not Found
-```
+~~~
 
 Oturum sahibi ile hedef arasında block ilişkisi nedeniyle profil görünmezse:
 
-```
+~~~http
 404 Not Found
-```
+~~~
 
 Response block ilişkisinin varlığını ayrıca açıklamaz.
 
-12. Follows
+## 12. Follows
 
-12.1 POST /api/v1/profiles/{username}/follow
+### 12.1 POST /api/v1/profiles/{username}/follow
 
 Auth: Bearer
 
 Create semantiği:
 
-Hedef path içindeki username ile belirlenir.
-
-İstek gövdesi yoktur.
+- Hedef path içindeki `username` ile belirlenir.
+- İstek gövdesi yoktur.
 
 Golden request:
 
-```
+~~~http
 POST /api/v1/profiles/ada/follow
 Authorization: Bearer <accessToken>
-```
+~~~
 
 Başarı:
 
-```
+~~~http
 200 OK
-```
+~~~
 
 Golden response:
 
-```
+~~~json
 {
   "username": "ada",
   "isFollowing": true
 }
-```
+~~~
 
 Kullanıcı bulunamazsa:
 
-```
+~~~http
 404 Not Found
-```
+~~~
 
 Block ilişkisi varsa:
 
-```
+~~~http
 404 Not Found
-```
+~~~
 
-12.2 DELETE /api/v1/profiles/{username}/follow
+### 12.2 DELETE /api/v1/profiles/{username}/follow
 
 Auth: Bearer
 
@@ -664,22 +655,22 @@ Auth: Bearer
 
 Başarı:
 
-```
+~~~http
 200 OK
-```
+~~~
 
 Golden response:
 
-```
+~~~json
 {
   "username": "ada",
   "isFollowing": false
 }
-```
+~~~
 
-13. Feed
+## 13. Feed
 
-13.1 GET /api/v1/feed
+### 13.1 GET /api/v1/feed
 
 Auth: Bearer
 
@@ -687,13 +678,13 @@ Auth: Bearer
 
 Başarı:
 
-```
+~~~http
 200 OK
-```
+~~~
 
 Golden response:
 
-```
+~~~json
 {
   "items": [
     {
@@ -713,68 +704,66 @@ Golden response:
     }
   ]
 }
-```
+~~~
 
 Boş feed:
 
-```
+~~~json
 {
   "items": []
 }
-```
+~~~
 
-Boş feed 404 değildir.
+Boş feed `404` değildir.
 
 Feed:
 
-kronolojik olarak createdAt DESC sıralanır,
+- kronolojik olarak `createdAt DESC` sıralanır,
+- soft-delete postları içermez,
+- block ilişkisi bulunan kullanıcıların postlarını içermez.
 
-soft-delete postları içermez,
+## 14. Posts
 
-block ilişkisi bulunan kullanıcıların postlarını içermez.
-
-14. Posts
-
-14.1 POST /api/v1/posts
+### 14.1 POST /api/v1/posts
 
 Auth: Bearer
 
 Create semantiği:
 
-Gövdede id yoktur.
-
-Author id gövdeden alınmaz; token üzerinden belirlenir.
+- Gövdede id yoktur.
+- Author id gövdeden alınmaz; token üzerinden belirlenir.
 
 İstek alanları:
 
-AlanTürZorunlu
-contentstringEvet
+| Alan | Tür | Zorunlu |
+|---|---|---|
+| `content` | string | Evet |
 
 Golden request:
 
-```
+~~~json
 {
   "content": "Merhaba Pulse."
 }
-```
+~~~
 
 Geçersiz request:
 
-```
+~~~json
 {
   "title": "Merhaba Pulse."
 }
-```
+~~~
 
 Başarı:
 
-```
+~~~http
 201 Created
-```
+~~~
 
 Golden response:
 
-```
+~~~json
 {
   "id": 15,
   "author": {
@@ -790,15 +779,14 @@ Golden response:
   "replyCount": 0,
   "isLikedByMe": false
 }
-```
+~~~
 
 Validation:
 
-content boş olamaz.
+- `content` boş olamaz.
+- `content` 280 karakteri aşamaz.
 
-content 280 karakteri aşamaz.
-
-14.2 DELETE /api/v1/posts/{postId}
+### 14.2 DELETE /api/v1/posts/{postId}
 
 Auth: Bearer
 
@@ -808,60 +796,60 @@ Yalnızca gönderi sahibi kendi gönderisini silebilir.
 
 Başarı:
 
-```
+~~~http
 204 No Content
-```
+~~~
 
 Post bulunamazsa:
 
-```
+~~~http
 404 Not Found
-```
+~~~
 
 Başkasının postunu silme:
 
-```
+~~~http
 403 Forbidden
-```
+~~~
 
 Bu endpoint standart kullanıcı sahiplik silmesidir.
 
 Moderasyon kaldırması için bu endpoint kullanılmaz.
 
-15. Replies
+## 15. Replies
 
-POST /api/v1/posts/{postId}/replies
+### POST /api/v1/posts/{postId}/replies
 
 Auth: Bearer
 
 Create semantiği:
 
-Parent post path içindeki postId ile belirlenir.
-
-Gövdede id veya parentPostId bulunmaz.
+- Parent post path içindeki `postId` ile belirlenir.
+- Gövdede id veya `parentPostId` bulunmaz.
 
 İstek alanları:
 
-AlanTürZorunlu
-contentstringEvet
+| Alan | Tür | Zorunlu |
+|---|---|---|
+| `content` | string | Evet |
 
 Golden request:
 
-```
+~~~json
 {
   "content": "Katılıyorum."
 }
-```
+~~~
 
 Başarı:
 
-```
+~~~http
 201 Created
-```
+~~~
 
 Golden response:
 
-```
+~~~json
 {
   "id": 16,
   "author": {
@@ -877,21 +865,18 @@ Golden response:
   "replyCount": 0,
   "isLikedByMe": false
 }
-```
+~~~
 
 Kurallar:
 
-content maksimum 280 karakter.
+- `content` maksimum 280 karakter.
+- Parent bulunamazsa `404`.
+- Soft-delete edilmiş parent için `404`.
+- Block nedeniyle görünmeyen parent için `404`.
 
-Parent bulunamazsa 404.
+## 16. Likes
 
-Soft-delete edilmiş parent için 404.
-
-Block nedeniyle görünmeyen parent için 404.
-
-16. Likes
-
-16.1 POST /api/v1/posts/{postId}/likes
+### 16.1 POST /api/v1/posts/{postId}/likes
 
 Auth: Bearer
 
@@ -899,29 +884,29 @@ Auth: Bearer
 
 Başarı:
 
-```
+~~~http
 200 OK
-```
+~~~
 
 Golden response:
 
-```
+~~~json
 {
   "postId": 15,
   "isLiked": true,
   "likeCount": 5
 }
-```
+~~~
 
 Post bulunamaz veya görünmezse:
 
-```
+~~~http
 404 Not Found
-```
+~~~
 
 Aynı kullanıcının tekrar like isteği idempotenttir.
 
-16.2 DELETE /api/v1/posts/{postId}/likes
+### 16.2 DELETE /api/v1/posts/{postId}/likes
 
 Auth: Bearer
 
@@ -929,77 +914,72 @@ Auth: Bearer
 
 Başarı:
 
-```
+~~~http
 200 OK
-```
+~~~
 
 Golden response:
 
-```
+~~~json
 {
   "postId": 15,
   "isLiked": false,
   "likeCount": 4
 }
-```
+~~~
 
 Like bulunmasa da işlem idempotent olarak başarılı kabul edilir.
 
-17. Blocks
+## 17. Blocks
 
-17.1 POST /api/v1/profiles/{username}/block
+### 17.1 POST /api/v1/profiles/{username}/block
 
 Auth: Bearer
 
 Create semantiği:
 
-Hedef path içindeki username ile belirlenir.
-
-İstek gövdesi yoktur.
-
-Gövdede id veya username gönderilmez.
+- Hedef path içindeki `username` ile belirlenir.
+- İstek gövdesi yoktur.
+- Gövdede id veya username gönderilmez.
 
 Golden request:
 
-```
+~~~http
 POST /api/v1/profiles/otheruser/block
 Authorization: Bearer <accessToken>
-```
+~~~
 
 Başarı:
 
-```
+~~~http
 200 OK
-```
+~~~
 
 Golden response:
 
-```
+~~~json
 {
   "username": "otheruser",
   "isBlocked": true
 }
-```
+~~~
 
 Yanıt alanları:
 
-AlanTürZorunluNull
-usernamestringEvetHayır
-isBlockedbooleanEvetHayır
+| Alan | Tür | Zorunlu | Null |
+|---|---|---|---|
+| `username` | string | Evet | Hayır |
+| `isBlocked` | boolean | Evet | Hayır |
 
 Kurallar:
 
-Kullanıcı kendisini engellerse 400.
+- Kullanıcı kendisini engellerse `400`.
+- Hedef kullanıcı bulunamazsa `404`.
+- Aynı block tekrar oluşturulursa ikinci kayıt açılmaz.
+- Tekrarlanan create yine `200` döndürür.
+- Block oluşturulduğunda iki kullanıcı arasındaki mevcut follow ilişkileri kaldırılır.
 
-Hedef kullanıcı bulunamazsa 404.
-
-Aynı block tekrar oluşturulursa ikinci kayıt açılmaz.
-
-Tekrarlanan create yine 200 döndürür.
-
-Block oluşturulduğunda iki kullanıcı arasındaki mevcut follow ilişkileri kaldırılır.
-
-17.2 DELETE /api/v1/profiles/{username}/block
+### 17.2 DELETE /api/v1/profiles/{username}/block
 
 Auth: Bearer
 
@@ -1007,26 +987,25 @@ Auth: Bearer
 
 Golden request:
 
-```
+~~~http
 DELETE /api/v1/profiles/otheruser/block
 Authorization: Bearer <accessToken>
-```
+~~~
 
 Başarı:
 
-```
+~~~http
 204 No Content
-```
+~~~
 
 Yanıt gövdesi: Yok
 
 Kurallar:
 
-Block yoksa işlem idempotent olarak yine 204 döndürür.
+- Block yoksa işlem idempotent olarak yine `204` döndürür.
+- Engelin kaldırılması eski follow ilişkilerini geri oluşturmaz.
 
-Engelin kaldırılması eski follow ilişkilerini geri oluşturmaz.
-
-17.3 GET /api/v1/blocks
+### 17.3 GET /api/v1/blocks
 
 Auth: Bearer
 
@@ -1034,17 +1013,17 @@ Auth: Bearer
 
 Read semantiği:
 
-Yalnızca oturum sahibinin engellediği kullanıcılar döndürülür.
+- Yalnızca oturum sahibinin engellediği kullanıcılar döndürülür.
 
 Başarı:
 
-```
+~~~http
 200 OK
-```
+~~~
 
 Golden response:
 
-```
+~~~json
 {
   "items": [
     {
@@ -1056,93 +1035,85 @@ Golden response:
     }
   ]
 }
-```
+~~~
 
 Yanıt alanları:
 
-AlanTürZorunluNull
-itemsarrayEvetHayır
-items[].idintegerEvetHayır
-items[].usernamestringEvetHayır
-items[].displayNamestringEvetHayır
-items[].avatarUrlstringEvetEvet
-items[].blockedAtUTC ISO 8601 stringEvetHayır
+| Alan | Tür | Zorunlu | Null |
+|---|---|---|---|
+| `items` | array | Evet | Hayır |
+| `items[].id` | integer | Evet | Hayır |
+| `items[].username` | string | Evet | Hayır |
+| `items[].displayName` | string | Evet | Hayır |
+| `items[].avatarUrl` | string | Evet | Evet |
+| `items[].blockedAt` | UTC ISO 8601 string | Evet | Hayır |
 
 Empty state:
 
-```
+~~~json
 {
   "items": []
 }
-```
+~~~
 
-Kayıt yokken 404 kullanılmaz.
+Kayıt yokken `404` kullanılmaz.
 
-18. Reports
+## 18. Reports
 
-18.1 POST /api/v1/reports
+### 18.1 POST /api/v1/reports
 
 Auth: Bearer
 
 Create semantiği:
 
-Gövdede report id bulunmaz.
-
-Reporter kimliği token üzerinden belirlenir.
-
-Hedef targetType ve targetId ile belirlenir.
+- Gövdede report id bulunmaz.
+- Reporter kimliği token üzerinden belirlenir.
+- Hedef `targetType` ve `targetId` ile belirlenir.
 
 İstek alanları:
 
-AlanTürZorunluNull
-targetTypeReportTargetTypeEvetHayır
-targetIdintegerEvetHayır
-reasonReportReasonEvetHayır
-detailsstringHayırEvet
+| Alan | Tür | Zorunlu | Null |
+|---|---|---|---|
+| `targetType` | ReportTargetType | Evet | Hayır |
+| `targetId` | integer | Evet | Hayır |
+| `reason` | ReportReason | Evet | Hayır |
+| `details` | string | Hayır | Evet |
 
-details maksimum 500 karakterdir.
+`details` maksimum 500 karakterdir.
 
 Golden post-report request:
 
-```
+~~~json
 {
   "targetType": "Post",
   "targetId": 15,
   "reason": "Harassment",
   "details": "Repeated targeted insults."
 }
-```
+~~~
 
 Golden user-report request:
 
-```
+~~~json
 {
   "targetType": "User",
   "targetId": 22,
   "reason": "Impersonation",
   "details": null
 }
-```
+~~~
 
-Alternatif request alanları geçersizdir:
-
-```
-postId
-userId
-reportType
-categoryCode
-targetIdentifier
-```
+Alternatif request alanları geçersizdir: `postId`, `userId`, `reportType`, `categoryCode`, `targetIdentifier`.
 
 Başarı:
 
-```
+~~~http
 201 Created
-```
+~~~
 
 Golden response:
 
-```
+~~~json
 {
   "id": 41,
   "targetType": "Post",
@@ -1152,80 +1123,65 @@ Golden response:
   "status": "Pending",
   "createdAt": "2026-08-08T12:15:00Z"
 }
-```
+~~~
 
 Yanıt alanları:
 
-AlanTürZorunluNull
-idintegerEvetHayır
-targetTypeReportTargetTypeEvetHayır
-targetIdintegerEvetHayır
-reasonReportReasonEvetHayır
-detailsstringEvetEvet
-statusReportStatusEvetHayır
-createdAtUTC ISO 8601 stringEvetHayır
+| Alan | Tür | Zorunlu | Null |
+|---|---|---|---|
+| `id` | integer | Evet | Hayır |
+| `targetType` | ReportTargetType | Evet | Hayır |
+| `targetId` | integer | Evet | Hayır |
+| `reason` | ReportReason | Evet | Hayır |
+| `details` | string | Evet | Evet |
+| `status` | ReportStatus | Evet | Hayır |
+| `createdAt` | UTC ISO 8601 string | Evet | Hayır |
 
 HTTP semantiği:
 
-Target bulunamazsa 404.
+- Target bulunamazsa `404`.
+- Kullanıcı kendi hesabını şikâyet ederse `400`.
+- Kullanıcı kendi postunu şikâyet ederse `400`.
+- Aynı reporter ve target için `Pending` report varsa `409`.
+- Geçersiz enum `400`.
+- `details` 500 karakteri aşarsa `400`.
+- Report oluşturulması hedefi otomatik kaldırmaz.
 
-Kullanıcı kendi hesabını şikâyet ederse 400.
-
-Kullanıcı kendi postunu şikâyet ederse 400.
-
-Aynı reporter ve target için Pending report varsa 409.
-
-Geçersiz enum 400.
-
-details 500 karakteri aşarsa 400.
-
-Report oluşturulması hedefi otomatik kaldırmaz.
-
-19. Moderation
+## 19. Moderation
 
 Tüm endpoint'ler:
 
-```
+~~~http
 Authorization: Bearer <accessToken>
-```
+~~~
 
-ve Moderator rolü gerektirir.
+ve `Moderator` rolü gerektirir.
 
-Normal User rolü:
+Normal `User` rolü:
 
-```
+~~~http
 403 Forbidden
-```
+~~~
 
-19.1 GET /api/v1/moderation/reports
+### 19.1 GET /api/v1/moderation/reports
 
 Auth: Moderator
 
 İstek gövdesi: Yok
 
-Opsiyonel query:
+Opsiyonel `status` query değeri paylaşılan `ReportStatus` enum'undan biri olmalıdır: `Pending`, `Resolved`, `Dismissed`.
 
-```
-status=Pending
-status=Resolved
-status=Dismissed
-```
-
-Query verilmezse:
-
-```
-Pending
-```
+Query verilmezse varsayılan durum `Pending` olur.
 
 Başarı:
 
-```
+~~~http
 200 OK
-```
+~~~
 
 Golden response:
 
-```
+~~~json
 {
   "items": [
     {
@@ -1242,34 +1198,35 @@ Golden response:
     }
   ]
 }
-```
+~~~
 
 Yanıt alanları:
 
-AlanTürZorunluNull
-itemsarrayEvetHayır
-items[].idintegerEvetHayır
-items[].reporterUserIdintegerEvetHayır
-items[].targetTypeReportTargetTypeEvetHayır
-items[].targetIdintegerEvetHayır
-items[].reasonReportReasonEvetHayır
-items[].detailsstringEvetEvet
-items[].statusReportStatusEvetHayır
-items[].createdAtUTC ISO 8601 stringEvetHayır
-items[].resolvedAtUTC ISO 8601 stringEvetEvet
-items[].resolvedByUserIdintegerEvetEvet
+| Alan | Tür | Zorunlu | Null |
+|---|---|---|---|
+| `items` | array | Evet | Hayır |
+| `items[].id` | integer | Evet | Hayır |
+| `items[].reporterUserId` | integer | Evet | Hayır |
+| `items[].targetType` | ReportTargetType | Evet | Hayır |
+| `items[].targetId` | integer | Evet | Hayır |
+| `items[].reason` | ReportReason | Evet | Hayır |
+| `items[].details` | string | Evet | Evet |
+| `items[].status` | ReportStatus | Evet | Hayır |
+| `items[].createdAt` | UTC ISO 8601 string | Evet | Hayır |
+| `items[].resolvedAt` | UTC ISO 8601 string | Evet | Evet |
+| `items[].resolvedByUserId` | integer | Evet | Evet |
 
 Empty state:
 
-```
+~~~json
 {
   "items": []
 }
-```
+~~~
 
-Boş kuyruk 404 değildir.
+Boş kuyruk `404` değildir.
 
-19.2 GET /api/v1/moderation/reports/{reportId}
+### 19.2 GET /api/v1/moderation/reports/{reportId}
 
 Auth: Moderator
 
@@ -1277,13 +1234,13 @@ Auth: Moderator
 
 Başarı:
 
-```
+~~~http
 200 OK
-```
+~~~
 
 Golden response:
 
-```
+~~~json
 {
   "id": 41,
   "reporterUserId": 7,
@@ -1296,59 +1253,59 @@ Golden response:
   "resolvedAt": null,
   "resolvedByUserId": null
 }
-```
+~~~
 
 Report bulunamazsa:
 
-```
+~~~http
 404 Not Found
-```
+~~~
 
-19.3 POST /api/v1/moderation/reports/{reportId}/resolve
+### 19.3 POST /api/v1/moderation/reports/{reportId}/resolve
 
 Auth: Moderator
 
 Update semantiği:
 
-Report path içindeki reportId ile belirlenir.
-
-Gövdede report id bulunmaz.
+- Report path içindeki `reportId` ile belirlenir.
+- Gövdede report id bulunmaz.
 
 İstek alanları:
 
-AlanTürZorunluNull
-actionModerationActionEvetHayır
-notestringHayırEvet
+| Alan | Tür | Zorunlu | Null |
+|---|---|---|---|
+| `action` | ModerationAction | Evet | Hayır |
+| `note` | string | Hayır | Evet |
 
-note maksimum 500 karakterdir.
+`note` maksimum 500 karakterdir.
 
 Golden RemovePost request:
 
-```
+~~~json
 {
   "action": "RemovePost",
   "note": "Content violates harassment policy."
 }
-```
+~~~
 
 Golden NoAction request:
 
-```
+~~~json
 {
   "action": "NoAction",
   "note": null
 }
-```
+~~~
 
 Başarı:
 
-```
+~~~http
 200 OK
-```
+~~~
 
 Golden response:
 
-```
+~~~json
 {
   "id": 41,
   "status": "Resolved",
@@ -1356,487 +1313,384 @@ Golden response:
   "resolvedAt": "2026-08-08T12:30:00Z",
   "resolvedByUserId": 3
 }
-```
+~~~
 
 Yanıt alanları:
 
-AlanTürZorunluNull
-idintegerEvetHayır
-statusReportStatusEvetHayır
-actionModerationActionEvetHayır
-resolvedAtUTC ISO 8601 stringEvetHayır
-resolvedByUserIdintegerEvetHayır
+| Alan | Tür | Zorunlu | Null |
+|---|---|---|---|
+| `id` | integer | Evet | Hayır |
+| `status` | ReportStatus | Evet | Hayır |
+| `action` | ModerationAction | Evet | Hayır |
+| `resolvedAt` | UTC ISO 8601 string | Evet | Hayır |
+| `resolvedByUserId` | integer | Evet | Hayır |
 
 Kurallar:
 
-Report bulunamazsa 404.
+- Report bulunamazsa `404`.
+- Report `Pending` değilse `409`.
+- `RemovePost` yalnızca `targetType=Post` için geçerlidir.
+- `RemovePost` bir User report için kullanılırsa `400`.
+- `RemovePost` fiziksel DELETE yapmaz.
+- `NoAction` target kaynağı değiştirmez.
+- Başarılı işlem audit kaydı oluşturur.
 
-Report Pending değilse 409.
-
-RemovePost yalnızca targetType=Post için geçerlidir.
-
-RemovePost bir User report için kullanılırsa 400.
-
-RemovePost fiziksel DELETE yapmaz.
-
-NoAction target kaynağı değiştirmez.
-
-Başarılı işlem audit kaydı oluşturur.
-
-19.4 POST /api/v1/moderation/reports/{reportId}/dismiss
+### 19.4 POST /api/v1/moderation/reports/{reportId}/dismiss
 
 Auth: Moderator
 
 Update semantiği:
 
-Report path içindeki reportId ile belirlenir.
-
-Gövdede id bulunmaz.
+- Report path içindeki `reportId` ile belirlenir.
+- Gövdede id bulunmaz.
 
 İstek alanları:
 
-AlanTürZorunluNull
-notestringHayırEvet
+| Alan | Tür | Zorunlu | Null |
+|---|---|---|---|
+| `note` | string | Hayır | Evet |
 
-note maksimum 500 karakterdir.
+`note` maksimum 500 karakterdir.
 
 Golden request:
 
-```
+~~~json
 {
   "note": "No policy violation found."
 }
-```
+~~~
 
 Başarı:
 
-```
+~~~http
 200 OK
-```
+~~~
 
 Golden response:
 
-```
+~~~json
 {
   "id": 41,
   "status": "Dismissed",
   "resolvedAt": "2026-08-08T12:35:00Z",
   "resolvedByUserId": 3
 }
-```
+~~~
 
 Yanıt alanları:
 
-AlanTürZorunluNull
-idintegerEvetHayır
-statusReportStatusEvetHayır
-resolvedAtUTC ISO 8601 stringEvetHayır
-resolvedByUserIdintegerEvetHayır
+| Alan | Tür | Zorunlu | Null |
+|---|---|---|---|
+| `id` | integer | Evet | Hayır |
+| `status` | ReportStatus | Evet | Hayır |
+| `resolvedAt` | UTC ISO 8601 string | Evet | Hayır |
+| `resolvedByUserId` | integer | Evet | Hayır |
 
 Kurallar:
 
-Report bulunamazsa 404.
+- Report bulunamazsa `404`.
+- Report `Pending` değilse `409`.
+- Dismiss target kaynağını değiştirmez.
+- Başarılı işlem audit kaydı oluşturur.
 
-Report Pending değilse 409.
-
-Dismiss target kaynağını değiştirmez.
-
-Başarılı işlem audit kaydı oluşturur.
-
-20. Block görünürlük semantiği
+## 20. Block görünürlük semantiği
 
 Block ilişkisi aşağıdaki mevcut kaynaklarda server-side uygulanır:
 
-```
-GET /api/v1/feed
-GET /api/v1/profiles/{username}
-POST /api/v1/profiles/{username}/follow
-POST /api/v1/posts/{postId}/likes
-POST /api/v1/posts/{postId}/replies
-```
+- `GET /api/v1/feed`
+- `GET /api/v1/profiles/{username}`
+- `POST /api/v1/profiles/{username}/follow`
+- `POST /api/v1/posts/{postId}/likes`
+- `POST /api/v1/posts/{postId}/replies`
 
 Kurallar:
 
-Engelli hesapların postları feed'den filtrelenir.
+- Engelli hesapların postları feed'den filtrelenir.
+- İki kullanıcı arasında block varsa yeni follow oluşturulamaz.
+- Block nedeniyle görünmeyen profile erişim `404` döndürür.
+- Block nedeniyle görünmeyen post üzerinde like/reply `404` döndürür.
+- Response block ilişkisinin varlığını ayrıca açıklamaz.
+- Block oluşturulduğunda iki yöndeki mevcut follow ilişkileri kaldırılır.
+- Unblock eski follow ilişkisini geri getirmez.
 
-İki kullanıcı arasında block varsa yeni follow oluşturulamaz.
+## 21. Moderasyon ile kaldırılmış gönderi semantiği
 
-Block nedeniyle görünmeyen profile erişim 404 döndürür.
+`RemovePost` sonucunda soft-delete edilmiş post:
 
-Block nedeniyle görünmeyen post üzerinde like/reply 404 döndürür.
+- feed'de dönmez,
+- normal görünür post kabul edilmez,
+- yeni like kabul etmez,
+- yeni reply kabul etmez.
 
-Response block ilişkisinin varlığını ayrıca açıklamaz.
+Görünmeyen soft-delete post için ilişkili kaynak işlemleri `404 Not Found` döndürür.
 
-Block oluşturulduğunda iki yöndeki mevcut follow ilişkileri kaldırılır.
-
-Unblock eski follow ilişkisini geri getirmez.
-
-21. Moderasyon ile kaldırılmış gönderi semantiği
-
-RemovePost sonucunda soft-delete edilmiş post:
-
-feed'de dönmez,
-
-normal görünür post kabul edilmez,
-
-yeni like kabul etmez,
-
-yeni reply kabul etmez.
-
-Görünmeyen soft-delete post için ilişkili kaynak işlemleri:
-
-```
-404 Not Found
-```
-
-Mobil istemci moderasyon kaldırması için:
-
-```
-DELETE /api/v1/posts/{postId}
-```
-
-endpoint'ini kullanmaz.
+Mobil istemci moderasyon kaldırması için standart `DELETE /api/v1/posts/{postId}` endpoint'ini kullanmaz.
 
 Standart DELETE endpoint'inin gönderi sahipliği semantiği değişmez.
 
-22. HTTP Create / Update / Read kuralları
+## 22. HTTP Create / Update / Read kuralları
 
-Create
+### Create
 
-Yeni kaynak create işlemi:
-
-```
-POST /collection
-```
+Yeni kaynak create işlemi `POST /collection` semantiğini kullanır.
 
 Gövdede server tarafından üretilecek kaynak kimliği bulunmaz.
 
 Bu kural:
 
-register,
-
-posts,
-
-replies,
-
-block,
-
-reports
+- register,
+- posts,
+- replies,
+- block,
+- reports
 
 create akışları için geçerlidir.
 
-Update
+### Update
 
 Mevcut kaynağın güncellenmesi canonical path üzerinden yapılır.
 
-Örnek:
-
-```
-PUT /api/v1/me
-```
+Örnek: `PUT /api/v1/me`.
 
 Moderasyon state transition işlemleri action endpoint'leri üzerinden gerçekleştirilir:
 
-```
-POST /api/v1/moderation/reports/{reportId}/resolve
-POST /api/v1/moderation/reports/{reportId}/dismiss
-```
+- `POST /api/v1/moderation/reports/{reportId}/resolve`
+- `POST /api/v1/moderation/reports/{reportId}/dismiss`
 
 Request body içinde path kimliği tekrar edilmez.
 
-Read
+### Read
 
-Tek kaynağın path ile seçildiği GET endpoint'lerinde kayıt bulunamazsa:
+Tek kaynağın path ile seçildiği GET endpoint'lerinde kayıt bulunamazsa `404 Not Found` döndürülür.
 
-```
-404 Not Found
-```
-
-Collection endpoint'lerinde kayıt olmaması:
-
-```
-200 OK
-```
-
-ve boş collection döndürür.
+Collection endpoint'lerinde kayıt olmaması `200 OK` ve boş collection anlamına gelir.
 
 Örnek:
 
-```
+~~~json
 {
   "items": []
 }
-```
+~~~
 
 Bu davranış özellikle:
 
-```
-GET /api/v1/feed
-GET /api/v1/blocks
-GET /api/v1/moderation/reports
-```
+- `GET /api/v1/feed`
+- `GET /api/v1/blocks`
+- `GET /api/v1/moderation/reports`
 
 için empty state anlamına gelir.
 
-23. Golden sample kuralı
+## 23. Golden sample kuralı
 
-Backend integration testindeki PostAsJsonAsync ve PutAsJsonAsync request gövdeleri bu dokümandaki golden JSON ile aynı alan adlarını kullanmalıdır.
-
-Özellikle:
+Backend integration testindeki `PostAsJsonAsync` ve `PutAsJsonAsync` request gövdeleri bu dokümandaki golden JSON ile aynı alan adlarını kullanmalıdır.
 
 Post:
 
-```
+~~~json
 {
   "content": "Merhaba Pulse."
 }
-```
+~~~
 
 Reply:
 
-```
+~~~json
 {
   "content": "Katılıyorum."
 }
-```
+~~~
 
 Profile update:
 
-```
+~~~json
 {
   "displayName": "İlkan Kişi",
   "bio": "Pulse kullanıcısı",
   "avatarUrl": null
 }
-```
+~~~
 
 Report:
 
-```
+~~~json
 {
   "targetType": "Post",
   "targetId": 15,
   "reason": "Harassment",
   "details": "Repeated targeted insults."
 }
-```
+~~~
 
 Moderation resolve:
 
-```
+~~~json
 {
   "action": "RemovePost",
   "note": "Content violates harassment policy."
 }
-```
+~~~
 
-Mobil bu alanların yerine alternatif property isimleri kullanamaz.
+Mobil `toJson()` ve request body testleri bu golden gövdelerle aynı alan adlarını ve enum string değerlerini üretmelidir.
 
-24. Enum casing kuralı
+Aynı paylaşılan enum/tip için istemci tarafında tek canonical serializer kullanılmalıdır. Endpoint'e göre alternatif enum casing veya farklı serializer tanımlanamaz.
 
-Enum string değerleri case-sensitive canonical değerler olarak değerlendirilir.
+## 24. Enum casing ve serializer kuralı
 
-ReportTargetType:
+Enum string değerleri case-sensitive canonical değerlerdir.
 
-```
-Post
-User
-```
+`ReportTargetType`:
 
-ReportReason:
+- `Post`
+- `User`
 
-```
-Spam
-Harassment
-HateSpeech
-Violence
-SexualContent
-Impersonation
-Other
-```
+`ReportReason`:
 
-ReportStatus:
+- `Spam`
+- `Harassment`
+- `HateSpeech`
+- `Violence`
+- `SexualContent`
+- `Impersonation`
+- `Other`
 
-```
-Pending
-Resolved
-Dismissed
-```
+`ReportStatus`:
 
-ModerationAction:
+- `Pending`
+- `Resolved`
+- `Dismissed`
 
-```
-NoAction
-RemovePost
-```
+`ModerationAction`:
 
-Aşağıdaki örnekler canonical değildir:
+- `NoAction`
+- `RemovePost`
 
-```
-post
-user
-spam
-harassment
-pending
-resolved
-remove_post
-removePost
-```
+Küçük harfli veya farklı biçimli enum alias'ları geçersizdir.
 
-25. Kimlik kararı
+Örneğin `post`, `user`, `spam`, `harassment`, `pending`, `resolved`, `remove_post` ve `removePost` canonical enum string'i değildir.
+
+Backend integration testlerindeki enum string'leri golden referanstır.
+
+Mobil aynı enum için tek serializer fonksiyonu kullanmalı ve yukarıdaki canonical değerleri birebir üretmelidir.
+
+## 25. Kimlik kararı
 
 Güncel Pulse MVP kaynak kimlikleri integer'dır.
 
-Backend:
+Backend modeli `int Id`, mobil modeli `final int id;` kullanır.
 
-```
-int Id
-```
+API örneği:
 
-Mobil:
-
-```
-final int id;
-```
-
-API:
-
-```
+~~~json
 {
   "id": 1
 }
-```
+~~~
 
 UUID string kullanılmaz.
 
-26. Gönderi alan adları
+## 26. Gönderi alan adları
 
-Bir gönderinin canonical temel alanları:
+Bir gönderinin canonical temel JSON property adları `id`, `author`, `content`, `parentPostId`, `createdAt`, `likeCount`, `replyCount` ve `isLikedByMe` şeklindedir.
 
-```
-id
-author
-content
-parentPostId
-createdAt
-likeCount
-replyCount
-isLikedByMe
-```
+Kullanıcı tarafından oluşturulan gönderi metninin canonical JSON property adı `content`'tir. `content` bir enum string değeri değildir ve camelCase JSON property adı olarak kalmalıdır.
 
-Kullanıcı tarafından oluşturulan metin alanı:
+Geçersiz alternatif JSON property adları `title`, `description`, `text` ve `body`'dir.
 
-```
-content
-```
+Mobil UI bir gönderi başlığı benzeri görsel öğe üretse bile backend request/response alanını `title` olarak değiştirmez.
 
-Geçersiz alternatifler:
+§24 içindeki PascalCase zorunluluğu yalnızca paylaşılan enum string değerlerine uygulanır; JSON property adlarına uygulanmaz.
 
-```
-title
-description
-text
-body
-```
-
-Mobil UI bir gönderi başlığı benzeri görsel öğe üretse bile backend request/response alanını title olarak değiştirmez.
-
-27. Güvenlik ve moderasyon hata örnekleri
+## 27. Güvenlik ve moderasyon hata örnekleri
 
 Self-block:
 
-```
+~~~json
 {
   "error": "You cannot block yourself.",
   "field": null
 }
-```
+~~~
 
 Duplicate pending report:
 
-```
+~~~json
 {
   "error": "A pending report already exists for this target.",
   "field": null
 }
-```
+~~~
 
 Geçersiz report reason:
 
-```
+~~~json
 {
   "error": "Invalid report reason.",
   "field": "reason"
 }
-```
+~~~
 
 Geçersiz moderation action:
 
-```
+~~~json
 {
   "error": "Invalid moderation action.",
   "field": "action"
 }
-```
+~~~
 
 Moderator rolü yok:
 
-```
+~~~json
 {
   "error": "You are not authorized to perform this action.",
   "field": null
 }
-```
+~~~
 
 Daha önce sonuçlandırılmış report:
 
-```
+~~~json
 {
   "error": "The report has already been resolved.",
   "field": null
 }
-```
+~~~
 
-28. Authorization özeti
+## 28. Authorization özeti
 
 Anonim:
 
-```
-GET /health
-POST /api/v1/auth/register
-POST /api/v1/auth/login
-```
+- `GET /health`
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/login`
 
 Bearer:
 
-```
-GET /api/v1/me
-PUT /api/v1/me
-GET /api/v1/profiles/{username}
-POST /api/v1/profiles/{username}/follow
-DELETE /api/v1/profiles/{username}/follow
-GET /api/v1/feed
-POST /api/v1/posts
-DELETE /api/v1/posts/{postId}
-POST /api/v1/posts/{postId}/replies
-POST /api/v1/posts/{postId}/likes
-DELETE /api/v1/posts/{postId}/likes
-POST /api/v1/profiles/{username}/block
-DELETE /api/v1/profiles/{username}/block
-GET /api/v1/blocks
-POST /api/v1/reports
-```
+- `GET /api/v1/me`
+- `PUT /api/v1/me`
+- `GET /api/v1/profiles/{username}`
+- `POST /api/v1/profiles/{username}/follow`
+- `DELETE /api/v1/profiles/{username}/follow`
+- `GET /api/v1/feed`
+- `POST /api/v1/posts`
+- `DELETE /api/v1/posts/{postId}`
+- `POST /api/v1/posts/{postId}/replies`
+- `POST /api/v1/posts/{postId}/likes`
+- `DELETE /api/v1/posts/{postId}/likes`
+- `POST /api/v1/profiles/{username}/block`
+- `DELETE /api/v1/profiles/{username}/block`
+- `GET /api/v1/blocks`
+- `POST /api/v1/reports`
 
 Bearer + Moderator:
 
-```
-GET /api/v1/moderation/reports
-GET /api/v1/moderation/reports/{reportId}
-POST /api/v1/moderation/reports/{reportId}/resolve
-POST /api/v1/moderation/reports/{reportId}/dismiss
-```
+- `GET /api/v1/moderation/reports`
+- `GET /api/v1/moderation/reports/{reportId}`
+- `POST /api/v1/moderation/reports/{reportId}/resolve`
+- `POST /api/v1/moderation/reports/{reportId}/dismiss`
 
-29. Tek kaynak kuralı
+## 29. Tek kaynak kuralı
 
 Bu doküman backend ve mobil arasında API sözleşmesinin tek kaynağıdır.
 
@@ -1848,24 +1702,15 @@ Legacy fallback kullanılamaz.
 
 Yeni modül eklendiğinde:
 
-ayrı endpoint bölümü,
-
-HTTP method + path,
-
-auth,
-
-request body alanları,
-
-response body alanları,
-
-enum listeleri,
-
-golden request,
-
-golden response,
-
-HTTP semantiği,
-
-empty-state/404 anlamı
+- ayrı endpoint bölümü,
+- HTTP method + path,
+- auth,
+- request body alanları,
+- response body alanları,
+- enum listeleri,
+- golden request,
+- golden response,
+- HTTP semantiği,
+- empty-state/404 anlamı
 
 bu dosyada açık şekilde tanımlanmadan implementasyona başlanmamalıdır.

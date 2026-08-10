@@ -4,6 +4,8 @@ import 'package:http_mock_adapter/http_mock_adapter.dart';
 import 'package:pulse/core/network/api_client.dart';
 import 'package:pulse/core/storage/token_store.dart';
 
+import 'package:pulse/core/network/api_routes.dart';
+
 void main() {
   test('JWT varsa korumalı isteğe Bearer başlığı eklenir', () async {
     final dio = Dio(BaseOptions(baseUrl: 'http://127.0.0.1:5000'));
@@ -23,11 +25,11 @@ void main() {
     );
 
     adapter.onGet(
-      '/api/v1/feed',
+      ApiRoutes.feed,
       (server) => server.reply(200, <Map<String, dynamic>>[]),
     );
 
-    await client.dio.get<dynamic>('/api/v1/feed');
+    await client.dio.get<dynamic>(ApiRoutes.feed);
 
     final request = capturedRequest;
     expect(request, isNotNull);
@@ -52,11 +54,11 @@ void main() {
     );
 
     adapter.onGet(
-      '/api/v1/feed',
+      ApiRoutes.feed,
       (server) => server.reply(200, <Map<String, dynamic>>[]),
     );
 
-    await client.dio.get<dynamic>('/api/v1/feed');
+    await client.dio.get<dynamic>(ApiRoutes.feed);
 
     final request = capturedRequest;
     expect(request, isNotNull);
@@ -70,12 +72,12 @@ void main() {
     final client = ApiClient(tokenStore: tokenStore, dio: dio);
 
     adapter.onGet(
-      '/api/v1/feed',
+      ApiRoutes.feed,
       (server) => server.reply(401, <String, dynamic>{'error': 'Unauthorized'}),
     );
 
     await expectLater(
-      client.dio.get<dynamic>('/api/v1/feed'),
+      client.dio.get<dynamic>(ApiRoutes.feed),
       throwsA(isA<DioException>()),
     );
 
@@ -103,13 +105,13 @@ void main() {
     );
 
     adapter.onPost(
-      '/api/v1/posts',
+      ApiRoutes.posts,
       (server) => server.reply(201, <String, dynamic>{}),
       data: <String, dynamic>{'content': 'Merhaba Pulse'},
     );
 
     await client.dio.post<dynamic>(
-      '/api/v1/posts',
+      ApiRoutes.posts,
       data: <String, dynamic>{'content': 'Merhaba Pulse'},
     );
 

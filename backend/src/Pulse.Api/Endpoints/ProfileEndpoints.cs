@@ -16,15 +16,12 @@ public static class ProfileEndpoints
             .RequireAuthorization()
             .WithTags("Profiles");
 
-        group.MapGet("/me", GetCurrentProfileAsync);
-        group.MapPut("/me", UpdateCurrentProfileAsync);
         group.MapGet("/{username}", GetProfileAsync);
-        group.MapGet("/{username}/posts", GetProfilePostsAsync);
 
         return endpoints;
     }
 
-    private static async Task<IResult> GetCurrentProfileAsync(
+    internal static async Task<IResult> GetCurrentProfileContractAsync(
         ClaimsPrincipal principal,
         PulseDbContext db,
         CancellationToken cancellationToken)
@@ -49,52 +46,14 @@ public static class ProfileEndpoints
         }
 
         return Results.Ok(
-            await CreateProfileResponseAsync(
+            await CreateProfileContractResponseAsync(
                 db,
                 user,
                 currentUserId,
                 cancellationToken));
     }
 
-    private static async Task<IResult> GetProfileAsync(
-        string username,
-        ClaimsPrincipal principal,
-        PulseDbContext db,
-        CancellationToken cancellationToken)
-    {
-        if (!PostEndpoints.TryGetUserId(
-                principal,
-                out var currentUserId))
-        {
-            return Results.Unauthorized();
-        }
-
-        var normalizedUsername =
-            username.Trim().ToUpperInvariant();
-
-        var user = await db.Users
-            .AsNoTracking()
-            .SingleOrDefaultAsync(
-                candidate =>
-                    candidate.NormalizedUsername ==
-                    normalizedUsername,
-                cancellationToken);
-
-        if (user is null)
-        {
-            return Results.NotFound(
-                new ApiErrorResponse("User was not found."));
-        }
-
-        return Results.Ok(
-            await CreateProfileResponseAsync(
-                db,
-                user,
-                currentUserId,
-                cancellationToken));
-    }
-
-    private static async Task<IResult> UpdateCurrentProfileAsync(
+    internal static async Task<IResult> UpdateCurrentProfileContractAsync(
         UpdateProfileRequest request,
         ClaimsPrincipal principal,
         PulseDbContext db,
@@ -168,14 +127,14 @@ public static class ProfileEndpoints
         await db.SaveChangesAsync(cancellationToken);
 
         return Results.Ok(
-            await CreateProfileResponseAsync(
+            await CreateProfileContractResponseAsync(
                 db,
                 user,
                 currentUserId,
                 cancellationToken));
     }
 
-    private static async Task<IResult> GetProfilePostsAsync(
+    private static async Task<IResult> GetProfileAsync(
         string username,
         ClaimsPrincipal principal,
         PulseDbContext db,
@@ -205,48 +164,21 @@ public static class ProfileEndpoints
                 new ApiErrorResponse("User was not found."));
         }
 
-        var posts = await db.Posts
-            .AsNoTracking()
-            .Include(post => post.Author)
-            .Where(
-                post =>
-                    post.AuthorId == user.Id
-                    && post.ParentPostId == null
-                    && post.DeletedAt == null)
-            .OrderByDescending(post => post.CreatedAtUtc)
-            .ThenByDescending(post => post.Id)
-            .ToListAsync(cancellationToken);
-
-        var response = new List<PostResponse>(posts.Count);
-
-        foreach (var post in posts)
-        {
-            response.Add(
-                await PostEndpoints.ToResponseAsync(
-                    db,
-                    post,
-                    currentUserId,
-                    cancellationToken));
-        }
-
-        return Results.Ok(response);
+        return Results.Ok(
+            await CreateProfileContractResponseAsync(
+                db,
+                user,
+                currentUserId,
+                cancellationToken));
     }
 
-    internal static async Task<ProfileResponse> CreateProfileResponseAsync(
+    internal static async Task<ProfileContractResponse>
+        CreateProfileContractResponseAsync(
         PulseDbContext db,
         User user,
         int currentUserId,
         CancellationToken cancellationToken)
     {
-        var postCount = await db.Posts
-            .AsNoTracking()
-            .CountAsync(
-                post =>
-                    post.AuthorId == user.Id
-                    && post.ParentPostId == null
-                    && post.DeletedAt == null,
-                cancellationToken);
-
         var followerCount = await db.Follows
             .AsNoTracking()
             .CountAsync(
@@ -259,9 +191,7 @@ public static class ProfileEndpoints
                 follow => follow.FollowerId == user.Id,
                 cancellationToken);
 
-        var isCurrentUser = user.Id == currentUserId;
-
-        var isFollowing = !isCurrentUser &&
+        var isFollowing = user.Id != currentUserId &&
             await db.Follows
                 .AsNoTracking()
                 .AnyAsync(
@@ -270,18 +200,15 @@ public static class ProfileEndpoints
                         follow.FollowingId == user.Id,
                     cancellationToken);
 
-        return new ProfileResponse(
+        return new ProfileContractResponse(
             user.Id,
             user.Username,
             user.DisplayName,
             user.Bio,
             user.AvatarUrl,
-            user.CreatedAtUtc,
-            postCount,
             followerCount,
             followingCount,
-            isFollowing,
-            isCurrentUser);
+            isFollowing);
     }
 
     private static string? NormalizeOptional(string? value)

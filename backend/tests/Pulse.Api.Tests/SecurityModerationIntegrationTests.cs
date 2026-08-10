@@ -184,9 +184,9 @@ public sealed class SecurityModerationIntegrationTests
             "/api/v1/reports",
             new
             {
-                targetType = "user",
+                targetType = "User",
                 targetId = 2,
-                reason = "spam",
+                reason = "Spam",
                 details = "Repeated unwanted messages."
             });
 
@@ -199,7 +199,7 @@ public sealed class SecurityModerationIntegrationTests
                 .ReadFromJsonAsync<JsonElement>();
 
         Assert.Equal(
-            "user",
+            "User",
             body.GetProperty("targetType").GetString());
 
         Assert.Equal(
@@ -207,11 +207,11 @@ public sealed class SecurityModerationIntegrationTests
             body.GetProperty("targetId").GetInt32());
 
         Assert.Equal(
-            "spam",
+            "Spam",
             body.GetProperty("reason").GetString());
 
         Assert.Equal(
-            "pending",
+            "Pending",
             body.GetProperty("status").GetString());
 
         var reportId =
@@ -261,9 +261,9 @@ public sealed class SecurityModerationIntegrationTests
             "/api/v1/reports",
             new
             {
-                targetType = "user",
+                targetType = "User",
                 targetId = 2,
-                reason = "fakeAccount",
+                reason = "Impersonation",
                 details = "Account identity report."
             });
 
@@ -276,15 +276,15 @@ public sealed class SecurityModerationIntegrationTests
                 .ReadFromJsonAsync<JsonElement>();
 
         Assert.Equal(
-            "user",
+            "User",
             body.GetProperty("targetType").GetString());
 
         Assert.Equal(
-            "fakeAccount",
+            "Impersonation",
             body.GetProperty("reason").GetString());
 
         Assert.Equal(
-            "pending",
+            "Pending",
             body.GetProperty("status").GetString());
     }
 
@@ -375,7 +375,7 @@ public sealed class SecurityModerationIntegrationTests
             $"/api/v1/moderation/reports/{reportId}/resolve",
             new
             {
-                action = "removePost",
+                action = "RemovePost",
                 note = "Removed after review."
             });
 
@@ -388,11 +388,11 @@ public sealed class SecurityModerationIntegrationTests
                 .ReadFromJsonAsync<JsonElement>();
 
         Assert.Equal(
-            "resolved",
+            "Resolved",
             body.GetProperty("status").GetString());
 
         Assert.Equal(
-            "removePost",
+            "RemovePost",
             body.GetProperty("action").GetString());
 
         Assert.Equal(
@@ -496,11 +496,11 @@ public sealed class SecurityModerationIntegrationTests
                 .ReadFromJsonAsync<JsonElement>();
 
         Assert.Equal(
-            "dismissed",
+            "Dismissed",
             body.GetProperty("status").GetString());
 
         Assert.Equal(
-            "noAction",
+            "NoAction",
             body.GetProperty("action").GetString());
 
         Assert.Equal(

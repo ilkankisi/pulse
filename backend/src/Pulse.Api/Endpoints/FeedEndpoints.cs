@@ -86,6 +86,7 @@ public static class FeedEndpoints
                     cancellationToken));
         }
 
-        return Results.Ok(responses);
+        return Results.Ok(
+            new FeedListResponse(responses));
     }
 }

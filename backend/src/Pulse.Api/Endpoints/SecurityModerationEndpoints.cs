@@ -229,6 +229,8 @@ public static class SecurityModerationEndpoints
                     new BlockListItemResponse(
                         block.BlockedUserId,
                         block.BlockedUser.Username,
+                        block.BlockedUser.DisplayName,
+                        block.BlockedUser.AvatarUrl,
                         block.CreatedAt))
             .ToList();
 
@@ -609,11 +611,13 @@ public static class SecurityModerationEndpoints
     {
         switch (token)
         {
+            case "Post":
             case "post":
                 value =
                     (ReportTargetType)postTargetValue;
                 return true;
 
+            case "User":
             case "user":
                 value =
                     (ReportTargetType)userTargetValue;
@@ -631,36 +635,43 @@ public static class SecurityModerationEndpoints
     {
         switch (token)
         {
+            case "Spam":
             case "spam":
                 value =
                     (ReportReason)spamReasonValue;
                 return true;
 
+            case "Harassment":
             case "harassment":
                 value =
                     (ReportReason)harassmentReasonValue;
                 return true;
 
+            case "HateSpeech":
             case "hateSpeech":
                 value =
                     (ReportReason)hateSpeechReasonValue;
                 return true;
 
+            case "Violence":
             case "violence":
                 value =
                     (ReportReason)violenceReasonValue;
                 return true;
 
+            case "SexualContent":
             case "sexualContent":
                 value =
                     (ReportReason)sexualContentReasonValue;
                 return true;
 
+            case "Impersonation":
             case "fakeAccount":
                 value =
                     (ReportReason)fakeAccountReasonValue;
                 return true;
 
+            case "Other":
             case "other":
                 value =
                     (ReportReason)otherReasonValue;
@@ -678,11 +689,13 @@ public static class SecurityModerationEndpoints
     {
         switch (token)
         {
+            case "NoAction":
             case "noAction":
                 value =
                     (ModerationAction)noActionValue;
                 return true;
 
+            case "RemovePost":
             case "removePost":
                 value =
                     (ModerationAction)removePostActionValue;
@@ -699,8 +712,8 @@ public static class SecurityModerationEndpoints
     {
         return (int)value switch
         {
-            postTargetValue => "post",
-            userTargetValue => "user",
+            postTargetValue => "Post",
+            userTargetValue => "User",
             _ => throw new ArgumentOutOfRangeException(
                 nameof(value))
         };
@@ -711,13 +724,13 @@ public static class SecurityModerationEndpoints
     {
         return (int)value switch
         {
-            spamReasonValue => "spam",
-            harassmentReasonValue => "harassment",
-            hateSpeechReasonValue => "hateSpeech",
-            violenceReasonValue => "violence",
-            sexualContentReasonValue => "sexualContent",
-            fakeAccountReasonValue => "fakeAccount",
-            otherReasonValue => "other",
+            spamReasonValue => "Spam",
+            harassmentReasonValue => "Harassment",
+            hateSpeechReasonValue => "HateSpeech",
+            violenceReasonValue => "Violence",
+            sexualContentReasonValue => "SexualContent",
+            fakeAccountReasonValue => "Impersonation",
+            otherReasonValue => "Other",
             _ => throw new ArgumentOutOfRangeException(
                 nameof(value))
         };
@@ -728,9 +741,9 @@ public static class SecurityModerationEndpoints
     {
         return (int)value switch
         {
-            pendingStatusValue => "pending",
-            resolvedStatusValue => "resolved",
-            dismissedStatusValue => "dismissed",
+            pendingStatusValue => "Pending",
+            resolvedStatusValue => "Resolved",
+            dismissedStatusValue => "Dismissed",
             _ => throw new ArgumentOutOfRangeException(
                 nameof(value))
         };
@@ -741,8 +754,8 @@ public static class SecurityModerationEndpoints
     {
         return (int)value switch
         {
-            noActionValue => "noAction",
-            removePostActionValue => "removePost",
+            noActionValue => "NoAction",
+            removePostActionValue => "RemovePost",
             _ => throw new ArgumentOutOfRangeException(
                 nameof(value))
         };
@@ -788,7 +801,9 @@ public static class SecurityModerationEndpoints
     public sealed record BlockListItemResponse(
         int Id,
         string Username,
-        DateTime CreatedAt);
+        string DisplayName,
+        string? AvatarUrl,
+        DateTime BlockedAt);
 
     public sealed record BlockListResponse(
         IReadOnlyList<BlockListItemResponse> Items);
@@ -811,8 +826,8 @@ public static class SecurityModerationEndpoints
         string? Details,
         string Status,
         DateTime CreatedAt,
-        DateTime? ReviewedAt,
-        int? ReviewedByUserId);
+        DateTime? ResolvedAt,
+        int? ResolvedByUserId);
 
     public sealed record ModerationReportListResponse(
         IReadOnlyList<ModerationReportResponse> Items);

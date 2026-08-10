@@ -5,9 +5,9 @@ import 'package:pulse/features/pulse/data/pulse_repository.dart';
 import 'package:pulse/features/pulse/domain/pulse_models.dart';
 
 void main() {
-  const profilePath = '/api/v1/profiles/me';
+  const profilePath = '/api/v1/me';
 
-  test('GET /api/v1/profiles/me 404 mevcut profil için null döner', () async {
+  test('GET /api/v1/me 404 mevcut profil için null döner', () async {
     final dio = Dio(BaseOptions(baseUrl: 'http://127.0.0.1:5000'));
     final adapter = DioAdapter(dio: dio);
     final repository = PulseRepository(dio: dio);
@@ -43,7 +43,7 @@ void main() {
     dio.close(force: true);
   });
 
-  test('PUT /api/v1/profiles/me canonical update body kullanır', () async {
+  test('PUT /api/v1/me canonical update body kullanır', () async {
     final dio = Dio(BaseOptions(baseUrl: 'http://127.0.0.1:5000'));
     final adapter = DioAdapter(dio: dio);
     final repository = PulseRepository(dio: dio);

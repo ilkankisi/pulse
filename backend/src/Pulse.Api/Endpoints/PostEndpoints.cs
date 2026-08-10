@@ -95,7 +95,7 @@ public static partial class PostEndpoints
                     && reply.DeletedAt == null,
                 cancellationToken);
 
-        var isLikedByCurrentUser =
+        var isLikedByMe =
             currentUserId.HasValue
             && await dbContext.PostLikes.AnyAsync(
                 like =>
@@ -115,6 +115,6 @@ public static partial class PostEndpoints
             post.CreatedAtUtc,
             likeCount,
             replyCount,
-            isLikedByCurrentUser);
+            isLikedByMe);
     }
 }

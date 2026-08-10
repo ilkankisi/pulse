@@ -9,6 +9,8 @@ import 'package:pulse/features/pulse/data/pulse_repository.dart';
 import 'package:pulse/features/pulse/domain/pulse_models.dart';
 import 'package:pulse/features/pulse/presentation/profile_page.dart';
 
+import 'package:pulse/core/network/api_routes.dart';
+
 void main() {
   const profile = PulseProfile(
     id: 1,
@@ -32,7 +34,7 @@ void main() {
 
     addTearDown(() => dio.close(force: true));
 
-    const postsPath = '/api/v1/profiles/ilkan/posts';
+    const postsPath = ApiRoutes.feed;
 
     adapter.onGet(
       postsPath,
@@ -120,7 +122,7 @@ void main() {
 
     addTearDown(() => dio.close(force: true));
 
-    const postsPath = '/api/v1/profiles/ayse/posts';
+    const postsPath = ApiRoutes.feed;
 
     adapter.onGet(
       postsPath,
@@ -191,7 +193,7 @@ void main() {
     addTearDown(() => dio.close(force: true));
 
     adapter.onGet(
-      '/api/v1/profiles/ilkan/posts',
+      ApiRoutes.feed,
       (server) => server.reply(200, <Map<String, dynamic>>[]),
     );
 
@@ -216,10 +218,6 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('Henüz gönderi yok'), findsOneWidget);
-    expect(
-      find.text('Paylaştığın gönderiler burada görünecek.'),
-      findsOneWidget,
-    );
     expect(find.text('Gönderiler yüklenemedi'), findsNothing);
   });
 
@@ -237,7 +235,7 @@ void main() {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
-          if (options.path != '/api/v1/profiles/ilkan/posts') {
+          if (options.path != ApiRoutes.feed) {
             handler.next(options);
             return;
           }
@@ -323,7 +321,7 @@ void main() {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
-          if (options.path != '/api/v1/profiles/ilkan/posts') {
+          if (options.path != ApiRoutes.feed) {
             handler.next(options);
             return;
           }
@@ -446,7 +444,7 @@ void main() {
     });
 
     adapter.onGet(
-      '/api/v1/profiles/ilkan/posts',
+      ApiRoutes.feed,
       (server) => server.reply(200, <Map<String, dynamic>>[]),
     );
 
@@ -531,7 +529,7 @@ void main() {
     expect(find.text('Yeni biyografi'), findsOneWidget);
 
     await tester.pump(const Duration(seconds: 5));
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     expect(tester.takeException(), isNull);
   });

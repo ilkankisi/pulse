@@ -82,9 +82,8 @@ public static class FollowEndpoints
 
         return Results.Ok(
             await CreateResponseAsync(
-                targetUser.Id,
+                targetUser.Username,
                 true,
-                db,
                 cancellationToken));
     }
 
@@ -135,9 +134,8 @@ public static class FollowEndpoints
 
         return Results.Ok(
             await CreateResponseAsync(
-                targetUser.Id,
+                targetUser.Username,
                 false,
-                db,
                 cancellationToken));
     }
 
@@ -158,21 +156,12 @@ public static class FollowEndpoints
                 cancellationToken);
     }
 
-    private static async Task<FollowResponse> CreateResponseAsync(
-        int userId,
+    private static Task<FollowResponse> CreateResponseAsync(
+        string username,
         bool isFollowing,
-        PulseDbContext db,
         CancellationToken cancellationToken)
     {
-        var followerCount = await db.Follows
-            .AsNoTracking()
-            .CountAsync(
-                follow => follow.FollowingId == userId,
-                cancellationToken);
-
-        return new FollowResponse(
-            userId,
-            isFollowing,
-            followerCount);
+        return Task.FromResult(
+            new FollowResponse(username, isFollowing));
     }
 }

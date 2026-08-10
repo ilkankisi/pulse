@@ -4,6 +4,8 @@ import 'package:http_mock_adapter/http_mock_adapter.dart';
 import 'package:pulse/features/pulse/data/pulse_repository.dart';
 import 'package:pulse/features/pulse/domain/pulse_models.dart';
 
+import 'package:pulse/core/network/api_routes.dart';
+
 void main() {
   late Dio dio;
   late DioAdapter adapter;
@@ -28,7 +30,7 @@ void main() {
 
   test('feed 404 yanıtını empty state olarak döndürür', () async {
     adapter.onGet(
-      '/api/v1/feed',
+      ApiRoutes.feed,
       (server) => server.reply(404, <String, dynamic>{'error': 'Not found'}),
     );
 
@@ -39,7 +41,7 @@ void main() {
 
   test('profil 404 yanıtını null olarak döndürür', () async {
     adapter.onGet(
-      '/api/v1/profiles/me',
+      ApiRoutes.me,
       (server) => server.reply(404, <String, dynamic>{'error': 'Not found'}),
     );
 
@@ -52,7 +54,7 @@ void main() {
     'gönderi oluşturma POST path ve gövdesi sözleşmeyle uyumludur',
     () async {
       adapter.onPost(
-        '/api/v1/posts',
+        ApiRoutes.posts,
         (server) => server.reply(201, _postJson()),
         data: <String, dynamic>{'content': 'Merhaba Pulse'},
       );
@@ -65,14 +67,14 @@ void main() {
 
       final request = requests.single;
       expect(request.method, 'POST');
-      expect(request.path, '/api/v1/posts');
+      expect(request.path, ApiRoutes.posts);
       expect(request.data, <String, dynamic>{'content': 'Merhaba Pulse'});
     },
   );
 
   test('profil güncelleme PUT path ve gövdesi sözleşmeyle uyumludur', () async {
     adapter.onPut(
-      '/api/v1/profiles/me',
+      ApiRoutes.me,
       (server) => server.reply(200, _profileJson()),
       data: <String, dynamic>{
         'displayName': 'İlkan',
@@ -90,7 +92,7 @@ void main() {
 
     final request = requests.single;
     expect(request.method, 'PUT');
-    expect(request.path, '/api/v1/profiles/me');
+    expect(request.path, ApiRoutes.me);
     expect(request.data, <String, dynamic>{
       'displayName': 'İlkan',
       'bio': 'Flutter geliştirici',
@@ -99,11 +101,11 @@ void main() {
 
   test('like ve unlike doğru HTTP senaryolarını kullanır', () async {
     adapter.onPost(
-      '/api/v1/posts/10/likes',
+      ApiRoutes.postLikes(10),
       (server) => server.reply(204, null),
     );
     adapter.onDelete(
-      '/api/v1/posts/10/likes',
+      ApiRoutes.postLikes(10),
       (server) => server.reply(204, null),
     );
 
@@ -111,14 +113,14 @@ void main() {
     await repository.unlikePost(10);
 
     expect(requests[0].method, 'POST');
-    expect(requests[0].path, '/api/v1/posts/10/likes');
+    expect(requests[0].path, ApiRoutes.postLikes(10));
     expect(requests[1].method, 'DELETE');
-    expect(requests[1].path, '/api/v1/posts/10/likes');
+    expect(requests[1].path, ApiRoutes.postLikes(10));
   });
 
   test('tek seviyeli reply doğru endpoint ve gövdeyi kullanır', () async {
     adapter.onPost(
-      '/api/v1/posts/10/replies',
+      ApiRoutes.postReplies(10),
       (server) => server.reply(201, _postJson(id: 11, replyToPostId: 10)),
       data: <String, dynamic>{'content': 'Yanıt'},
     );
@@ -130,17 +132,17 @@ void main() {
 
     expect(reply.replyToPostId, 10);
     expect(requests.single.method, 'POST');
-    expect(requests.single.path, '/api/v1/posts/10/replies');
+    expect(requests.single.path, ApiRoutes.postReplies(10));
     expect(requests.single.data, <String, dynamic>{'content': 'Yanıt'});
   });
 
   test('follow ve unfollow doğru HTTP senaryolarını kullanır', () async {
     adapter.onPost(
-      '/api/v1/profiles/ada/follow',
+      ApiRoutes.profileFollow('ada'),
       (server) => server.reply(204, null),
     );
     adapter.onDelete(
-      '/api/v1/profiles/ada/follow',
+      ApiRoutes.profileFollow('ada'),
       (server) => server.reply(204, null),
     );
 
@@ -148,9 +150,9 @@ void main() {
     await repository.unfollowUser('ada');
 
     expect(requests[0].method, 'POST');
-    expect(requests[0].path, '/api/v1/profiles/ada/follow');
+    expect(requests[0].path, ApiRoutes.profileFollow('ada'));
     expect(requests[1].method, 'DELETE');
-    expect(requests[1].path, '/api/v1/profiles/ada/follow');
+    expect(requests[1].path, ApiRoutes.profileFollow('ada'));
   });
 }
 
