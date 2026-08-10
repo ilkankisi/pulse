@@ -96,7 +96,9 @@ public static class PostEndpointRoutes
 
         var post = await dbContext.Posts
             .SingleOrDefaultAsync(
-                candidate => candidate.Id == postId,
+                candidate =>
+                    candidate.Id == postId
+                    && candidate.DeletedAt == null,
                 cancellationToken);
 
         if (post is null)
@@ -109,7 +111,7 @@ public static class PostEndpointRoutes
             return Results.Forbid();
         }
 
-        dbContext.Posts.Remove(post);
+        post.DeletedAt = DateTime.UtcNow;
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return Results.NoContent();
@@ -142,7 +144,9 @@ public static class PostEndpointRoutes
         var parentPost = await dbContext.Posts
             .AsNoTracking()
             .SingleOrDefaultAsync(
-                post => post.Id == postId,
+                post =>
+                    post.Id == postId
+                    && post.DeletedAt == null,
                 cancellationToken);
 
         if (parentPost is null)
@@ -196,9 +200,13 @@ public static class PostEndpointRoutes
             return Results.Unauthorized();
         }
 
-        var postExists = await dbContext.Posts.AnyAsync(
-            post => post.Id == postId,
-            cancellationToken);
+        var postExists = await dbContext.Posts
+            .AsNoTracking()
+            .AnyAsync(
+                post =>
+                    post.Id == postId
+                    && post.DeletedAt == null,
+                cancellationToken);
 
         if (!postExists)
         {
@@ -250,9 +258,13 @@ public static class PostEndpointRoutes
             return Results.Unauthorized();
         }
 
-        var postExists = await dbContext.Posts.AnyAsync(
-            post => post.Id == postId,
-            cancellationToken);
+        var postExists = await dbContext.Posts
+            .AsNoTracking()
+            .AnyAsync(
+                post =>
+                    post.Id == postId
+                    && post.DeletedAt == null,
+                cancellationToken);
 
         if (!postExists)
         {

@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -65,6 +66,7 @@ builder.Services
     .AddJwtBearer(
         options =>
         {
+            options.MapInboundClaims = false;
             options.TokenValidationParameters =
                 new TokenValidationParameters
                 {
@@ -76,7 +78,9 @@ builder.Services
                     IssuerSigningKey = new SymmetricSecurityKey(
                         Encoding.UTF8.GetBytes(jwtKey)),
                     ValidateLifetime = true,
-                    ClockSkew = TimeSpan.Zero
+                    ClockSkew = TimeSpan.Zero,
+                    NameClaimType = ClaimTypes.NameIdentifier,
+                    RoleClaimType = ClaimTypes.Role,
                 };
         });
 
@@ -153,6 +157,7 @@ app.MapPostEndpoints();
 app.MapFeedEndpoints();
 app.MapProfileEndpoints();
 app.MapFollowEndpoints();
+app.MapSecurityModerationEndpoints();
 
 app.Run();
 

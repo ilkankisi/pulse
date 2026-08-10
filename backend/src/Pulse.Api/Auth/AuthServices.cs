@@ -83,6 +83,11 @@ public sealed class JwtTokenService
                 JwtRegisteredClaimNames.Email,
                 user.Email),
             new Claim(
+                ClaimTypes.Role,
+                string.IsNullOrWhiteSpace(user.Role)
+                    ? "user"
+                    : user.Role),
+            new Claim(
                 JwtRegisteredClaimNames.Jti,
                 Guid.NewGuid().ToString("N"))
         };

@@ -208,12 +208,15 @@ public static class ProfileEndpoints
         var posts = await db.Posts
             .AsNoTracking()
             .Include(post => post.Author)
-            .Where(post =>
-                post.AuthorId == user.Id &&
-                post.ParentPostId == null)
+            .Where(
+                post =>
+                    post.AuthorId == user.Id
+                    && post.ParentPostId == null
+                    && post.DeletedAt == null)
             .OrderByDescending(post => post.CreatedAtUtc)
             .ThenByDescending(post => post.Id)
             .ToListAsync(cancellationToken);
+
         var response = new List<PostResponse>(posts.Count);
 
         foreach (var post in posts)
@@ -239,8 +242,9 @@ public static class ProfileEndpoints
             .AsNoTracking()
             .CountAsync(
                 post =>
-                    post.AuthorId == user.Id &&
-                    post.ParentPostId == null,
+                    post.AuthorId == user.Id
+                    && post.ParentPostId == null
+                    && post.DeletedAt == null,
                 cancellationToken);
 
         var followerCount = await db.Follows

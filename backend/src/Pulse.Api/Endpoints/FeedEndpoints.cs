@@ -38,10 +38,27 @@ public static class FeedEndpoints
             .Select(follow => follow.FollowingId)
             .ToListAsync(cancellationToken);
 
+        var blockedUserIds = await dbContext.Blocks
+            .AsNoTracking()
+            .Where(
+                block =>
+                    block.BlockerId == currentUserId
+                    || block.BlockedUserId == currentUserId)
+            .Select(
+                block =>
+                    block.BlockerId == currentUserId
+                        ? block.BlockedUserId
+                        : block.BlockerId)
+            .ToListAsync(cancellationToken);
+
         IQueryable<Post> query = dbContext.Posts
             .AsNoTracking()
             .Include(post => post.Author)
-            .Where(post => post.ParentPostId == null);
+            .Where(
+                post =>
+                    post.ParentPostId == null
+                    && post.DeletedAt == null
+                    && !blockedUserIds.Contains(post.AuthorId));
 
         if (followedUserIds.Count > 0)
         {

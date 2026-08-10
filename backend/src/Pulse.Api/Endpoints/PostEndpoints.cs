@@ -7,13 +7,14 @@ using Pulse.Api.Domain;
 
 namespace Pulse.Api.Endpoints;
 
-public static class PostEndpoints
+public static partial class PostEndpoints
 {
     public static bool TryGetUserId(
         ClaimsPrincipal principal,
         out int userId)
     {
-        var claim = principal.FindFirst(ClaimTypes.NameIdentifier)
+        var claim =
+            principal.FindFirst(ClaimTypes.NameIdentifier)
             ?? principal.FindFirst(JwtRegisteredClaimNames.Sub);
 
         return int.TryParse(claim?.Value, out userId);
@@ -89,7 +90,9 @@ public static class PostEndpoints
 
         var replyCount = await dbContext.Posts
             .CountAsync(
-                reply => reply.ParentPostId == post.Id,
+                reply =>
+                    reply.ParentPostId == post.Id
+                    && reply.DeletedAt == null,
                 cancellationToken);
 
         var isLikedByCurrentUser =

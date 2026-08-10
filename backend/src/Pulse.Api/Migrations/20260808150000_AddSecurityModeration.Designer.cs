@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pulse.Api.Data;
@@ -12,9 +13,10 @@ using Pulse.Api.Data;
 namespace Pulse.Api.Migrations;
 
 [DbContext(typeof(PulseDbContext))]
-partial class PulseDbContextModelSnapshot : ModelSnapshot
+[Migration("20260808150000_AddSecurityModeration")]
+partial class AddSecurityModeration
 {
-    protected override void BuildModel(
+    protected override void BuildTargetModel(
         ModelBuilder modelBuilder)
     {
 #pragma warning disable 612, 618
@@ -341,8 +343,8 @@ partial class PulseDbContextModelSnapshot : ModelSnapshot
                 entity.HasKey("Id");
 
                 entity.HasIndex(
-                    "IsActive",
-                    "CreatedAtUtc");
+                        "IsActive",
+                        "CreatedAtUtc");
 
                 entity.HasIndex("NormalizedEmail")
                     .IsUnique();

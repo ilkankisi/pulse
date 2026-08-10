@@ -19,6 +19,13 @@ public sealed class PulseDbContext : DbContext
 
     public DbSet<Follow> Follows => Set<Follow>();
 
+    public DbSet<Block> Blocks => Set<Block>();
+
+    public DbSet<Report> Reports => Set<Report>();
+
+    public DbSet<ModerationActionRecord> ModerationActions =>
+        Set<ModerationActionRecord>();
+
     protected override void OnModelCreating(
         ModelBuilder modelBuilder)
     {
@@ -61,11 +68,26 @@ public sealed class PulseDbContext : DbContext
                     .IsRequired()
                     .HasMaxLength(512);
 
+                entity.Property(user => user.Role)
+                    .IsRequired()
+                    .HasMaxLength(32)
+                    .HasDefaultValue("user");
+
+                entity.Property(user => user.IsActive)
+                    .IsRequired()
+                    .HasDefaultValue(true);
+
                 entity.HasIndex(user => user.NormalizedUsername)
                     .IsUnique();
 
                 entity.HasIndex(user => user.NormalizedEmail)
                     .IsUnique();
+
+                entity.HasIndex(user => new
+                    {
+                        user.IsActive,
+                        user.CreatedAtUtc
+                    });
             });
 
         modelBuilder.Entity<Post>(
@@ -144,6 +166,123 @@ public sealed class PulseDbContext : DbContext
                     .WithMany(user => user.Followers)
                     .HasForeignKey(follow => follow.FollowingId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+        modelBuilder.Entity<Block>(
+            entity =>
+            {
+                entity.ToTable("Blocks");
+
+                entity.HasKey(block => block.Id);
+
+                entity.HasOne(block => block.Blocker)
+                    .WithMany(user => user.BlocksCreated)
+                    .HasForeignKey(block => block.BlockerId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(block => block.BlockedUser)
+                    .WithMany(user => user.BlocksReceived)
+                    .HasForeignKey(block => block.BlockedUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(
+                        block => new
+                        {
+                            block.BlockerId,
+                            block.BlockedUserId
+                        })
+                    .IsUnique();
+
+                entity.HasIndex(block => block.BlockedUserId);
+            });
+
+        modelBuilder.Entity<Report>(
+            entity =>
+            {
+                entity.ToTable("Reports");
+
+                entity.HasKey(report => report.Id);
+
+                entity.Property(report => report.TargetType)
+                    .HasConversion<string>()
+                    .HasMaxLength(16)
+                    .IsRequired();
+
+                entity.Property(report => report.Reason)
+                    .HasConversion<string>()
+                    .HasMaxLength(32)
+                    .IsRequired();
+
+                entity.Property(report => report.Details)
+                    .HasMaxLength(500);
+
+                entity.Property(report => report.Status)
+                    .HasConversion<string>()
+                    .HasMaxLength(16)
+                    .HasDefaultValue(ReportStatus.Pending)
+                    .IsRequired();
+
+                entity.HasOne(report => report.Reporter)
+                    .WithMany(user => user.ReportsCreated)
+                    .HasForeignKey(report => report.ReporterId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(report => report.ReviewedByUser)
+                    .WithMany(user => user.ReportsReviewed)
+                    .HasForeignKey(report => report.ReviewedByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(
+                    report => new
+                    {
+                        report.Status,
+                        report.CreatedAt
+                    });
+
+                entity.HasIndex(
+                    report => new
+                    {
+                        report.ReporterId,
+                        report.TargetType,
+                        report.TargetId
+                    });
+
+                entity.HasIndex(
+                    report => new
+                    {
+                        report.TargetType,
+                        report.TargetId
+                    });
+            });
+
+        modelBuilder.Entity<ModerationActionRecord>(
+            entity =>
+            {
+                entity.ToTable("ModerationActions");
+
+                entity.HasKey(action => action.Id);
+
+                entity.Property(action => action.Action)
+                    .HasConversion<string>()
+                    .HasMaxLength(16)
+                    .IsRequired();
+
+                entity.Property(action => action.Note)
+                    .HasMaxLength(500);
+
+                entity.HasOne(action => action.Report)
+                    .WithMany(report => report.ModerationActions)
+                    .HasForeignKey(action => action.ReportId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(action => action.ModeratorUser)
+                    .WithMany(user => user.ModerationActions)
+                    .HasForeignKey(action => action.ModeratorUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(action => action.ReportId);
+
+                entity.HasIndex(action => action.ModeratorUserId);
             });
     }
 }
