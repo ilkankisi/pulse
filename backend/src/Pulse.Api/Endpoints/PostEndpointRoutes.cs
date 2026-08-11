@@ -11,11 +11,15 @@ public static class PostEndpointRoutes
     public static IEndpointRouteBuilder MapPostEndpoints(
         this IEndpointRouteBuilder endpoints)
     {
+        endpoints.MapPost(
+                "/api/v1/posts",
+                CreatePostAsync)
+            .RequireAuthorization();
+
         var group = endpoints
             .MapGroup("/api/v1/posts")
             .RequireAuthorization();
 
-        group.MapPost(string.Empty, CreatePostAsync);
         group.MapDelete("/{postId:int}", DeletePostAsync);
 
         group.MapPost(

@@ -333,7 +333,7 @@ public static class SecurityModerationEndpoints
         {
             return Error(
                 StatusCodes.Status409Conflict,
-                "A pending report already exists for this target.");
+                "A Pending report already exists for this target.");
         }
 
         var report = new Report
@@ -446,7 +446,7 @@ public static class SecurityModerationEndpoints
         {
             return Error(
                 StatusCodes.Status409Conflict,
-                "Only pending reports can be resolved.");
+                "Only Pending reports can be resolved.");
         }
 
         if ((int)action == removePostActionValue)
@@ -455,7 +455,7 @@ public static class SecurityModerationEndpoints
             {
                 return Error(
                     StatusCodes.Status400BadRequest,
-                    "removePost can only be used for post reports.",
+                    "RemovePost can only be used for Post reports.",
                     "action");
             }
 
@@ -533,7 +533,7 @@ public static class SecurityModerationEndpoints
         {
             return Error(
                 StatusCodes.Status409Conflict,
-                "Only pending reports can be dismissed.");
+                "Only Pending reports can be dismissed.");
         }
 
         var reviewedAt = DateTime.UtcNow;
@@ -612,13 +612,11 @@ public static class SecurityModerationEndpoints
         switch (token)
         {
             case "Post":
-            case "post":
                 value =
                     (ReportTargetType)postTargetValue;
                 return true;
 
             case "User":
-            case "user":
                 value =
                     (ReportTargetType)userTargetValue;
                 return true;
@@ -636,43 +634,36 @@ public static class SecurityModerationEndpoints
         switch (token)
         {
             case "Spam":
-            case "spam":
                 value =
                     (ReportReason)spamReasonValue;
                 return true;
 
             case "Harassment":
-            case "harassment":
                 value =
                     (ReportReason)harassmentReasonValue;
                 return true;
 
             case "HateSpeech":
-            case "hateSpeech":
                 value =
                     (ReportReason)hateSpeechReasonValue;
                 return true;
 
             case "Violence":
-            case "violence":
                 value =
                     (ReportReason)violenceReasonValue;
                 return true;
 
             case "SexualContent":
-            case "sexualContent":
                 value =
                     (ReportReason)sexualContentReasonValue;
                 return true;
 
             case "Impersonation":
-            case "fakeAccount":
                 value =
                     (ReportReason)fakeAccountReasonValue;
                 return true;
 
             case "Other":
-            case "other":
                 value =
                     (ReportReason)otherReasonValue;
                 return true;
@@ -690,13 +681,11 @@ public static class SecurityModerationEndpoints
         switch (token)
         {
             case "NoAction":
-            case "noAction":
                 value =
                     (ModerationAction)noActionValue;
                 return true;
 
             case "RemovePost":
-            case "removePost":
                 value =
                     (ModerationAction)removePostActionValue;
                 return true;
