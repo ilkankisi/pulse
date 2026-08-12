@@ -16,6 +16,9 @@ MVP aşağıdaki yetenekleri kapsar:
 - Oturum sahibinin profilini görüntüleme
 - Profil bilgilerini güncelleme
 - Başka kullanıcı profilini görüntüleme
+- Profil sahibinin gönderilerini görüntüleme
+- Profilin takipçilerini görüntüleme
+- Profilin takip ettiği kullanıcıları görüntüleme
 - Kullanıcı takip etme
 - Kullanıcıyı takipten çıkarma
 - Kronolojik ana akış
@@ -58,8 +61,27 @@ Bu fazda:
 - Şikâyet oluşturulması hedef kaynağı otomatik kaldırmaz.
 - Moderasyon kararı yalnızca `Moderator` rolüne sahip kullanıcı tarafından verilebilir.
 - Moderasyon işlemleri server-side yetkilendirilir.
-- Moderasyon sonucu kaldırılan gönderiler fiziksel olarak silinmez; audit gereksinimi nedeniyle soft-delete uygulanır.
+- Moderasyon sonucu kaldırılan gönderiler fiziksel olarak silinmez.
 - Moderasyon kararları denetlenebilir bir kayıt olarak saklanır.
+
+### 2.2 Sosyal Graf ve Profil Tamamlama kapsamı
+
+Sosyal Graf & Profil Tamamlama fazı mevcut `users`, `posts`, `follows` ve `user_blocks` modellerinin read tarafını tamamlar.
+
+Bu faz:
+
+- profil oluşturulma zamanını göstermeyi,
+- görünür gönderi sayısını göstermeyi,
+- takipçi sayısını göstermeyi,
+- takip edilen kullanıcı sayısını göstermeyi,
+- oturum sahibinin hedef profili takip edip etmediğini göstermeyi,
+- profil sahibinin kök gönderilerini listelemeyi,
+- profil sahibinin takipçilerini listelemeyi,
+- profil sahibinin takip ettiği kullanıcıları listelemeyi
+
+kapsar.
+
+Bu faz yeni sosyal graf mikroservisi, graph database veya ayrı profil-post ilişki tablosu gerektirmez.
 
 ## 3. Teknoloji yığını
 
@@ -94,43 +116,38 @@ Mobil API base URL değeri yalnızca backend host adresini temsil eder. Reposito
 
 Örnek:
 
-```text
+~~~text
 API_BASE_URL=http://127.0.0.1:5000
-```
+~~~
 
-5. CORS
+## 5. CORS
 
 Backend aşağıdaki origin için CORS desteği sağlamalıdır:
 
-```
+~~~text
 http://127.0.0.1:8080
-```
+~~~
 
 İzin verilen başlıklar en az:
 
-Authorization
-
-Content-Type
+- Authorization
+- Content-Type
 
 İzin verilen metotlar en az:
 
-GET
+- GET
+- POST
+- PUT
+- DELETE
+- OPTIONS
 
-POST
+Tarayıcı preflight `OPTIONS` istekleri başarılı şekilde cevaplanmalıdır.
 
-PUT
+Flutter web istemcisinden `http://127.0.0.1:5000` API adresine yapılan Bearer token içeren isteklerin CORS nedeniyle engellenmemesi zorunludur.
 
-DELETE
+## 6. Sistem bileşenleri
 
-OPTIONS
-
-Tarayıcı preflight OPTIONS istekleri başarılı şekilde cevaplanmalıdır.
-
-Flutter web istemcisinden http://127.0.0.1:5000 API adresine yapılan Bearer token içeren isteklerin CORS nedeniyle engellenmemesi zorunludur.
-
-6. Sistem bileşenleri
-
-```
+~~~text
 Flutter Mobile / Flutter Web
             |
             | JSON + Bearer JWT
@@ -140,6 +157,7 @@ ASP.NET Core Web API
             +-- Health
             +-- Auth
             +-- Profile
+            +-- Social Graph
             +-- Feed
             +-- Posts
             +-- Replies
@@ -151,17 +169,17 @@ ASP.NET Core Web API
             |
             v
        PostgreSQL
-```
+~~~
 
 Sistem ilk sürümde modüler monolit olarak geliştirilir.
 
-Güvenlik ve Moderasyon fazı için ayrı mikroservis zorunlu değildir.
+Güvenlik & Moderasyon veya Sosyal Graf & Profil Tamamlama fazı için ayrı mikroservis zorunlu değildir.
 
-7. Backend katmanları
+## 7. Backend katmanları
 
 Önerilen yapı:
 
-```
+~~~text
 backend/
   src/
     Pulse.Api/
@@ -176,6 +194,7 @@ backend/
     Pulse.Application/
       Auth/
       Profiles/
+      SocialGraph/
       Feed/
       Posts/
       Follows/
@@ -196,50 +215,53 @@ backend/
   tests/
     Pulse.UnitTests/
     Pulse.IntegrationTests/
-```
+~~~
 
 Bağımlılık yönü:
 
-```
+~~~text
 Pulse.Api -> Pulse.Application -> Pulse.Domain
 Pulse.Api -> Pulse.Infrastructure
 Pulse.Infrastructure -> Pulse.Application
 Pulse.Infrastructure -> Pulse.Domain
-```
+~~~
 
 Domain katmanı ASP.NET Core, Entity Framework Core veya HTTP ayrıntılarına bağımlı olmamalıdır.
 
-7.1 Güvenlik ve moderasyon backend sorumlulukları
+### 7.1 Güvenlik ve moderasyon backend sorumlulukları
 
 Backend:
 
-Kullanıcı kimliğini JWT üzerinden belirler.
+- Kullanıcı kimliğini JWT üzerinden belirler.
+- Block ilişkisini kalıcı olarak saklar.
+- Block görünürlük ve etkileşim kurallarını server-side uygular.
+- Kullanıcı kendisini engellemeye çalıştığında isteği reddeder.
+- Yeni block oluşturulduğunda iki kullanıcı arasındaki mevcut follow ilişkilerini kaldırır.
+- Şikâyet request doğrulamasını yapar.
+- Aynı reporter ve aynı target için ikinci açık şikâyeti engeller.
+- Moderasyon endpoint'lerinde `Moderator` rolünü doğrular.
+- Moderasyon kararını ve audit kaydını aynı transaction sınırında işler.
+- Moderasyonla kaldırılan postları feed ve etkileşim sorgularından filtreler.
+- Mobil istemcinin UI tabanlı güvenlik kararlarına güvenmez.
 
-Block ilişkisini kalıcı olarak saklar.
+### 7.2 Sosyal graf ve profil backend sorumlulukları
 
-Block görünürlük ve etkileşim kurallarını server-side uygular.
+Backend:
 
-Kullanıcı kendisini engellemeye çalıştığında isteği reddeder.
+- Profil read modelini canonical alanlarla üretir.
+- Profil sayaçlarını server-side hesaplar.
+- Profil gönderilerini mevcut post read modeliyle döndürür.
+- Takipçi ve takip edilen listelerini mevcut follow ilişkilerinden üretir.
+- Sosyal graf sonuçlarında block görünürlüğünü uygular.
+- Oturum sahibinin takip durumunu server-side hesaplar.
+- Olmayan profil ile boş collection durumunu birbirinden ayırır.
+- API kontratında tanımlanmayan ikinci bir profil, post veya follow DTO alan adı üretmez.
 
-Yeni block oluşturulduğunda iki kullanıcı arasındaki mevcut follow ilişkilerini kaldırır.
-
-Şikâyet request doğrulamasını yapar.
-
-Aynı reporter ve aynı target için ikinci Pending şikâyeti engeller.
-
-Moderasyon endpoint'lerinde Moderator rolünü doğrular.
-
-Moderasyon kararını ve audit kaydını aynı transaction sınırında işler.
-
-Moderasyonla kaldırılan postları feed ve etkileşim sorgularından filtreler.
-
-Mobil istemcinin UI tabanlı güvenlik kararlarına güvenmez.
-
-8. Mobil katmanlar
+## 8. Mobil katmanlar
 
 Önerilen yapı:
 
-```
+~~~text
 mobile/
   lib/
     app/
@@ -275,96 +297,97 @@ mobile/
         domain/
         presentation/
 
+      social_graph/
+        data/
+        domain/
+        presentation/
+
       moderation/
         data/
         domain/
         presentation/
-```
+~~~
 
 Mobil istemci backend kontratındaki camelCase alanları birebir kullanır.
 
 Mobil katman:
 
-endpoint isimleri uydurmaz,
+- endpoint isimleri uydurmaz,
+- canonical endpoint yerine legacy fallback kullanmaz,
+- backend alanlarını yeniden adlandırmaz,
+- token yoksa korumalı kaynağa anonim istek göndermez,
+- server-side authorization yerine yalnızca UI gizlemeye güvenmez.
 
-canonical endpoint yerine legacy fallback kullanmaz,
-
-backend alanlarını yeniden adlandırmaz,
-
-token yoksa korumalı kaynağa anonim istek göndermez,
-
-server-side authorization yerine yalnızca UI gizlemeye güvenmez.
-
-8.1 Güvenlik ve moderasyon mobil sorumlulukları
+### 8.1 Güvenlik ve moderasyon mobil sorumlulukları
 
 Mobil:
 
-Profil üzerinden kullanıcıyı engelleme aksiyonunu sunabilir.
+- Profil üzerinden kullanıcıyı engelleme aksiyonunu sunabilir.
+- Engelli kullanıcı için engeli kaldırma aksiyonunu sunabilir.
+- Engellenen kullanıcıları listeleyebilir.
+- Profil üzerinden kullanıcı şikâyeti formunu açabilir.
+- Gönderi üzerinden gönderi şikâyeti formunu açabilir.
+- Başarılı şikâyet oluşturulmasını hedef içeriğin kaldırıldığı şeklinde yorumlamaz.
+- `401` durumunda mevcut oturum yenileme/login davranışını kullanır.
+- `403` durumunu yetki hatası olarak işler.
+- `404` durumunda gizlenen veya bulunamayan kaynağın nedenini istemci tarafında tahmin etmez.
+- Moderasyon ekranlarının görünürlüğünü rol bilgisi mevcutsa sınırlandırabilir; nihai karar yine backend'indir.
 
-Engelli kullanıcı için engeli kaldırma aksiyonunu sunabilir.
+### 8.2 Sosyal graf ve profil mobil sorumlulukları
 
-Engellenen kullanıcıları listeleyebilir.
+Mobil:
 
-Profil üzerinden kullanıcı şikâyeti formunu açabilir.
+- Profil response alanlarını canonical isimleriyle parse eder.
+- Profil gönderileri için mevcut post modelini yeniden kullanır.
+- Takipçi ve takip edilen listeleri için tek canonical sosyal graf liste öğesi modeli kullanır.
+- Takip durumunu backend'in döndürdüğü alan üzerinden gösterir.
+- Takip durumunu local tahminle canonical response'un üzerine yazmaz.
+- Boş gönderi/takipçi/takip edilen listesini hata kabul etmez.
+- Profil gönderisine dokunulduğunda mevcut gönderi detay akışına gider.
+- Takipçi veya takip edilen kullanıcıya dokunulduğunda mevcut profil ekranına gider.
 
-Gönderi üzerinden gönderi şikâyeti formunu açabilir.
-
-Başarılı şikâyet oluşturulmasını hedef içeriğin kaldırıldığı şeklinde yorumlamaz.
-
-401 durumunda mevcut oturum yenileme/login davranışını kullanır.
-
-403 durumunu yetki hatası olarak işler.
-
-404 durumunda gizlenen veya bulunamayan kaynağın nedenini istemci tarafında tahmin etmez.
-
-Moderasyon ekranlarının görünürlüğünü rol bilgisi mevcutsa sınırlandırabilir; nihai karar yine backend'indir.
-
-9. Health endpoint
+## 9. Health endpoint
 
 Orchestrator backend'i aşağıdaki endpoint ile kontrol eder:
 
-```
+~~~http
 GET /health
-```
+~~~
 
 Başarı:
 
-```
+~~~http
 200 OK
-```
+~~~
 
 Gövde:
 
-```
+~~~json
 {
   "status": "ok"
 }
-```
+~~~
 
 Kurallar:
 
-/health /api/v1 altında değildir.
+- `/health` `/api/v1` altında değildir.
+- Kimlik doğrulama gerektirmez.
+- JWT doğrulamasına bağımlı değildir.
+- Kullanıcı CRUD endpoint'lerinden ayrı bir orchestrator sağlık kontrolüdür.
+- Workspace başlangıcı bu endpoint'in başarılı olmasına bağlıdır.
 
-Kimlik doğrulama gerektirmez.
-
-JWT doğrulamasına bağımlı değildir.
-
-Kullanıcı CRUD endpoint'lerinden ayrı bir orchestrator sağlık kontrolüdür.
-
-Workspace başlangıcı bu endpoint'in başarılı olmasına bağlıdır.
-
-10. JWT ve yerel orchestrator başlangıcı
+## 10. JWT ve yerel orchestrator başlangıcı
 
 Orchestrator backend'i aşağıdaki çalışma biçimiyle başlatır:
 
-```
+~~~text
 dotnet run --no-launch-profile
 ASPNETCORE_ENVIRONMENT=Development
-```
+~~~
 
-Development ortamında appsettings.Development.json içinde aşağıdaki ayarlar bulunmalıdır:
+Development ortamında `appsettings.Development.json` içinde aşağıdaki ayarlar bulunmalıdır:
 
-```
+~~~json
 {
   "Jwt": {
     "Key": "development-only-key-at-least-32-bytes",
@@ -372,163 +395,209 @@ Development ortamında appsettings.Development.json içinde aşağıdaki ayarlar
     "Audience": "Pulse.Client"
   }
 }
-```
+~~~
 
 Kurallar:
 
-Jwt:Key en az 32 byte olmalıdır.
-
-Development ortamı production secret bulunmadığı için çökmemelidir.
-
-Development değeri yalnızca yerel geliştirme içindir.
-
-Production ortamında Jwt:Key environment variable veya secret store üzerinden verilmelidir.
-
-Production secret repoya commit edilmez.
-
-GET /health anonimdir.
-
-POST /api/v1/auth/register anonimdir.
-
-POST /api/v1/auth/login anonimdir.
-
-Diğer kullanıcı kaynakları Bearer token gerektirir.
-
-/api/v1/moderation/** kaynakları ayrıca Moderator rolü gerektirir.
+- `Jwt:Key` en az 32 byte olmalıdır.
+- Development ortamı production secret bulunmadığı için çökmemelidir.
+- Development değeri yalnızca yerel geliştirme içindir.
+- Production ortamında `Jwt:Key` environment variable veya secret store üzerinden verilmelidir.
+- Production secret repoya commit edilmez.
+- `GET /health` anonimdir.
+- `POST /api/v1/auth/register` anonimdir.
+- `POST /api/v1/auth/login` anonimdir.
+- Diğer kullanıcı kaynakları Bearer token gerektirir.
+- `/api/v1/moderation/**` kaynakları ayrıca `Moderator` rolü gerektirir.
 
 Korumalı istek:
 
-```
+~~~http
 Authorization: Bearer <token>
-```
+~~~
 
-10.1 Roller
+### 10.1 Roller
 
 Canonical roller:
 
-```
-User
-Moderator
-```
+- `User`
+- `Moderator`
 
-User standart uygulama kullanıcısıdır.
+`User` standart uygulama kullanıcısıdır.
 
-Moderator, standart kullanıcı haklarına ek olarak moderasyon kuyruğunu okuyabilir ve şikâyet sonuçlandırabilir.
+`Moderator`, standart kullanıcı haklarına ek olarak moderasyon kuyruğunu okuyabilir ve şikâyet sonuçlandırabilir.
 
-Geçerli Bearer token olup gerekli rol bulunmadığında backend 403 Forbidden döndürür.
+Geçerli Bearer token olup gerekli rol bulunmadığında backend `403 Forbidden` döndürür.
 
-11. Kimlik modeli
+## 11. Kimlik modeli
 
 Pulse kaynak kimlikleri integer'dır.
 
 Backend:
 
-```
+~~~text
 int Id
-```
+~~~
 
 Mobil:
 
-```
+~~~text
 final int id;
-```
+~~~
 
 API:
 
-```
+~~~json
 {
   "id": 1
 }
-```
+~~~
 
 UUID string kaynak kimliği olarak kullanılmaz.
 
-12. Gönderi modeli
+## 12. Gönderi modeli
 
 Bir gönderinin temel alanları:
 
-id
+- id
+- author
+- content
+- parentPostId
+- createdAt
+- likeCount
+- replyCount
+- isLikedByMe
 
-author
-
-content
-
-parentPostId
-
-createdAt
-
-likeCount
-
-replyCount
-
-Gönderinin kullanıcı tarafından girilen metin alanı yalnızca content adını kullanır.
+Gönderinin kullanıcı tarafından girilen metin alanı yalnızca `content` adını kullanır.
 
 Maksimum uzunluk:
 
-```
+~~~text
 280 karakter
-```
+~~~
 
 Alternatif alan isimleri kullanılmaz:
 
-title
-
-description
-
-text
-
-body
+- title
+- description
+- text
+- body
 
 Tek seviyeli reply modeli kullanılır.
 
 Yeni reply yalnızca kök gönderiye bağlıdır. Çok seviyeli reply ağacı bu kapsamda yoktur.
 
-13. Profil modeli
+## 13. Profil modeli
 
 Profil oturum sahibi veya başka bir kullanıcı için görüntülenebilir.
 
-Canonical kaynak yolları:
+Canonical temel kaynak yolları:
 
-```
+~~~text
 GET /api/v1/me
 PUT /api/v1/me
 GET /api/v1/profiles/{username}
-```
+~~~
 
-Legacy /api/v1/users/... yolları kullanılmaz.
+Sosyal Graf & Profil Tamamlama read yolları:
 
-Profil alanlarının HTTP sözleşmesi docs/api-contract.md içinde tanımlanır.
+~~~text
+GET /api/v1/profiles/{username}/posts
+GET /api/v1/profiles/{username}/followers
+GET /api/v1/profiles/{username}/following
+~~~
 
-14. Feed
+Legacy `/api/v1/users/...` yolları kullanılmaz.
+
+Profil alanlarının HTTP sözleşmesi `docs/api-contract.md` içinde tanımlanır.
+
+### 13.1 Profil read modeli
+
+Profil read modeli en az:
+
+- kullanıcı kimliği,
+- username,
+- display name,
+- bio,
+- avatar URL,
+- hesap oluşturulma zamanı,
+- görünür kök gönderi sayısı,
+- takipçi sayısı,
+- takip edilen hesap sayısı,
+- oturum sahibinin profili takip edip etmediği
+
+bilgilerini taşır.
+
+HTTP JSON alanlarının kesin adları yalnız `docs/api-contract.md` tarafından belirlenir.
+
+Profil sayaçları persistence'ta ayrı zorunlu sütunlar değildir; mevcut tablolar üzerinden hesaplanabilir.
+
+### 13.2 Profil gönderileri
+
+Profil gönderileri:
+
+- hedef kullanıcıya ait olmalıdır,
+- yalnız kök gönderileri içermelidir,
+- soft-delete kayıtları içermemelidir,
+- moderasyonla gizlenen kayıtları içermemelidir,
+- `createdAt DESC` sıralı olmalıdır.
+
+Profil gönderilerinde mevcut post read modeli yeniden kullanılır.
+
+Yeni bir profil-post response modeli uydurulmaz.
+
+Profil var ancak görünür gönderisi yoksa collection empty state döner.
+
+### 13.3 Takipçiler
+
+Takipçi listesi mevcut follow ilişkilerinden türetilir.
+
+Hedef kullanıcının takipçileri, hedef kullanıcının follow ilişkisinde takip edilen taraf olduğu kayıtlardır.
+
+Block nedeniyle oturum sahibine görünmeyen kullanıcılar sonuçtan filtrelenir.
+
+Liste öğesinde oturum sahibinin ilgili kullanıcıyı takip edip etmediği backend tarafından hesaplanır.
+
+### 13.4 Takip edilen kullanıcılar
+
+Takip edilen listesi mevcut follow ilişkilerinden türetilir.
+
+Hedef kullanıcının takip ettiği hesaplar, hedef kullanıcının follow ilişkisinde takip eden taraf olduğu kayıtlardır.
+
+Block nedeniyle oturum sahibine görünmeyen kullanıcılar sonuçtan filtrelenir.
+
+Followers ve following aynı liste öğesi read modelini kullanır.
+
+## 14. Feed
 
 Feed kronolojiktir.
 
 Temel sıra:
 
-```
+~~~text
 createdAt DESC
-```
+~~~
 
 Feed yalnızca kullanıcının görmeye yetkili olduğu gönderileri döndürür.
 
 Aşağıdaki gönderiler feed'den filtrelenir:
 
-soft-delete edilmiş gönderiler,
-
-oturum sahibi ile arasında block ilişkisi bulunan kullanıcıların gönderileri.
+- soft-delete edilmiş gönderiler,
+- moderasyonla gizlenmiş gönderiler,
+- oturum sahibi ile arasında block ilişkisi bulunan kullanıcıların gönderileri.
 
 Block filtresi iki yönlü görünürlük uygular. A kullanıcısının B'yi engellemiş olması halinde A ve B birbirlerinin gönderilerini feed içinde görmez.
 
-15. Takip
+## 15. Takip
 
 Follow ilişkisi kullanıcılar arasında yönlüdür.
 
 Canonical endpoint'ler:
 
-```
+~~~text
 POST /api/v1/profiles/{username}/follow
 DELETE /api/v1/profiles/{username}/follow
-```
+~~~
 
 Block ilişkisi bulunan iki kullanıcı arasında yeni follow oluşturulamaz.
 
@@ -536,74 +605,64 @@ Yeni block oluşturulduğunda iki yönlü mevcut follow kayıtları kaldırılı
 
 Engelin kaldırılması silinen follow kayıtlarını otomatik geri getirmez.
 
-16. Beğeni
+Sosyal graf read endpoint'leri bu canonical follow ilişkisini kullanır; ikinci bir social graph ilişki kaynağı oluşturulmaz.
+
+## 16. Beğeni
 
 Bir kullanıcı aynı gönderiyi en fazla bir kez beğenebilir.
 
 Canonical endpoint'ler:
 
-```
+~~~text
 POST /api/v1/posts/{postId}/likes
 DELETE /api/v1/posts/{postId}/likes
-```
+~~~
 
 Aşağıdaki gönderilere yeni beğeni oluşturulamaz:
 
-soft-delete edilmiş gönderi,
+- soft-delete edilmiş gönderi,
+- moderasyonla gizlenmiş gönderi,
+- block nedeniyle kullanıcıya görünmeyen gönderi.
 
-block nedeniyle kullanıcıya görünmeyen gönderi.
-
-17. Yanıtlar
+## 17. Yanıtlar
 
 Canonical endpoint:
 
-```
+~~~text
 POST /api/v1/posts/{postId}/replies
-```
+~~~
 
-Yanıt alanı:
+Yanıt alanı `content` olarak kalır.
 
-```
-content
-```
-
-Maksimum:
-
-```
-280 karakter
-```
+Maksimum uzunluk 280 karakterdir.
 
 Aşağıdaki gönderilere reply oluşturulamaz:
 
-soft-delete edilmiş gönderi,
+- soft-delete edilmiş gönderi,
+- moderasyonla gizlenmiş gönderi,
+- block nedeniyle kullanıcıya görünmeyen gönderi.
 
-block nedeniyle kullanıcıya görünmeyen gönderi.
-
-18. Kullanıcı engelleme
+## 18. Kullanıcı engelleme
 
 Engelleme yönlü bir ilişkidir.
 
 Örnek:
 
-```
+~~~text
 A -> B
-```
+~~~
 
 A, B'yi engellediğinde:
 
-A ve B birbirlerinin gönderilerini feed içinde görmez.
+- A ve B birbirlerinin gönderilerini feed içinde görmez.
+- A ve B birbirini takip edemez.
+- Mevcut A -> B ve B -> A follow ilişkileri kaldırılır.
+- A ve B birbirlerinin gönderilerine yeni like veremez.
+- A ve B birbirlerinin gönderilerine yeni reply oluşturamaz.
+- Doğrudan görünmez profile erişim `404 Not Found` olarak değerlendirilir.
+- Profile bağlı post/follower/following collection'ları da görünmez kabul edilir.
 
-A ve B birbirini takip edemez.
-
-Mevcut A -> B ve B -> A follow ilişkileri kaldırılır.
-
-A ve B birbirlerinin gönderilerine yeni like veremez.
-
-A ve B birbirlerinin gönderilerine yeni reply oluşturamaz.
-
-Doğrudan görünmez profile erişim 404 Not Found olarak değerlendirilir.
-
-Görünürlük sebebi response içinde açıklanmaz. Böylece başka kullanıcıya block ilişkisinin ayrıntıları gereksiz şekilde sızdırılmaz.
+Görünürlük sebebi response içinde açıklanmaz.
 
 Kullanıcı kendisini engelleyemez.
 
@@ -611,486 +670,442 @@ Aynı kullanıcıyı tekrar engelleme idempotenttir ve ikinci block kaydı oluş
 
 Engeli kaldırma da idempotenttir.
 
-18.1 Block veri modeli
-
-```
-user_blocks
-  blocker_user_id
-  blocked_user_id
-  created_at
-```
-
-Anahtar:
-
-```
-PRIMARY KEY (blocker_user_id, blocked_user_id)
-```
-
-Foreign key'ler:
-
-```
-blocker_user_id -> users.id
-blocked_user_id -> users.id
-```
-
-blocker_user_id ve blocked_user_id eşit olamaz.
-
-19. Şikâyet sistemi
+## 19. Şikâyet sistemi
 
 Bir şikâyet tam olarak bir hedefe yönelir.
 
-Hedef tipleri:
+Canonical hedef tipleri:
 
-```
-Post
-User
-```
+- `Post`
+- `User`
 
-Canonical ReportReason değerleri:
+Canonical şikâyet nedenleri:
 
-```
-Spam
-Harassment
-HateSpeech
-Violence
-SexualContent
-Impersonation
-Other
-```
+- `Spam`
+- `Harassment`
+- `HateSpeech`
+- `Violence`
+- `SexualContent`
+- `Impersonation`
+- `Other`
 
-Canonical ReportStatus değerleri:
+Canonical durumlar:
 
-```
-Pending
-Resolved
-Dismissed
-```
+- `Pending`
+- `Resolved`
+- `Dismissed`
 
 Kurallar:
 
-Kullanıcı kendi hesabını şikâyet edemez.
+- Kullanıcı kendi hesabını şikâyet edemez.
+- Kullanıcı kendi gönderisini şikâyet edemez.
+- Aynı reporter ve aynı hedef için açık şikâyet varken ikinci kayıt oluşturulamaz.
+- Duplicate açık istek `409 Conflict` döndürür.
+- `details` opsiyoneldir.
+- `details` en fazla 500 karakterdir.
+- Şikâyet oluşturulması hedef kaynağı otomatik kaldırmaz.
 
-Kullanıcı kendi gönderisini şikâyet edemez.
+## 20. Moderasyon
 
-Aynı reporter ve aynı hedef için açık Pending şikâyet varken ikinci kayıt oluşturulamaz.
-
-Duplicate pending istek 409 Conflict döndürür.
-
-details opsiyoneldir.
-
-details en fazla 500 karakterdir.
-
-Şikâyet oluşturulması hedef kaynağı otomatik kaldırmaz.
-
-19.1 Report veri modeli
-
-```
-reports
-  id
-  reporter_user_id
-  target_type
-  target_post_id
-  target_user_id
-  reason
-  details
-  status
-  created_at
-  resolved_at
-  resolved_by_user_id
-```
-
-Kurallar:
-
-target_type=Post:
-
-```
-target_post_id NOT NULL
-target_user_id NULL
-```
-
-target_type=User:
-
-```
-target_user_id NOT NULL
-target_post_id NULL
-```
-
-Veritabanı constraint'i aynı report için iki hedefin birden dolu olmasını engeller.
-
-20. Moderasyon
-
-Moderasyon endpoint'leri yalnızca Moderator rolüne açıktır.
+Moderasyon endpoint'leri yalnızca `Moderator` rolüne açıktır.
 
 Canonical moderasyon aksiyonları:
 
-```
-NoAction
-RemovePost
-```
+- `NoAction`
+- `RemovePost`
 
-20.1 NoAction
+### 20.1 NoAction
 
-NoAction:
+`NoAction`:
 
-raporu Resolved yapar,
+- raporu resolved duruma geçirir,
+- hedef gönderi veya kullanıcı üzerinde değişiklik yapmaz,
+- audit kaydı oluşturur.
 
-hedef gönderi veya kullanıcı üzerinde değişiklik yapmaz,
+### 20.2 RemovePost
 
-audit kaydı oluşturur.
+`RemovePost` yalnızca post hedefli rapor için kullanılabilir.
 
-20.2 RemovePost
+Yanlış target tipi `400 Bad Request` döndürür.
 
-RemovePost yalnızca Post hedefli rapor için kullanılabilir.
+`RemovePost` fiziksel DELETE uygulamaz.
 
-Yanlış target tipi için:
+Gönderi canonical persistence modeli üzerinden normal kullanıcı görünürlüğünden çıkarılır.
 
-```
-400 Bad Request
-```
+Gizlenmiş gönderi:
 
-RemovePost fiziksel DELETE uygulamaz.
+- feed'e girmez,
+- profil gönderi listesine girmez,
+- normal görünür kaynak olarak değerlendirilmez,
+- yeni like kabul etmez,
+- yeni reply kabul etmez.
 
-Gönderi soft-delete edilir.
-
-Önerilen alan:
-
-```
-posts.deleted_at timestamptz NULL
-```
-
-Soft-delete sonrası gönderi:
-
-feed'e girmez,
-
-doğrudan görünür kaynak olarak değerlendirilmez,
-
-yeni like kabul etmez,
-
-yeni reply kabul etmez.
-
-20.3 Dismiss
+### 20.3 Dismiss
 
 Dismiss işlemi:
 
-raporu Dismissed yapar,
+- raporu dismissed duruma geçirir,
+- hedef kaynağı değiştirmez,
+- audit kaydı oluşturur.
 
-hedef kaynağı değiştirmez,
+### 20.4 Moderasyon concurrency
 
-audit kaydı oluşturur.
+Yalnızca açık durumdaki rapor sonuçlandırılabilir.
 
-20.4 Moderasyon concurrency
+Daha önce sonuçlandırılmış rapor için yeni resolve/dismiss isteği `409 Conflict` döndürür.
 
-Yalnızca Pending durumundaki rapor sonuçlandırılabilir.
-
-Daha önce Resolved veya Dismissed olan rapor için yeni resolve/dismiss isteği:
-
-```
-409 Conflict
-```
-
-20.5 Moderasyon audit modeli
-
-```
-moderation_actions
-  id
-  report_id
-  moderator_user_id
-  action
-  note
-  created_at
-```
-
-note nullable ve en fazla 500 karakterdir.
-
-Moderasyon kararı, report durum değişikliği ve gerekli post soft-delete işlemi aynı transaction sınırında gerçekleştirilmelidir.
-
-21. Veritabanı
+## 21. Veritabanı
 
 Ana kalıcı veri deposu PostgreSQL'dir.
 
-Güvenlik ve Moderasyon için gereken ek tablolar:
+Güncel model en az aşağıdaki kavramları içerir:
 
-```
-user_blocks
-reports
-moderation_actions
-```
+- users
+- posts
+- follows
+- likes
+- user blocks
+- reports
+- moderation actions
 
-Mevcut kullanıcı, gönderi, takip, beğeni ve reply tabloları korunur.
+Sosyal Graf & Profil Tamamlama fazı yeni tablo gerektirmez.
 
-Önerilen ilişkiler:
+Profil read modeli:
 
-```
-users 1 --- * user_blocks (blocker)
-users 1 --- * user_blocks (blocked)
+- `users`,
+- `posts`,
+- `follows`,
+- `user_blocks`
 
-users 1 --- * reports (reporter)
-users 1 --- * reports (target user)
-posts 1 --- * reports (target post)
+üzerinden türetilir.
 
-reports 1 --- * moderation_actions
-users 1 --- * moderation_actions (moderator)
-```
+Profil sayaçları MVP için denormalize zorunlu sütunlar değildir.
 
-Index gereksinimleri:
+## 22. Redis ve MinIO
 
-```
-user_blocks(blocker_user_id, blocked_user_id) UNIQUE
-reports(status, created_at)
-reports(reporter_user_id, target_type, target_post_id)
-reports(reporter_user_id, target_type, target_user_id)
-moderation_actions(report_id)
-```
+Güvenlik & Moderasyon ve Sosyal Graf & Profil Tamamlama fazları için:
 
-Duplicate Pending report kontrolü application katmanında yapılmalı ve mümkün olan yerde veritabanı bütünlük mekanizmalarıyla desteklenmelidir.
+- Redis zorunlu değildir.
+- MinIO zorunlu değildir.
 
-22. Redis ve MinIO
+PostgreSQL mevcut kalıcı veri gereksinimleri için yeterlidir.
 
-Bu Güvenlik ve Moderasyon fazı için:
+İleride distributed cache, yüksek ölçekli sayaç cache'i veya medya moderasyonu eklenirse Redis/MinIO ihtiyacı ayrı görevde değerlendirilir.
 
-Redis zorunlu değildir.
-
-MinIO zorunlu değildir.
-
-PostgreSQL kalıcı block/report/moderation verileri için yeterlidir.
-
-İleride rate limiting, distributed cache veya medya moderasyonu eklenirse Redis/MinIO ihtiyacı ayrı görevde yeniden değerlendirilir.
-
-Architect docker-compose.yml yazmaz.
+Architect `docker-compose.yml` yazmaz.
 
 Altyapı gereksinimlerinin compose karşılığı Infra Agent sorumluluğundadır.
 
-23. HTTP hata semantiği
+## 23. HTTP hata semantiği
 
 Genel anlamlar:
 
-```
+~~~text
 400 Validation veya iş kuralı hatası
 401 Token yok/geçersiz/süresi dolmuş
 403 Kimliği doğrulanmış kullanıcının yetkisi yetersiz
 404 Kaynak bulunamadı veya güvenlik nedeniyle görünmez
 409 Mevcut durumla çakışan işlem
 500 Beklenmeyen backend hatası
-```
+~~~
 
-Block nedeniyle gizlenen bir kaynağın varlığını açıklamak yerine 404 kullanılabilir.
+Block nedeniyle gizlenen bir kaynağın varlığını açıklamak yerine `404` kullanılabilir.
 
-Moderation rol eksikliği 403 olarak kalır.
+Profile bağlı sosyal graf collection'ında hedef profil yoksa veya görünmezse `404` kullanılır.
 
-24. Ekran envanteri
+Hedef profil mevcut ancak collection boşsa `200` ve boş collection kullanılır.
+
+Moderation rol eksikliği `403` olarak kalır.
+
+## 24. Ekran envanteri
 
 Anonim ekranlar:
 
-Login
-
-Register
+- Login
+- Register
 
 Token gerektiren standart ekranlar:
 
-Feed
-
-Profil
-
-Gönderi oluşturma
-
-Gönderi detayı
-
-Kullanıcı şikâyet formu
-
-Gönderi şikâyet formu
-
-Engellenen kullanıcılar
+- Feed
+- Profil
+- Profil gönderileri
+- Takipçiler
+- Takip edilenler
+- Gönderi oluşturma
+- Gönderi detayı
+- Kullanıcı şikâyet formu
+- Gönderi şikâyet formu
+- Engellenen kullanıcılar
 
 Moderator rolü gerektiren ekranlar:
 
-Moderasyon kuyruğu
+- Moderasyon kuyruğu
+- Moderasyon şikâyet detayı
+- Moderasyon karar ekranı
 
-Moderasyon şikâyet detayı
+## 25. Kullanıcı akışı
 
-Moderasyon karar ekranı
+~~~mermaid
+flowchart TD
+    Start[Uygulama Açılışı] --> Token{Geçerli token var mı?}
+    Token -- Hayır --> Login[Login]
+    Login --> Register[Register]
+    Register --> Login
+    Login --> Feed[Feed]
+    Token -- Evet --> Feed
 
-25. Kullanıcı akışı
+    Feed --> Profile[Profil]
+    Feed --> PostDetail[Gönderi Detayı]
+    Feed --> Compose[Gönderi Oluştur]
+    Compose --> Feed
 
-```
-Mermaid
-```
+    Profile --> ProfilePosts[Profil Gönderileri]
+    Profile --> Followers[Takipçiler]
+    Profile --> Following[Takip Edilenler]
+    Profile --> Follow[Follow / Unfollow]
+    Profile --> Block[Block / Unblock]
+    Profile --> UserReport[Kullanıcı Şikâyeti]
+
+    ProfilePosts --> PostDetail
+    Followers --> OtherProfile[Profil]
+    Following --> OtherProfile
+    OtherProfile --> ProfilePosts
+    OtherProfile --> Followers
+    OtherProfile --> Following
+
+    PostDetail --> Like[Like / Unlike]
+    PostDetail --> Reply[Yanıt Yaz]
+    PostDetail --> PostReport[Gönderi Şikâyeti]
+
+    Settings[Ayarlar] --> BlockedUsers[Engellenen Kullanıcılar]
+    BlockedUsers --> Profile
+
+    Feed --> Logout[Çıkış]
+    Logout --> Login
+
+    ModeratorHome[Moderator Girişi] --> ModerationQueue[Moderasyon Kuyruğu]
+    ModerationQueue --> ModerationDetail[Şikâyet Detayı]
+    ModerationDetail --> ModerationDecision[Resolve / Dismiss]
+    ModerationDecision --> ModerationQueue
+~~~
 
 Geçiş kuralları:
 
-Login -> Register
-
-Register -> Login
-
-Login -> Feed
-
-Feed -> Profil
-
-Feed -> Gönderi detayı
-
-Feed -> Gönderi oluşturma
-
-Profil -> Follow/Unfollow
-
-Profil -> Block/Unblock
-
-Profil -> Kullanıcı şikâyeti
-
-Gönderi detayı -> Like/Unlike
-
-Gönderi detayı -> Reply
-
-Gönderi detayı -> Gönderi şikâyeti
-
-Ayarlar -> Engellenen kullanıcılar
-
-Engellenen kullanıcılar -> Profil
-
-Feed -> Logout -> Login
-
-Moderasyon kuyruğu -> Şikâyet detayı
-
-Şikâyet detayı -> Moderasyon kararı
-
-Moderasyon kararı -> Moderasyon kuyruğu
+- Login -> Register
+- Register -> Login
+- Login -> Feed
+- Feed -> Profil
+- Feed -> Gönderi detayı
+- Feed -> Gönderi oluşturma
+- Profil -> Profil gönderileri
+- Profil -> Takipçiler
+- Profil -> Takip edilenler
+- Profil gönderileri -> Gönderi detayı
+- Takipçiler -> Profil
+- Takip edilenler -> Profil
+- Profil -> Follow/Unfollow
+- Profil -> Block/Unblock
+- Profil -> Kullanıcı şikâyeti
+- Gönderi detayı -> Like/Unlike
+- Gönderi detayı -> Reply
+- Gönderi detayı -> Gönderi şikâyeti
+- Ayarlar -> Engellenen kullanıcılar
+- Engellenen kullanıcılar -> Profil
+- Feed -> Logout -> Login
+- Moderasyon kuyruğu -> Şikâyet detayı
+- Şikâyet detayı -> Moderasyon kararı
+- Moderasyon kararı -> Moderasyon kuyruğu
 
 Token gerektiren route token olmadan açılmaya çalışılırsa login ekranına dönülür.
 
-Moderator route'u standart User rolüyle açılmamalıdır. Backend erişim kontrolü yine zorunludur.
+Moderator route'u standart `User` rolüyle açılmamalıdır. Backend erişim kontrolü yine zorunludur.
 
-26. API kontratı tek kaynak kuralı
+Block nedeniyle görünmeyen profil veya profile bağlı alt ekran için canonical not-found akışı kullanılır.
 
-HTTP path, request body, response body, enum değeri veya JSON alan adı konusunda docs/api-contract.md tek kaynaktır.
+## 26. API kontratı tek kaynak kuralı
+
+HTTP path, request body, response body, enum değeri veya JSON alan adı konusunda `docs/api-contract.md` tek kaynaktır.
 
 Backend ve mobil:
 
-alternatif alan adı üretemez,
-
-endpoint alias/fallback tanımlayamaz,
-
-farklı enum casing kullanamaz.
+- alternatif alan adı üretemez,
+- endpoint alias/fallback tanımlayamaz,
+- farklı enum casing kullanamaz.
 
 JSON alanları camelCase'dir.
 
 Paylaşılan enum string değerleri API kontratındaki casing ile birebir kullanılır.
 
-27. Test stratejisi
+Profil, profil gönderileri ve sosyal graf listeleri için alan adları mobil tarafından tahmin edilmez.
+
+## 27. Test stratejisi
 
 Backend integration testleri en az aşağıdakileri doğrulamalıdır:
 
-/health anonim 200
+- `/health` anonim 200
+- register/login anonim
+- korumalı endpoint token gereksinimi
+- profil read modeli alanları
+- profil oluşturulma zamanı
+- görünür post sayısı
+- follower/following sayaçları
+- oturum sahibinin takip durumu
+- profil gönderilerinde yalnız görünür kök postlar
+- profil gönderilerinde deterministic sıralama
+- profil gönderileri empty state
+- followers listesi
+- following listesi
+- sosyal graf listelerinde takip durumu
+- sosyal graf listelerinde block görünürlüğü
+- olmayan profil için sosyal graf `404`
+- mevcut profil + boş collection için `200`
+- block create/remove
+- self-block reddi
+- block sonrası follow temizliği
+- block sonrası feed görünürlüğü
+- report create
+- self-report reddi
+- duplicate açık report `409`
+- normal kullanıcının moderation endpoint'inden `403` alması
+- moderator queue
+- resolve `NoAction`
+- resolve `RemovePost`
+- dismiss
+- ikinci moderation kararında `409`
+- gizlenmiş postun feed/like/reply/profil gönderileri akışından çıkarılması
 
-register/login anonim
-
-korumalı endpoint token gereksinimi
-
-block create/remove
-
-self-block reddi
-
-block sonrası follow temizliği
-
-block sonrası feed görünürlüğü
-
-report create
-
-self-report reddi
-
-duplicate pending report 409
-
-normal kullanıcının moderation endpoint'inden 403 alması
-
-moderator pending queue
-
-resolve NoAction
-
-resolve RemovePost
-
-dismiss
-
-ikinci moderation kararında 409
-
-soft-delete postun feed/like/reply akışından çıkarılması
-
-Backend integration testlerindeki PostAsJsonAsync ve PutAsJsonAsync gövdeleri docs/api-contract.md golden JSON örnekleriyle aynı alan adlarını kullanmalıdır.
+Backend integration testlerindeki request gövdeleri `docs/api-contract.md` golden JSON örnekleriyle aynı alan adlarını kullanmalıdır.
 
 Mobil testleri en az:
 
-block/unblock sonucu
-
-report request alanları
-
-unauthorized yönlendirme
-
-forbidden moderasyon durumu
-
-loading/empty/error durumları
+- profil response parse
+- profil gönderileri parse
+- followers/following parse
+- takip durumu alanı
+- collection empty state
+- block/unblock sonucu
+- report request alanları
+- unauthorized yönlendirme
+- forbidden moderasyon durumu
+- loading/empty/error durumları
 
 üzerinde canonical kontratı doğrulamalıdır.
 
-28. Güvenlik ilkeleri
+## 28. Güvenlik ilkeleri
 
-Şifreler düz metin saklanmaz.
+- Şifreler düz metin saklanmaz.
+- JWT production secret repoda tutulmaz.
+- Authorization yalnızca mobil UI ile uygulanmaz.
+- Moderasyon yetkisi backend'de role göre doğrulanır.
+- Block ilişkisi server-side sorgularda uygulanır.
+- Sosyal graf sorguları block görünürlüğünü server-side uygular.
+- Kullanıcı girdileri doğrulanır.
+- Moderasyon notu ve report details alanları güvenilmeyen kullanıcı girdisi kabul edilir.
+- SQL oluşturmak için kullanıcı girdisi birleştirilmez; EF Core parametreli sorgular kullanılır.
+- Hata response'ları gereksiz iç sistem ayrıntısı içermez.
+- Block nedeniyle gizlenen kaynağın varlığı kullanıcıya açık edilmez.
+- Moderasyon aksiyonları audit için kalıcı olarak saklanır.
 
-JWT production secret repoda tutulmaz.
+## 29. Mimari karar özeti
 
-Authorization yalnızca mobil UI ile uygulanmaz.
+- Mimari: modüler monolit
+- Backend: .NET 8 ASP.NET Core
+- Mobil: Flutter
+- Veritabanı: PostgreSQL
+- Auth: JWT Bearer
+- Kimlik: integer
+- JSON: camelCase
+- Post metni: `content`
+- Maksimum post/reply: 280 karakter
+- Health: anonim `GET /health`
+- Development JWT fallback: zorunlu
+- Flutter web CORS origin: `http://127.0.0.1:8080`
+- API adresi: `http://127.0.0.1:5000`
+- Profil gönderileri: mevcut post read modeli
+- Sosyal graf: mevcut follows ilişkisi
+- Sosyal graf için yeni tablo: yok
+- Profil sayaçları: mevcut veriden türetilir
+- Block görünürlüğü: profil, post ve sosyal graf okumalarında uygulanır
+- Block ilişkisi: yönlü
+- Report hedefleri: `Post`, `User`
+- Report durumları: `Pending`, `Resolved`, `Dismissed`
+- Moderator aksiyonları: `NoAction`, `RemovePost`
+- Moderasyon kaldırması: fiziksel DELETE değil
+- Redis: bu fazlarda zorunlu değil
+- MinIO: bu fazlarda zorunlu değil
 
-Moderasyon yetkisi backend'de role göre doğrulanır.
+## 30. Sosyal Graf ve Profil Tamamlama canonical kararları
 
-Block ilişkisi server-side sorgularda uygulanır.
+### 30.1 Profil sayaçları
 
-Kullanıcı girdileri doğrulanır.
+Profil read modelindeki sayaçlar backend tarafından hesaplanır.
 
-Moderasyon notu ve report details alanları güvenilmeyen kullanıcı girdisi kabul edilir.
+Görünür gönderi sayısı yalnız:
 
-SQL oluşturmak için kullanıcı girdisi birleştirilmez; EF Core parametreli sorgular kullanılır.
+- hedef kullanıcının gönderisi,
+- kök gönderi,
+- silinmemiş gönderi,
+- moderasyonla gizlenmemiş gönderi
 
-Hata response'ları gereksiz iç sistem ayrıntısı içermez.
+koşullarını sağlayan kayıtları kapsar.
 
-Block nedeniyle gizlenen kaynağın varlığı kullanıcıya açık edilmez.
+Takipçi sayısı mevcut follow ilişkilerinden türetilir.
 
-Moderasyon aksiyonları audit için kalıcı olarak saklanır.
+Takip edilen sayısı mevcut follow ilişkilerinden türetilir.
 
-29. Mimari karar özeti
+Yeni sayaç persistence sütunu bu görev için zorunlu değildir.
 
-Mimari: modüler monolit
+### 30.2 Profil gönderileri collection'ı
 
-Backend: .NET 8 ASP.NET Core
+Profil gönderileri mevcut post response modelini kullanır.
 
-Mobil: Flutter
+Kurallar:
 
-Veritabanı: PostgreSQL
+- target username canonical profile namespace üzerinden çözülür,
+- yalnız kök gönderiler döner,
+- görünürlük filtreleri server-side uygulanır,
+- sıralama en yeni gönderiden eskiye doğrudur,
+- boş liste hata değildir.
 
-Auth: JWT Bearer
+### 30.3 Followers ve following collection'ları
 
-Kimlik: integer
+Followers ve following aynı sosyal graf liste öğesi modelini kullanır.
 
-JSON: camelCase
+Liste öğesi:
 
-Post metni: content
+- kullanıcı kimliği,
+- username,
+- displayName,
+- avatarUrl,
+- oturum sahibinin bu kullanıcıyı takip edip etmediği
 
-Maksimum post/reply: 280 karakter
+bilgilerini taşır.
 
-Health: anonim GET /health
+Kesin HTTP property adları `docs/api-contract.md` içinde tanımlanır.
 
-Development JWT fallback: zorunlu
+Block nedeniyle görünmeyen hesaplar listeden çıkarılır.
 
-Flutter web CORS origin: http://127.0.0.1:8080
+### 30.4 Read HTTP semantiği
 
-API adresi: http://127.0.0.1:5000
+Profile bağlı collection için:
 
-Block ilişkisi: yönlü
+- hedef profil yoksa `404`,
+- hedef profil block nedeniyle görünmezse `404`,
+- hedef profil mevcut fakat collection boşsa `200` ve boş `items`.
 
-Block görünürlüğü: iki taraf için etkileşim/görünürlük kısıtı
+Bu kural profil gönderileri, takipçiler ve takip edilenler için aynıdır.
 
-Report hedefleri: Post, User
+### 30.5 Tek kaynak yaklaşımı
 
-Report durumları: Pending, Resolved, Dismissed
+Sosyal graf verisi için yeni servis veya ikinci persistence modeli oluşturulmaz.
 
-Moderator aksiyonları: NoAction, RemovePost
+Canonical kaynaklar:
 
-Moderasyon kaldırması: soft-delete
+- kullanıcı: `users`
+- gönderiler: `posts`
+- takip ilişkisi: `follows`
+- görünürlük: `user_blocks`
 
-Redis: bu fazda zorunlu değil
+olarak kalır.
 
-MinIO: bu fazda zorunlu değil
+API alan isimleri, liste response'ları ve exact endpoint yolları yalnız `docs/api-contract.md` tarafından belirlenir.

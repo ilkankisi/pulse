@@ -42,6 +42,8 @@ Arama, bildirim, bookmark, repost ve medya tabloları güncel MVP için zorunlu 
 
 `user_blocks`, `reports` ve `moderation_actions` Güvenlik & Moderasyon kapsamının canonical persistence tablolarıdır.
 
+Sosyal Graf & Profil Tamamlama fazı yeni tablo gerektirmez. Bu faz mevcut `users`, `posts`, `follows` ve `user_blocks` tablolarından read model üretir.
+
 ## 4. İlişki diyagramı
 
 ~~~mermaid
@@ -120,6 +122,10 @@ Authentication ve korumalı kaynak erişimi application katmanında `is_active` 
 
 Moderator yetkisi yalnız istemci UI kontrolüne bırakılmaz; backend rol doğrulaması zorunludur.
 
+`created_at`, profile response içindeki canonical `createdAt` alanının persistence kaynağıdır.
+
+Profil sayaçları `users` tablosunda zorunlu denormalize sütunlar değildir.
+
 ## 6. posts
 
 ### 6.1 Sütunlar
@@ -141,7 +147,7 @@ Moderator yetkisi yalnız istemci UI kontrolüne bırakılmaz; backend rol doğr
 - Index: `(parent_post_id, created_at ASC, id ASC)`
 - Index: `(is_hidden, created_at DESC, id DESC)`
 - Partial index: `deleted_at IS NULL`
-- Görünür feed sorguları için uygun index: `deleted_at IS NULL AND is_hidden = false`
+- Görünür feed/profil sorguları için uygun index: `deleted_at IS NULL AND is_hidden = false`
 
 ### 6.3 Kurallar
 
@@ -209,6 +215,28 @@ parent.deleted_at IS NULL
 parent.is_hidden = false
 ~~~
 
+### 6.5 Profil gönderileri read modeli
+
+Canonical profil gönderileri sorgusu:
+
+- `author_id = profile_user_id`
+- `parent_post_id IS NULL`
+- `deleted_at IS NULL`
+- `is_hidden = false`
+
+koşullarını birlikte uygular.
+
+Sıralama:
+
+~~~text
+created_at DESC
+id DESC
+~~~
+
+Profil `postCount` değeri aynı görünür kök gönderi koşullarını kullanan sayımdan türetilir.
+
+Reply kayıtları profil ana gönderi collection'ına dahil edilmez.
+
 ## 7. follows
 
 ### 7.1 Sütunlar
@@ -256,6 +284,46 @@ Yeni block oluşturulduğunda iki kullanıcı arasındaki mevcut follow kayıtla
 
 Unblock işlemi eski follow kayıtlarını otomatik geri oluşturmaz.
 
+### 7.4 Sosyal graf read modeli
+
+`followerCount`, hedef kullanıcının `following_id` olduğu follow kayıtlarının sayısıdır.
+
+`followingCount`, hedef kullanıcının `follower_id` olduğu follow kayıtlarının sayısıdır.
+
+`isFollowedByCurrentUser` aşağıdaki ilişkinin varlığından türetilir:
+
+~~~text
+follower_id = current_user_id
+following_id = response_user_id
+~~~
+
+Bu alan persistence sütunu değildir.
+
+Followers collection sorgusu:
+
+~~~text
+following_id = profile_user_id
+~~~
+
+koşulunu kullanır.
+
+Following collection sorgusu:
+
+~~~text
+follower_id = profile_user_id
+~~~
+
+koşulunu kullanır.
+
+Her iki collection da follow ilişkisinin:
+
+~~~text
+created_at DESC
+~~~
+
+sırasını kullanır; eşitlikte response kullanıcı `id DESC` ile deterministik sıralama uygulanır.
+
+Followers ve following için mevcut indeksler yeterlidir; yeni sosyal graf tablosu gerekmez.
 ## 8. likes
 
 ### 8.1 Sütunlar
@@ -274,7 +342,7 @@ Composite primary key:
 (user_id, post_id)
 ~~~
 
-Foreign key:
+Foreign key'ler:
 
 ~~~text
 user_id -> users.id
@@ -390,15 +458,22 @@ EXISTS (
 )
 ~~~
 
-Bu kontrol:
+Bu kontrol server-side olarak:
 
-- profile görünürlüğünde,
+- profil görünürlüğünde,
+- profil gönderileri collection'ında,
+- followers collection'ında,
+- following collection'ında,
 - feed filtrelemesinde,
 - follow oluşturmada,
 - like hedefinde,
 - reply hedefinde
 
-server-side uygulanmalıdır.
+uygulanmalıdır.
+
+Followers ve following collection'larında response öğesindeki kullanıcı oturum sahibine block nedeniyle görünmüyorsa ilgili öğe sonuçtan çıkarılır.
+
+Hedef profil oturum sahibine block nedeniyle görünmüyorsa profile bağlı collection sorgusu çalıştırılmaz; HTTP katmanı canonical `404` sonucu üretir.
 
 ## 10. reports
 
@@ -512,7 +587,6 @@ Aynı reporter ve aynı target için yalnızca bir açık `Pending` rapora izin 
 Bu invariant application katmanında zorunlu olarak kontrol edilir.
 
 PostgreSQL tarafında uygun partial unique index/constraint ile desteklenmelidir.
-
 Post target için mantıksal tekillik:
 
 ~~~text
@@ -690,7 +764,7 @@ AND is_hidden = false
 
 koşullarını kullanır.
 
-Feed ayrıca block ilişkisini de filtreler.
+Feed ve profil gönderileri ayrıca block ilişkisini de dikkate alır.
 
 ### 13.2 Profile görünürlüğü
 
@@ -698,7 +772,13 @@ Profile hedef kullanıcı ile oturum sahibi arasında herhangi bir yönde block 
 
 Persistence katmanı block ilişkisinin varlığını sağlayan sorguyu sunar.
 
-HTTP katmanı bunu `404` semantiğiyle temsil edebilir.
+HTTP katmanı bunu `404` semantiğiyle temsil eder.
+
+Profile bağlı aşağıdaki collection'lar aynı görünürlük ön koşulunu kullanır:
+
+- profil gönderileri,
+- followers,
+- following.
 
 ### 13.3 Like ve reply hedefi
 
@@ -712,6 +792,18 @@ AND is_hidden = false
 olmalıdır.
 
 Post author ile oturum sahibi arasında block ilişkisi bulunmamalıdır.
+
+### 13.4 Sosyal graf görünürlüğü
+
+Followers ve following collection'ları için:
+
+1. hedef profil görünür olmalıdır,
+2. follow ilişkileri mevcut `follows` tablosundan okunmalıdır,
+3. response kullanıcısı oturum sahibine block nedeniyle görünmüyorsa sonuçtan çıkarılmalıdır.
+
+Sosyal graf görünürlük filtresi follow ilişkisini fiziksel olarak değiştirmez.
+
+Block oluşturma sırasında mevcut follow kayıtlarının kaldırılması ayrı transaction davranışıdır.
 
 ## 14. Delete davranışları ve foreign key stratejisi
 
@@ -737,7 +829,6 @@ Post silme soft-delete/görünürlük modeli kullandığından report ve moderat
 - `moderation_actions.moderator_user_id -> users.id`: restrict
 
 Production retention veya kullanıcı hesabı fiziksel silme politikası ayrı bir ürün kararıdır.
-
 ## 15. Canonical database ↔ API eşlemeleri
 
 Database snake_case alanları HTTP JSON property adlarını değiştirmez.
@@ -748,8 +839,8 @@ Database snake_case alanları HTTP JSON property adlarını değiştirmez.
 |---|---|
 | `display_name` | `displayName` |
 | `avatar_url` | `avatarUrl` |
-| `parent_post_id` | `parentPostId` |
 | `created_at` | `createdAt` |
+| `parent_post_id` | `parentPostId` |
 | `target_type` | `targetType` |
 | `target_post_id` / `target_user_id` | `targetId` + `targetType` |
 | `resolved_at` | `resolvedAt` |
@@ -760,6 +851,18 @@ Database snake_case alanları HTTP JSON property adlarını değiştirmez.
 Moderasyon resolve request body için `isHidden` alanı tanımlanmaz.
 
 İstemci `RemovePost` canonical moderation action'ını gönderir; persistence katmanı bunun sonucunu `posts.is_hidden=true` olarak uygular.
+
+Profil read modelinde:
+
+- `users.created_at` → `createdAt`
+- görünür kök post sayımı → `postCount`
+- hedef kullanıcının takipçi sayımı → `followerCount`
+- hedef kullanıcının takip ettiği hesap sayımı → `followingCount`
+- current user ile response kullanıcısı arasındaki follow ilişkisi → `isFollowedByCurrentUser`
+
+olarak eşlenir.
+
+`postCount`, `followerCount`, `followingCount` ve `isFollowedByCurrentUser` için ayrı persistence sütunu zorunlu değildir.
 
 ## 16. Persistence enum tek kaynak kuralı
 
@@ -836,6 +939,36 @@ users.role = User
 
 Moderator kullanıcı ataması seed/admin operasyonu tarafından açıkça yapılmalıdır.
 
+### 17.1 Sosyal Graf & Profil Tamamlama migration kararı
+
+Sosyal Graf & Profil Tamamlama fazı için yeni migration zorunlu değildir.
+
+Gerekli veriler mevcut alanlardan türetilir:
+
+- `users.created_at`
+- `posts.author_id`
+- `posts.parent_post_id`
+- `posts.deleted_at`
+- `posts.is_hidden`
+- `follows.follower_id`
+- `follows.following_id`
+- `follows.created_at`
+- `user_blocks.blocker_user_id`
+- `user_blocks.blocked_user_id`
+
+Yeni:
+
+- `post_count`
+- `follower_count`
+- `following_count`
+- `is_followed_by_current_user`
+- `profile_posts`
+- `social_graph`
+
+sütun veya tabloları bu MVP kapsamında oluşturulmaz.
+
+İleride performans nedeniyle denormalize sayaçlar eklenirse bunların transaction/tutarlılık stratejisi ayrı migration ve mimari karar gerektirir.
+
 ## 18. Test doğrulamaları
 
 Backend persistence/integration testleri en az aşağıdakileri doğrulamalıdır:
@@ -863,6 +996,17 @@ Backend persistence/integration testleri en az aşağıdakileri doğrulamalıdı
 - ikinci resolve/dismiss state çakışmasının reddi
 - moderation audit kaydının oluşturulması
 - hidden/deleted postların feed, like ve reply sorgularından filtrelenmesi
+- `users.created_at` değerinin profile `createdAt` alanına kaynak olması
+- `postCount` hesabının yalnız görünür kök gönderileri sayması
+- `followerCount` hesabının `following_id` üzerinden doğru üretilmesi
+- `followingCount` hesabının `follower_id` üzerinden doğru üretilmesi
+- `isFollowedByCurrentUser` hesabının current-user follow ilişkisine göre üretilmesi
+- profil gönderilerinin yalnız hedef kullanıcıya ait görünür kök postları döndürmesi
+- profil gönderilerinin `created_at DESC, id DESC` sıralanması
+- followers sorgusunun `following_id = profile_user_id` kullanması
+- following sorgusunun `follower_id = profile_user_id` kullanması
+- sosyal graf listelerinde block nedeniyle görünmeyen kullanıcıların filtrelenmesi
+- mevcut profil için boş collection'ın hata olarak değerlendirilmemesi
 
 Persistence testlerindeki canonical enum değerleri `docs/api-contract.md` golden sample değerlerinden farklı casing kullanmamalıdır.
 
@@ -874,12 +1018,19 @@ Güncel persistence modeli:
 users
   role
   is_active
+  created_at
 
 posts
+  author_id
+  parent_post_id
   deleted_at
   is_hidden
 
 follows
+  follower_id
+  following_id
+  created_at
+
 likes
 user_blocks
 reports
@@ -898,3 +1049,83 @@ Güvenlik & Moderasyon kararları:
 - `RemovePost` `posts.is_hidden=true` uygular,
 - kullanıcı soft delete davranışı `deleted_at` ile ayrı tutulur,
 - canonical persistence enum değerleri API contract ile birebir aynıdır.
+
+Sosyal Graf & Profil Tamamlama kararları:
+
+- yeni sosyal graf tablosu yoktur,
+- yeni profil-post ilişki tablosu yoktur,
+- yeni sayaç sütunları zorunlu değildir,
+- `createdAt` kaynağı `users.created_at` değeridir,
+- `postCount` görünür kök postlardan türetilir,
+- `followerCount` mevcut `follows` tablosundan türetilir,
+- `followingCount` mevcut `follows` tablosundan türetilir,
+- `isFollowedByCurrentUser` mevcut follow ilişkisinden türetilir,
+- profil gönderileri mevcut `posts` tablosundan okunur,
+- followers/following mevcut `follows` tablosundan okunur,
+- sosyal graf görünürlüğü mevcut `user_blocks` modeliyle server-side filtrelenir.
+
+## 20. Sosyal Graf ve Profil read-model özeti
+
+Canonical kaynak eşlemesi:
+
+~~~text
+Profile
+  users
+  posts
+  follows
+  user_blocks
+
+Profile Posts
+  posts
+  users
+  user_blocks
+
+Followers
+  follows
+  users
+  user_blocks
+
+Following
+  follows
+  users
+  user_blocks
+~~~
+
+Profile read model:
+
+~~~text
+id
+username
+displayName
+bio
+avatarUrl
+createdAt
+postCount
+followerCount
+followingCount
+isFollowedByCurrentUser
+~~~
+
+bu alanları mevcut persistence modelinden üretir.
+
+Followers ve following liste öğeleri aynı persistence projection yaklaşımını kullanır:
+
+~~~text
+id
+username
+displayName
+avatarUrl
+isFollowedByCurrentUser
+~~~
+
+Bu alanlar yeni tablo veya kalıcı projection olarak zorunlu değildir.
+
+Backend sorguları:
+
+- canonical profile namespace ile hedef kullanıcıyı çözer,
+- block görünürlüğünü uygular,
+- yalnız gerekli projection alanlarını seçer,
+- collection sıralamasını deterministic tutar,
+- API katmanına canonical camelCase response modeli sağlar.
+
+Bu fazın persistence kararı mevcut ilişkisel modeli yeniden kullanmak ve ikinci bir sosyal graf veri kaynağı oluşturmamaktır.

@@ -173,6 +173,9 @@ Geçersiz JSON:
 | Profile | GET | `/api/v1/me` | Bearer | 200 |
 | Profile | PUT | `/api/v1/me` | Bearer | 200 |
 | Profile | GET | `/api/v1/profiles/{username}` | Bearer | 200 |
+| Profile | GET | `/api/v1/profiles/{username}/posts` | Bearer | 200 |
+| SocialGraph | GET | `/api/v1/profiles/{username}/followers` | Bearer | 200 |
+| SocialGraph | GET | `/api/v1/profiles/{username}/following` | Bearer | 200 |
 | Follow | POST | `/api/v1/profiles/{username}/follow` | Bearer | 200 |
 | Follow | DELETE | `/api/v1/profiles/{username}/follow` | Bearer | 200 |
 | Feed | GET | `/api/v1/feed` | Bearer | 200 |
@@ -330,7 +333,6 @@ Response kesin olarak küçük harfli `status` alanını ve `"ok"` değerini iç
 | `likeCount` | integer | Hayır |
 | `replyCount` | integer | Hayır |
 | `isLikedByMe` | boolean | Hayır |
-
 ### 9.5 ReportTargetType
 
 Tam canonical string değerleri:
@@ -366,6 +368,32 @@ Tam canonical string değerleri:
 
 - `NoAction`
 - `RemovePost`
+
+### 9.9 SocialGraphUserResponse
+
+Followers ve following collection'ları aynı canonical liste öğesi tipini kullanır.
+
+~~~json
+{
+  "id": 3,
+  "username": "deniz",
+  "displayName": "Deniz",
+  "avatarUrl": null,
+  "isFollowedByCurrentUser": true
+}
+~~~
+
+| Alan | Tür | Null |
+|---|---|---|
+| `id` | integer | Hayır |
+| `username` | string | Hayır |
+| `displayName` | string | Hayır |
+| `avatarUrl` | string | Evet |
+| `isFollowedByCurrentUser` | boolean | Hayır |
+
+`isFollowedByCurrentUser`, oturum sahibinin response'taki kullanıcıyı takip edip etmediğini belirtir.
+
+Followers ve following için ikinci bir JSON alan seti tanımlanmaz.
 
 ## 10. Auth
 
@@ -495,9 +523,11 @@ Golden response:
   "displayName": "İlkan",
   "bio": null,
   "avatarUrl": null,
+  "createdAt": "2026-08-01T10:00:00Z",
+  "postCount": 12,
   "followerCount": 10,
   "followingCount": 4,
-  "isFollowing": false
+  "isFollowedByCurrentUser": false
 }
 ~~~
 
@@ -508,9 +538,15 @@ Golden response:
 | `displayName` | string | Hayır |
 | `bio` | string | Evet |
 | `avatarUrl` | string | Evet |
+| `createdAt` | UTC ISO 8601 string | Hayır |
+| `postCount` | integer | Hayır |
 | `followerCount` | integer | Hayır |
 | `followingCount` | integer | Hayır |
-| `isFollowing` | boolean | Hayır |
+| `isFollowedByCurrentUser` | boolean | Hayır |
+
+Kendi profilinde `isFollowedByCurrentUser` değeri `false` olur; self-follow desteklenmez.
+
+`postCount` yalnız görünür kök gönderileri sayar.
 
 ### 11.2 PUT /api/v1/me
 
@@ -555,9 +591,11 @@ Golden response:
   "displayName": "İlkan Kişi",
   "bio": "Pulse kullanıcısı",
   "avatarUrl": null,
+  "createdAt": "2026-08-01T10:00:00Z",
+  "postCount": 12,
   "followerCount": 10,
   "followingCount": 4,
-  "isFollowing": false
+  "isFollowedByCurrentUser": false
 }
 ~~~
 
@@ -582,11 +620,28 @@ Golden response:
   "displayName": "Ada",
   "bio": null,
   "avatarUrl": null,
+  "createdAt": "2026-07-20T09:00:00Z",
+  "postCount": 8,
   "followerCount": 20,
   "followingCount": 8,
-  "isFollowing": true
+  "isFollowedByCurrentUser": true
 }
 ~~~
+
+Canonical profile response alanları:
+
+| Alan | Tür | Zorunlu | Null |
+|---|---|---|---|
+| `id` | integer | Evet | Hayır |
+| `username` | string | Evet | Hayır |
+| `displayName` | string | Evet | Hayır |
+| `bio` | string | Evet | Evet |
+| `avatarUrl` | string | Evet | Evet |
+| `createdAt` | UTC ISO 8601 string | Evet | Hayır |
+| `postCount` | integer | Evet | Hayır |
+| `followerCount` | integer | Evet | Hayır |
+| `followingCount` | integer | Evet | Hayır |
+| `isFollowedByCurrentUser` | boolean | Evet | Hayır |
 
 Kullanıcı bulunamazsa:
 
@@ -602,6 +657,180 @@ Oturum sahibi ile hedef arasında block ilişkisi nedeniyle profil görünmezse:
 
 Response block ilişkisinin varlığını ayrıca açıklamaz.
 
+### 11.4 GET /api/v1/profiles/{username}/posts
+
+Auth: Bearer
+
+İstek gövdesi: Yok
+
+Read semantiği:
+
+- Hedef profil path içindeki `username` ile belirlenir.
+- Yalnız hedef kullanıcıya ait kök gönderiler döndürülür.
+- Mevcut `PostResponse` şeması yeniden kullanılır.
+
+Başarı:
+
+~~~http
+200 OK
+~~~
+
+Golden response:
+
+~~~json
+{
+  "items": [
+    {
+      "id": 15,
+      "author": {
+        "id": 2,
+        "username": "ada",
+        "displayName": "Ada",
+        "avatarUrl": null
+      },
+      "content": "Profilimdeki gönderi.",
+      "parentPostId": null,
+      "createdAt": "2026-08-08T12:00:00Z",
+      "likeCount": 4,
+      "replyCount": 1,
+      "isLikedByMe": false
+    }
+  ]
+}
+~~~
+
+Yanıt alanları:
+
+| Alan | Tür | Zorunlu | Null |
+|---|---|---|---|
+| `items` | PostResponse array | Evet | Hayır |
+
+Kurallar:
+
+- Sıralama `createdAt DESC`, eşitlikte `id DESC` olur.
+- Yalnız `parentPostId=null` gönderiler döner.
+- Soft-delete edilmiş gönderiler döndürülmez.
+- Moderasyonla gizlenmiş gönderiler döndürülmez.
+- Hedef kullanıcı bulunamazsa `404`.
+- Block nedeniyle hedef profil görünmezse `404`.
+
+Empty state:
+
+~~~json
+{
+  "items": []
+}
+~~~
+
+Mevcut profilin hiç görünür kök gönderisi olmaması `404` değildir.
+
+### 11.5 GET /api/v1/profiles/{username}/followers
+
+Auth: Bearer
+
+İstek gövdesi: Yok
+
+Read semantiği:
+
+- Hedef profil path içindeki `username` ile belirlenir.
+- Hedef kullanıcıyı takip eden kullanıcılar döndürülür.
+
+Başarı:
+
+~~~http
+200 OK
+~~~
+
+Golden response:
+
+~~~json
+{
+  "items": [
+    {
+      "id": 3,
+      "username": "deniz",
+      "displayName": "Deniz",
+      "avatarUrl": null,
+      "isFollowedByCurrentUser": true
+    }
+  ]
+}
+~~~
+
+`items` elemanları `SocialGraphUserResponse` tipidir.
+
+Kurallar:
+
+- Hedef profil bulunamazsa `404`.
+- Hedef profil block nedeniyle görünmezse `404`.
+- Oturum sahibine block nedeniyle görünmeyen hesaplar sonuçtan filtrelenir.
+- `isFollowedByCurrentUser` her liste öğesi için oturum sahibine göre hesaplanır.
+- Sıralama follow ilişkisinin `createdAt DESC` değerine göre yapılır.
+- Eşitlikte kullanıcı `id DESC` sırası kullanılır.
+
+Empty state:
+
+~~~json
+{
+  "items": []
+}
+~~~
+
+Takipçi bulunmaması `404` değildir.
+
+### 11.6 GET /api/v1/profiles/{username}/following
+
+Auth: Bearer
+
+İstek gövdesi: Yok
+
+Read semantiği:
+
+- Hedef profil path içindeki `username` ile belirlenir.
+- Hedef kullanıcının takip ettiği kullanıcılar döndürülür.
+
+Başarı:
+
+~~~http
+200 OK
+~~~
+
+Golden response:
+
+~~~json
+{
+  "items": [
+    {
+      "id": 4,
+      "username": "ece",
+      "displayName": "Ece",
+      "avatarUrl": null,
+      "isFollowedByCurrentUser": false
+    }
+  ]
+}
+~~~
+
+`items` elemanları `SocialGraphUserResponse` tipidir.
+
+Kurallar:
+
+- Hedef profil bulunamazsa `404`.
+- Hedef profil block nedeniyle görünmezse `404`.
+- Oturum sahibine block nedeniyle görünmeyen hesaplar sonuçtan filtrelenir.
+- `isFollowedByCurrentUser` her liste öğesi için oturum sahibine göre hesaplanır.
+- Sıralama follow ilişkisinin `createdAt DESC` değerine göre yapılır.
+- Eşitlikte kullanıcı `id DESC` sırası kullanılır.
+
+Empty state:
+
+~~~json
+{
+  "items": []
+}
+~~~
+
+Takip edilen kullanıcı bulunmaması `404` değildir.
 ## 12. Follows
 
 ### 12.1 POST /api/v1/profiles/{username}/follow
@@ -612,6 +841,7 @@ Create semantiği:
 
 - Hedef path içindeki `username` ile belirlenir.
 - İstek gövdesi yoktur.
+- Takip eden kullanıcı JWT üzerinden belirlenir.
 
 Golden request:
 
@@ -647,6 +877,14 @@ Block ilişkisi varsa:
 404 Not Found
 ~~~
 
+Self-follow:
+
+~~~http
+400 Bad Request
+~~~
+
+Aynı follow ilişkisini tekrar oluşturma idempotent davranabilir ve duplicate persistence kaydı oluşturmaz.
+
 ### 12.2 DELETE /api/v1/profiles/{username}/follow
 
 Auth: Bearer
@@ -667,6 +905,8 @@ Golden response:
   "isFollowing": false
 }
 ~~~
+
+Follow kaydı bulunmasa da işlem idempotent olarak başarılı kabul edilebilir.
 
 ## 13. Feed
 
@@ -719,7 +959,9 @@ Boş feed `404` değildir.
 Feed:
 
 - kronolojik olarak `createdAt DESC` sıralanır,
+- eşitlikte `id DESC` kullanılır,
 - soft-delete postları içermez,
+- moderasyonla gizlenmiş postları içermez,
 - block ilişkisi bulunan kullanıcıların postlarını içermez.
 
 ## 14. Posts
@@ -872,7 +1114,9 @@ Kurallar:
 - `content` maksimum 280 karakter.
 - Parent bulunamazsa `404`.
 - Soft-delete edilmiş parent için `404`.
+- Moderasyonla gizlenmiş parent için `404`.
 - Block nedeniyle görünmeyen parent için `404`.
+- Parent'ın kendisi reply ise yeni nested reply oluşturulamaz.
 
 ## 16. Likes
 
@@ -1146,7 +1390,6 @@ HTTP semantiği:
 - Geçersiz enum `400`.
 - `details` 500 karakteri aşarsa `400`.
 - Report oluşturulması hedefi otomatik kaldırmaz.
-
 ## 19. Moderation
 
 Tüm endpoint'ler:
@@ -1169,7 +1412,11 @@ Auth: Moderator
 
 İstek gövdesi: Yok
 
-Opsiyonel `status` query değeri paylaşılan `ReportStatus` enum'undan biri olmalıdır: `Pending`, `Resolved`, `Dismissed`.
+Opsiyonel `status` query değeri paylaşılan `ReportStatus` enum'undan biri olmalıdır:
+
+- `Pending`
+- `Resolved`
+- `Dismissed`
 
 Query verilmezse varsayılan durum `Pending` olur.
 
@@ -1329,7 +1576,7 @@ Kurallar:
 
 - Report bulunamazsa `404`.
 - Report `Pending` değilse `409`.
-- `RemovePost` yalnızca `targetType=Post` için geçerlidir.
+- `RemovePost` yalnız `targetType=Post` için geçerlidir.
 - `RemovePost` bir User report için kullanılırsa `400`.
 - `RemovePost` fiziksel DELETE yapmaz.
 - `NoAction` target kaynağı değiştirmez.
@@ -1399,6 +1646,9 @@ Block ilişkisi aşağıdaki mevcut kaynaklarda server-side uygulanır:
 
 - `GET /api/v1/feed`
 - `GET /api/v1/profiles/{username}`
+- `GET /api/v1/profiles/{username}/posts`
+- `GET /api/v1/profiles/{username}/followers`
+- `GET /api/v1/profiles/{username}/following`
 - `POST /api/v1/profiles/{username}/follow`
 - `POST /api/v1/posts/{postId}/likes`
 - `POST /api/v1/posts/{postId}/replies`
@@ -1408,6 +1658,8 @@ Kurallar:
 - Engelli hesapların postları feed'den filtrelenir.
 - İki kullanıcı arasında block varsa yeni follow oluşturulamaz.
 - Block nedeniyle görünmeyen profile erişim `404` döndürür.
+- Block nedeniyle görünmeyen profilin post/follower/following collection'ları `404` döndürür.
+- Followers/following listelerinde oturum sahibine block nedeniyle görünmeyen kullanıcılar `items` sonucundan filtrelenir.
 - Block nedeniyle görünmeyen post üzerinde like/reply `404` döndürür.
 - Response block ilişkisinin varlığını ayrıca açıklamaz.
 - Block oluşturulduğunda iki yöndeki mevcut follow ilişkileri kaldırılır.
@@ -1415,14 +1667,15 @@ Kurallar:
 
 ## 21. Moderasyon ile kaldırılmış gönderi semantiği
 
-`RemovePost` sonucunda soft-delete edilmiş post:
+`RemovePost` sonucunda moderasyonla gizlenmiş post:
 
 - feed'de dönmez,
+- profil gönderileri collection'ında dönmez,
 - normal görünür post kabul edilmez,
 - yeni like kabul etmez,
 - yeni reply kabul etmez.
 
-Görünmeyen soft-delete post için ilişkili kaynak işlemleri `404 Not Found` döndürür.
+Görünmeyen post için ilişkili kaynak işlemleri `404 Not Found` döndürür.
 
 Mobil istemci moderasyon kaldırması için standart `DELETE /api/v1/posts/{postId}` endpoint'ini kullanmaz.
 
@@ -1432,7 +1685,7 @@ Standart DELETE endpoint'inin gönderi sahipliği semantiği değişmez.
 
 ### Create
 
-Yeni kaynak create işlemi `POST /collection` semantiğini kullanır.
+Yeni kaynak create işlemi collection/action `POST` semantiğini kullanır.
 
 Gövdede server tarafından üretilecek kaynak kimliği bulunmaz.
 
@@ -1450,7 +1703,11 @@ create akışları için geçerlidir.
 
 Mevcut kaynağın güncellenmesi canonical path üzerinden yapılır.
 
-Örnek: `PUT /api/v1/me`.
+Örnek:
+
+~~~http
+PUT /api/v1/me
+~~~
 
 Moderasyon state transition işlemleri action endpoint'leri üzerinden gerçekleştirilir:
 
@@ -1463,9 +1720,19 @@ Request body içinde path kimliği tekrar edilmez.
 
 Tek kaynağın path ile seçildiği GET endpoint'lerinde kayıt bulunamazsa `404 Not Found` döndürülür.
 
-Collection endpoint'lerinde kayıt olmaması `200 OK` ve boş collection anlamına gelir.
+Profile bağlı collection endpoint'lerinde önce hedef profil görünürlüğü doğrulanır.
 
-Örnek:
+Hedef profil bulunamaz veya block nedeniyle görünmezse:
+
+~~~http
+404 Not Found
+~~~
+
+Hedef profil mevcut fakat collection boşsa:
+
+~~~http
+200 OK
+~~~
 
 ~~~json
 {
@@ -1473,13 +1740,16 @@ Collection endpoint'lerinde kayıt olmaması `200 OK` ve boş collection anlamı
 }
 ~~~
 
-Bu davranış özellikle:
+Bu empty-state davranışı özellikle:
 
 - `GET /api/v1/feed`
 - `GET /api/v1/blocks`
 - `GET /api/v1/moderation/reports`
+- `GET /api/v1/profiles/{username}/posts`
+- `GET /api/v1/profiles/{username}/followers`
+- `GET /api/v1/profiles/{username}/following`
 
-için empty state anlamına gelir.
+için geçerlidir.
 
 ## 23. Golden sample kuralı
 
@@ -1572,12 +1842,21 @@ Küçük harfli veya farklı biçimli enum alias'ları geçersizdir.
 Backend integration testlerindeki enum string'leri golden referanstır.
 
 Mobil aynı enum için tek serializer fonksiyonu kullanmalı ve yukarıdaki canonical değerleri birebir üretmelidir.
-
 ## 25. Kimlik kararı
 
 Güncel Pulse MVP kaynak kimlikleri integer'dır.
 
-Backend modeli `int Id`, mobil modeli `final int id;` kullanır.
+Backend modeli:
+
+~~~text
+int Id
+~~~
+
+Mobil modeli:
+
+~~~text
+final int id;
+~~~
 
 API örneği:
 
@@ -1593,7 +1872,9 @@ UUID string kullanılmaz.
 
 Bir gönderinin canonical temel JSON property adları `id`, `author`, `content`, `parentPostId`, `createdAt`, `likeCount`, `replyCount` ve `isLikedByMe` şeklindedir.
 
-Kullanıcı tarafından oluşturulan gönderi metninin canonical JSON property adı `content`'tir. `content` bir enum string değeri değildir ve camelCase JSON property adı olarak kalmalıdır.
+Kullanıcı tarafından oluşturulan gönderi metninin canonical JSON property adı `content`'tir.
+
+`content` bir enum string değeri değildir ve camelCase JSON property adı olarak kalmalıdır.
 
 Geçersiz alternatif JSON property adları `title`, `description`, `text` ve `body`'dir.
 
@@ -1601,7 +1882,49 @@ Mobil UI bir gönderi başlığı benzeri görsel öğe üretse bile backend req
 
 §24 içindeki PascalCase zorunluluğu yalnızca paylaşılan enum string değerlerine uygulanır; JSON property adlarına uygulanmaz.
 
-## 27. Güvenlik ve moderasyon hata örnekleri
+## 27. Profil ve sosyal graf alan adları
+
+Canonical profile response alanları:
+
+- `id`
+- `username`
+- `displayName`
+- `bio`
+- `avatarUrl`
+- `createdAt`
+- `postCount`
+- `followerCount`
+- `followingCount`
+- `isFollowedByCurrentUser`
+
+Canonical `SocialGraphUserResponse` alanları:
+
+- `id`
+- `username`
+- `displayName`
+- `avatarUrl`
+- `isFollowedByCurrentUser`
+
+`isFollowedByCurrentUser`, oturum sahibinin response'ta temsil edilen kullanıcıyı takip edip etmediğini ifade eder.
+
+Bu alan yerine ikinci bir alias kullanılmaz.
+
+Özellikle aşağıdaki alternatif alan adları canonical değildir:
+
+- `isFollowing`
+- `followedByMe`
+- `followingByCurrentUser`
+- `isCurrentUserFollowing`
+
+Profile response içindeki `postCount`, yalnız görünür kök gönderilerin sayısıdır.
+
+`followerCount` ve `followingCount`, canonical follow ilişkilerinden hesaplanır.
+
+Followers ve following collection'ları aynı `SocialGraphUserResponse` alan setini kullanır.
+
+Profil gönderileri için ayrı bir post JSON şeması oluşturulmaz; `PostResponse` yeniden kullanılır.
+
+## 28. Güvenlik ve moderasyon hata örnekleri
 
 Self-block:
 
@@ -1657,7 +1980,7 @@ Daha önce sonuçlandırılmış report:
 }
 ~~~
 
-## 28. Authorization özeti
+## 29. Authorization özeti
 
 Anonim:
 
@@ -1670,6 +1993,9 @@ Bearer:
 - `GET /api/v1/me`
 - `PUT /api/v1/me`
 - `GET /api/v1/profiles/{username}`
+- `GET /api/v1/profiles/{username}/posts`
+- `GET /api/v1/profiles/{username}/followers`
+- `GET /api/v1/profiles/{username}/following`
 - `POST /api/v1/profiles/{username}/follow`
 - `DELETE /api/v1/profiles/{username}/follow`
 - `GET /api/v1/feed`
@@ -1690,7 +2016,154 @@ Bearer + Moderator:
 - `POST /api/v1/moderation/reports/{reportId}/resolve`
 - `POST /api/v1/moderation/reports/{reportId}/dismiss`
 
-## 29. Tek kaynak kuralı
+## 30. Sosyal Graf collection semantiği
+
+Aşağıdaki endpoint'ler profile bağlı collection endpoint'leridir:
+
+- `GET /api/v1/profiles/{username}/posts`
+- `GET /api/v1/profiles/{username}/followers`
+- `GET /api/v1/profiles/{username}/following`
+
+Ortak kurallar:
+
+- Bearer token zorunludur.
+- Hedef kullanıcı path içindeki `username` ile çözülür.
+- Hedef profil bulunamazsa `404`.
+- Hedef profil block nedeniyle görünmezse `404`.
+- Hedef profil mevcut ve collection boşsa `200`.
+- Boş response kesin olarak `{"items":[]}` semantiğini kullanır.
+- Block nedeniyle oturum sahibine görünmeyen sosyal graf kullanıcıları listeye dahil edilmez.
+- İstemci `404` sonucundan kullanıcının gerçekten bulunmadığı veya block nedeniyle gizlendiği sonucunu ayırt etmeye çalışmaz.
+
+### 30.1 Profil gönderileri sıralaması
+
+Profil gönderileri:
+
+~~~text
+createdAt DESC
+id DESC
+~~~
+
+sırasını kullanır.
+
+Yalnız kök gönderiler döndürülür.
+
+Reply kayıtları profil ana gönderi collection'ına dahil edilmez.
+
+### 30.2 Followers sıralaması
+
+Followers collection'ı follow ilişkisinin oluşturulma zamanına göre:
+
+~~~text
+createdAt DESC
+~~~
+
+sıralanır.
+
+Eşitlik durumunda response kullanıcısının integer kimliği:
+
+~~~text
+id DESC
+~~~
+
+ile deterministik sıra sağlanır.
+
+### 30.3 Following sıralaması
+
+Following collection'ı follow ilişkisinin oluşturulma zamanına göre:
+
+~~~text
+createdAt DESC
+~~~
+
+sıralanır.
+
+Eşitlik durumunda response kullanıcısının integer kimliği:
+
+~~~text
+id DESC
+~~~
+
+ile deterministik sıra sağlanır.
+
+## 31. Sosyal Graf golden response özeti
+
+### 31.1 Profile
+
+~~~json
+{
+  "id": 2,
+  "username": "ada",
+  "displayName": "Ada",
+  "bio": null,
+  "avatarUrl": null,
+  "createdAt": "2026-07-20T09:00:00Z",
+  "postCount": 8,
+  "followerCount": 20,
+  "followingCount": 8,
+  "isFollowedByCurrentUser": true
+}
+~~~
+
+### 31.2 Profile posts
+
+~~~json
+{
+  "items": [
+    {
+      "id": 15,
+      "author": {
+        "id": 2,
+        "username": "ada",
+        "displayName": "Ada",
+        "avatarUrl": null
+      },
+      "content": "Profilimdeki gönderi.",
+      "parentPostId": null,
+      "createdAt": "2026-08-08T12:00:00Z",
+      "likeCount": 4,
+      "replyCount": 1,
+      "isLikedByMe": false
+    }
+  ]
+}
+~~~
+
+### 31.3 Followers
+
+~~~json
+{
+  "items": [
+    {
+      "id": 3,
+      "username": "deniz",
+      "displayName": "Deniz",
+      "avatarUrl": null,
+      "isFollowedByCurrentUser": true
+    }
+  ]
+}
+~~~
+
+### 31.4 Following
+
+~~~json
+{
+  "items": [
+    {
+      "id": 4,
+      "username": "ece",
+      "displayName": "Ece",
+      "avatarUrl": null,
+      "isFollowedByCurrentUser": false
+    }
+  ]
+}
+~~~
+
+Backend integration testleri ve mobil model/request-response testleri bu alan adlarını birebir kullanmalıdır.
+
+## 32. Tek kaynak kuralı
 
 Bu doküman backend ve mobil arasında API sözleşmesinin tek kaynağıdır.
 
@@ -1714,3 +2187,13 @@ Yeni modül eklendiğinde:
 - empty-state/404 anlamı
 
 bu dosyada açık şekilde tanımlanmadan implementasyona başlanmamalıdır.
+
+Sosyal Graf & Profil Tamamlama için canonical yeni read endpoint'leri yalnız şunlardır:
+
+~~~text
+GET /api/v1/profiles/{username}/posts
+GET /api/v1/profiles/{username}/followers
+GET /api/v1/profiles/{username}/following
+~~~
+
+Bu kaynaklar için `/api/v1/users/...` veya farklı profile route alias'ları oluşturulmaz.
