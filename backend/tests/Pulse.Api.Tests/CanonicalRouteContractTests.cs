@@ -14,77 +14,85 @@ public sealed class CanonicalRouteContractTests
         using var factory =
             new CanonicalRouteWebApplicationFactory();
 
-        using var scope = factory.Services.CreateScope();
+        using var scope =
+            factory.Services.CreateScope();
 
         var endpointDataSource =
             scope.ServiceProvider
                 .GetRequiredService<EndpointDataSource>();
 
-        var actualRoutes = endpointDataSource.Endpoints
-            .OfType<RouteEndpoint>()
-            .Select(
-                endpoint =>
-                {
-                    var httpMethods = endpoint.Metadata
-                        .GetMetadata<HttpMethodMetadata>()?
-                        .HttpMethods;
-
-                    return new
+        var actualRoutes =
+            endpointDataSource.Endpoints
+                .OfType<RouteEndpoint>()
+                .Select(
+                    endpoint =>
                     {
-                        Methods =
-                            httpMethods
-                            ?? Array.Empty<string>(),
-                        Path = NormalizeRoute(
-                            endpoint.RoutePattern.RawText
-                            ?? string.Empty)
-                    };
-                })
-            .SelectMany(
-                endpoint =>
-                    endpoint.Methods.Select(
-                        method =>
-                            $"{method.ToUpperInvariant()} {endpoint.Path}"))
-            .Where(
-                route =>
-                    route.StartsWith(
-                        "GET /health",
-                        StringComparison.Ordinal)
-                    || route.Contains(
-                        " /api/v1/",
-                        StringComparison.Ordinal))
-            .ToHashSet(StringComparer.Ordinal);
+                        var httpMethods =
+                            endpoint.Metadata
+                                .GetMetadata<HttpMethodMetadata>()?
+                                .HttpMethods;
+
+                        return new
+                        {
+                            Methods =
+                                httpMethods
+                                ?? Array.Empty<string>(),
+                            Path =
+                                NormalizeRoute(
+                                    endpoint.RoutePattern.RawText
+                                    ?? string.Empty)
+                        };
+                    })
+                .SelectMany(
+                    endpoint =>
+                        endpoint.Methods.Select(
+                            method =>
+                                $"{method.ToUpperInvariant()} {endpoint.Path}"))
+                .Where(
+                    route =>
+                        route.StartsWith(
+                            "GET /health",
+                            StringComparison.Ordinal)
+                        || route.Contains(
+                            " /api/v1/",
+                            StringComparison.Ordinal))
+                .ToHashSet(
+                    StringComparer.Ordinal);
 
         var expectedRoutes =
             new HashSet<string>(
                 StringComparer.Ordinal)
-                {
-                    "GET /health",
-                    "POST /api/v1/auth/register",
-                    "POST /api/v1/auth/login",
-                    "GET /api/v1/me",
-                    "PUT /api/v1/me",
-                    "GET /api/v1/profiles/{username}",
-                    "POST /api/v1/profiles/{username}/follow",
-                    "DELETE /api/v1/profiles/{username}/follow",
-                    "GET /api/v1/feed",
-                    "POST /api/v1/posts",
-                    "DELETE /api/v1/posts/{postId}",
-                    "POST /api/v1/posts/{postId}/replies",
-                    "POST /api/v1/posts/{postId}/likes",
-                    "DELETE /api/v1/posts/{postId}/likes",
-                    "POST /api/v1/profiles/{username}/block",
-                    "DELETE /api/v1/profiles/{username}/block",
-                    "GET /api/v1/blocks",
-                    "POST /api/v1/reports",
-                    "GET /api/v1/moderation/reports",
-                    "GET /api/v1/moderation/reports/{reportId}",
-                    "POST /api/v1/moderation/reports/{reportId}/resolve",
-                    "POST /api/v1/moderation/reports/{reportId}/dismiss"
-                };
+            {
+                "GET /health",
+                "POST /api/v1/auth/register",
+                "POST /api/v1/auth/login",
+                "GET /api/v1/me",
+                "PUT /api/v1/me",
+                "GET /api/v1/profiles/{username}",
+                "GET /api/v1/profiles/{username}/posts",
+                "POST /api/v1/profiles/{username}/follow",
+                "DELETE /api/v1/profiles/{username}/follow",
+                "GET /api/v1/feed",
+                "POST /api/v1/posts",
+                "DELETE /api/v1/posts/{postId}",
+                "POST /api/v1/posts/{postId}/replies",
+                "POST /api/v1/posts/{postId}/likes",
+                "DELETE /api/v1/posts/{postId}/likes",
+                "POST /api/v1/profiles/{username}/block",
+                "DELETE /api/v1/profiles/{username}/block",
+                "GET /api/v1/blocks",
+                "POST /api/v1/reports",
+                "GET /api/v1/moderation/reports",
+                "GET /api/v1/moderation/reports/{reportId}",
+                "POST /api/v1/moderation/reports/{reportId}/resolve",
+                "POST /api/v1/moderation/reports/{reportId}/dismiss"
+            };
 
         Assert.Equal(
-            expectedRoutes.OrderBy(route => route),
-            actualRoutes.OrderBy(route => route));
+            expectedRoutes.OrderBy(
+                route => route),
+            actualRoutes.OrderBy(
+                route => route));
     }
 
     private sealed class CanonicalRouteWebApplicationFactory
@@ -93,42 +101,70 @@ public sealed class CanonicalRouteContractTests
         protected override void ConfigureWebHost(
             IWebHostBuilder builder)
         {
-            builder.UseEnvironment("Testing");
+            builder.UseEnvironment(
+                "Testing");
         }
     }
 
-    private static string NormalizeRoute(string route)
+    private static string NormalizeRoute(
+        string route)
     {
-        var normalized = route;
+        var normalized =
+            route.StartsWith(
+                "/",
+                StringComparison.Ordinal)
+                ? route
+                : $"/{route}";
 
-        var constraintStart =
-            normalized.IndexOf(
-                ':',
-                StringComparison.Ordinal);
+        var result =
+            new System.Text.StringBuilder(
+                normalized.Length);
 
-        while (constraintStart >= 0)
+        for (var index = 0;
+             index < normalized.Length;
+             index++)
         {
+            var current = normalized[index];
+
+            if (current != '{')
+            {
+                result.Append(current);
+                continue;
+            }
+
             var closingBrace =
                 normalized.IndexOf(
                     '}',
-                    constraintStart);
+                    index + 1);
 
             if (closingBrace < 0)
             {
+                result.Append(
+                    normalized.AsSpan(index));
                 break;
             }
 
-            normalized =
-                normalized.Remove(
-                    constraintStart,
-                    closingBrace - constraintStart);
+            var parameter =
+                normalized.Substring(
+                    index + 1,
+                    closingBrace - index - 1);
 
-            constraintStart =
-                normalized.IndexOf(
-                    ':',
-                    constraintStart);
+            var constraintIndex =
+                parameter.IndexOf(':');
+
+            if (constraintIndex >= 0)
+            {
+                parameter =
+                    parameter[..constraintIndex];
+            }
+
+            result.Append('{');
+            result.Append(parameter);
+            result.Append('}');
+
+            index = closingBrace;
         }
 
-        return normalized;
+        return result.ToString();
     }
 }

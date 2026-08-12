@@ -16,7 +16,13 @@ public static class ProfileEndpoints
             .RequireAuthorization()
             .WithTags("Profiles");
 
-        group.MapGet("/{username}", GetProfileAsync);
+        group.MapGet(
+            "/{username}",
+            GetProfileAsync);
+
+        group.MapGet(
+            "/{username}/posts",
+            GetProfilePostsAsync);
 
         return endpoints;
     }
@@ -36,17 +42,19 @@ public static class ProfileEndpoints
         var user = await db.Users
             .AsNoTracking()
             .SingleOrDefaultAsync(
-                candidate => candidate.Id == currentUserId,
+                candidate =>
+                    candidate.Id == currentUserId,
                 cancellationToken);
 
         if (user is null)
         {
             return Results.NotFound(
-                new ApiErrorResponse("User was not found."));
+                new ApiErrorResponse(
+                    "User was not found."));
         }
 
         return Results.Ok(
-            await CreateProfileContractResponseAsync(
+            await CreateProfileResponseAsync(
                 db,
                 user,
                 currentUserId,
@@ -67,9 +75,14 @@ public static class ProfileEndpoints
         }
 
         var displayName =
-            request.DisplayName?.Trim() ?? string.Empty;
-        var bio = NormalizeOptional(request.Bio);
-        var avatarUrl = NormalizeOptional(request.AvatarUrl);
+            request.DisplayName?.Trim()
+            ?? string.Empty;
+
+        var bio =
+            NormalizeOptional(request.Bio);
+
+        var avatarUrl =
+            NormalizeOptional(request.AvatarUrl);
 
         if (displayName.Length is < 1 or > 80)
         {
@@ -111,23 +124,26 @@ public static class ProfileEndpoints
 
         var user = await db.Users
             .SingleOrDefaultAsync(
-                candidate => candidate.Id == currentUserId,
+                candidate =>
+                    candidate.Id == currentUserId,
                 cancellationToken);
 
         if (user is null)
         {
             return Results.NotFound(
-                new ApiErrorResponse("User was not found."));
+                new ApiErrorResponse(
+                    "User was not found."));
         }
 
         user.DisplayName = displayName;
         user.Bio = bio;
         user.AvatarUrl = avatarUrl;
 
-        await db.SaveChangesAsync(cancellationToken);
+        await db.SaveChangesAsync(
+            cancellationToken);
 
         return Results.Ok(
-            await CreateProfileContractResponseAsync(
+            await CreateProfileResponseAsync(
                 db,
                 user,
                 currentUserId,
@@ -161,61 +177,195 @@ public static class ProfileEndpoints
         if (user is null)
         {
             return Results.NotFound(
-                new ApiErrorResponse("User was not found."));
+                new ApiErrorResponse(
+                    "User was not found."));
+        }
+
+        if (await HasBlockRelationshipAsync(
+                db,
+                currentUserId,
+                user.Id,
+                cancellationToken))
+        {
+            return Results.NotFound(
+                new ApiErrorResponse(
+                    "User was not found."));
         }
 
         return Results.Ok(
-            await CreateProfileContractResponseAsync(
+            await CreateProfileResponseAsync(
                 db,
                 user,
                 currentUserId,
                 cancellationToken));
     }
 
-    internal static async Task<ProfileContractResponse>
-        CreateProfileContractResponseAsync(
+    private static async Task<IResult> GetProfilePostsAsync(
+        string username,
+        ClaimsPrincipal principal,
         PulseDbContext db,
-        User user,
-        int currentUserId,
         CancellationToken cancellationToken)
     {
+        if (!PostEndpoints.TryGetUserId(
+                principal,
+                out var currentUserId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var normalizedUsername =
+            username.Trim().ToUpperInvariant();
+
+        var user = await db.Users
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                candidate =>
+                    candidate.NormalizedUsername ==
+                    normalizedUsername,
+                cancellationToken);
+
+        if (user is null)
+        {
+            return Results.NotFound(
+                new ApiErrorResponse(
+                    "User was not found."));
+        }
+
+        if (await HasBlockRelationshipAsync(
+                db,
+                currentUserId,
+                user.Id,
+                cancellationToken))
+        {
+            return Results.NotFound(
+                new ApiErrorResponse(
+                    "User was not found."));
+        }
+
+        var posts = await db.Posts
+            .AsNoTracking()
+            .Include(post => post.Author)
+            .Where(
+                post =>
+                    post.AuthorId == user.Id &&
+                    post.ParentPostId == null &&
+                    post.DeletedAt == null)
+            .ToListAsync(cancellationToken);
+
+        var orderedPosts = posts
+            .OrderByDescending(
+                post => post.CreatedAtUtc)
+            .ThenByDescending(
+                post => post.Id)
+            .ToList();
+
+        var items =
+            new List<PostResponse>(
+                orderedPosts.Count);
+
+        foreach (var post in orderedPosts)
+        {
+            items.Add(
+                await PostEndpoints.ToResponseAsync(
+                    db,
+                    post,
+                    currentUserId,
+                    cancellationToken));
+        }
+
+        return Results.Ok(
+            new FeedListResponse(items));
+    }
+
+    private static async Task<ProfileResponse>
+        CreateProfileResponseAsync(
+            PulseDbContext db,
+            User user,
+            int currentUserId,
+            CancellationToken cancellationToken)
+    {
+        var postCount = await db.Posts
+            .AsNoTracking()
+            .CountAsync(
+                post =>
+                    post.AuthorId == user.Id &&
+                    post.ParentPostId == null &&
+                    post.DeletedAt == null,
+                cancellationToken);
+
         var followerCount = await db.Follows
             .AsNoTracking()
             .CountAsync(
-                follow => follow.FollowingId == user.Id,
+                follow =>
+                    follow.FollowingId == user.Id,
                 cancellationToken);
 
         var followingCount = await db.Follows
             .AsNoTracking()
             .CountAsync(
-                follow => follow.FollowerId == user.Id,
+                follow =>
+                    follow.FollowerId == user.Id,
                 cancellationToken);
 
-        var isFollowing = user.Id != currentUserId &&
+        var isFollowedByCurrentUser =
+            user.Id != currentUserId &&
             await db.Follows
                 .AsNoTracking()
                 .AnyAsync(
                     follow =>
-                        follow.FollowerId == currentUserId &&
-                        follow.FollowingId == user.Id,
+                        follow.FollowerId ==
+                        currentUserId &&
+                        follow.FollowingId ==
+                        user.Id,
                     cancellationToken);
 
-        return new ProfileContractResponse(
+        return new ProfileResponse(
             user.Id,
             user.Username,
             user.DisplayName,
             user.Bio,
             user.AvatarUrl,
+            user.CreatedAtUtc,
+            postCount,
             followerCount,
             followingCount,
-            isFollowing);
+            isFollowedByCurrentUser);
     }
 
-    private static string? NormalizeOptional(string? value)
+    private static Task<bool> HasBlockRelationshipAsync(
+        PulseDbContext db,
+        int currentUserId,
+        int targetUserId,
+        CancellationToken cancellationToken)
     {
-        var normalized = value?.Trim();
+        if (currentUserId == targetUserId)
+        {
+            return Task.FromResult(false);
+        }
 
-        return string.IsNullOrEmpty(normalized)
+        return db.Blocks
+            .AsNoTracking()
+            .AnyAsync(
+                block =>
+                    (block.BlockerId ==
+                         currentUserId &&
+                     block.BlockedUserId ==
+                         targetUserId) ||
+                    (block.BlockerId ==
+                         targetUserId &&
+                     block.BlockedUserId ==
+                         currentUserId),
+                cancellationToken);
+    }
+
+    private static string? NormalizeOptional(
+        string? value)
+    {
+        var normalized =
+            value?.Trim();
+
+        return string.IsNullOrEmpty(
+                normalized)
             ? null
             : normalized;
     }

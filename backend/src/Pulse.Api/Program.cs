@@ -85,6 +85,7 @@ builder.Services
         });
 
 builder.Services.AddAuthorization();
+builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(
@@ -119,12 +120,12 @@ var app = builder.Build();
 
 if (!app.Environment.IsEnvironment("Testing"))
 {
-    using (var scope = app.Services.CreateScope())
-    {
-        var dbContext =
-            scope.ServiceProvider.GetRequiredService<PulseDbContext>();
-        dbContext.Database.Migrate();
-    }
+    using var scope = app.Services.CreateScope();
+
+    var dbContext =
+        scope.ServiceProvider.GetRequiredService<PulseDbContext>();
+
+    dbContext.Database.Migrate();
 }
 
 if (app.Environment.IsDevelopment())
@@ -133,7 +134,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(
         options =>
         {
-            options.SwaggerEndpoint("/swagger/v1/swagger.json", "Pulse API v1");
+            options.SwaggerEndpoint(
+                "/swagger/v1/swagger.json",
+                "Pulse API v1");
             options.RoutePrefix = "swagger";
         });
 }
@@ -144,14 +147,14 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapGet(
-        "/health",
-        () => Results.Ok(
-            new
-            {
-                status = "ok"
-            }))
-    .AllowAnonymous();
+    "/health",
+    () => Results.Ok(
+        new
+        {
+            status = "ok",
+        }));
 
+app.MapControllers();
 app.MapAuthEndpoints();
 app.MapPostEndpoints();
 app.MapFeedEndpoints();
@@ -162,4 +165,6 @@ app.MapSecurityModerationEndpoints();
 
 app.Run();
 
-public partial class Program;
+public partial class Program
+{
+}

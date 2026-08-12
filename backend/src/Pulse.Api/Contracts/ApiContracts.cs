@@ -49,16 +49,6 @@ public sealed record PostResponse(
     int ReplyCount,
     bool IsLikedByMe);
 
-public sealed record ProfileContractResponse(
-    int Id,
-    string Username,
-    string DisplayName,
-    string? Bio,
-    string? AvatarUrl,
-    int FollowerCount,
-    int FollowingCount,
-    bool IsFollowing);
-
 public sealed record ProfileResponse(
     int Id,
     string Username,
@@ -69,8 +59,7 @@ public sealed record ProfileResponse(
     int PostCount,
     int FollowerCount,
     int FollowingCount,
-    bool IsFollowing,
-    bool IsCurrentUser);
+    bool IsFollowedByCurrentUser);
 
 public sealed record FollowResponse(
     string Username,
@@ -91,3 +80,10 @@ public sealed record PagedResponse<T>(
 public sealed record ApiErrorResponse(
     string Error,
     string? Field = null);
+
+public sealed record SocialGraphUserResponse(
+    int Id,
+    string Username,
+    string DisplayName,
+    string? AvatarUrl,
+    bool IsFollowedByCurrentUser);
