@@ -79,6 +79,7 @@ void main() {
       data: <String, dynamic>{
         'displayName': 'İlkan',
         'bio': 'Flutter geliştirici',
+        'avatarUrl': null,
       },
     );
 
@@ -93,9 +94,11 @@ void main() {
     final request = requests.single;
     expect(request.method, 'PUT');
     expect(request.path, ApiRoutes.me);
+    // api-contract.md golden request: avatarUrl zorunlu alandır, boşsa null.
     expect(request.data, <String, dynamic>{
       'displayName': 'İlkan',
       'bio': 'Flutter geliştirici',
+      'avatarUrl': null,
     });
   });
 

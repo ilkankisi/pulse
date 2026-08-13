@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -91,7 +93,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       builder: (_) {
         return _EditProfileDialog(
           profile: profile,
-          onSave: (request) async {
+          onSave: (request) {
             final updateProfile = widget.updateProfile;
 
             if (updateProfile != null) {
@@ -292,10 +294,16 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
     super.dispose();
   }
 
-  Future<void> _save() async {
+  void _save() {
     if (_isSaving || !(_formKey.currentState?.validate() ?? false)) {
       return;
     }
+
+    final request = UpdateProfileRequest(
+      displayName: _displayNameController.text.trim(),
+      bio: _bioController.text.trim(),
+      avatarUrl: _avatarUrlController.text.trim(),
+    );
 
     setState(() {
       _isSaving = true;
@@ -303,13 +311,16 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
     });
 
     try {
-      final updatedProfile = await widget.onSave(
-        UpdateProfileRequest(
-          displayName: _displayNameController.text.trim(),
-          bio: _bioController.text.trim(),
-          avatarUrl: _avatarUrlController.text.trim(),
-        ),
-      );
+      final saveFuture = widget.onSave(request);
+      unawaited(_completeSave(saveFuture));
+    } catch (_) {
+      _handleSaveFailure();
+    }
+  }
+
+  Future<void> _completeSave(Future<PulseProfile> saveFuture) async {
+    try {
+      final updatedProfile = await saveFuture;
 
       if (!mounted) {
         return;
@@ -317,15 +328,19 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
 
       Navigator.of(context).pop(updatedProfile);
     } catch (_) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _isSaving = false;
-        _saveError = 'Profil güncellenemedi. Tekrar deneyin.';
-      });
+      _handleSaveFailure();
     }
+  }
+
+  void _handleSaveFailure() {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isSaving = false;
+      _saveError = 'Profil güncellenemedi. Tekrar deneyin.';
+    });
   }
 
   @override
@@ -402,12 +417,19 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
         FilledButton(
           key: const ValueKey<String>('profile-save-button'),
           onPressed: _isSaving ? null : _save,
-          child: _isSaving
-              ? const SizedBox.square(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_isSaving) ...[
+                const SizedBox.square(
                   dimension: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Kaydet'),
+                ),
+                const SizedBox(width: 8),
+              ],
+              const Text('Kaydet'),
+            ],
+          ),
         ),
       ],
     );

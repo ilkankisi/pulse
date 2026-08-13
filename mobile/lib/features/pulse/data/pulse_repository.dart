@@ -88,7 +88,10 @@ class PulseRepository {
 
   Future<List<PulsePost>> getProfilePosts(String username) async {
     try {
-      final response = await _dio.get<dynamic>('/api/v1/feed');
+      final encodedUsername = Uri.encodeComponent(username);
+      final response = await _dio.get<dynamic>(
+        '/api/v1/profiles/$encodedUsername/posts',
+      );
 
       return PulseFeed.fromJson(response.data).posts;
     } on DioException catch (error) {

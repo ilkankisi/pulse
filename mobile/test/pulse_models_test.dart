@@ -65,16 +65,18 @@ void main() {
     });
   });
 
-  test('profil güncelleme gövdesi boş avatar alanını göndermez', () {
+  test('profil güncelleme gövdesi boş avatar alanını null gönderir', () {
     final request = UpdateProfileRequest(
       displayName: ' İlkan ',
       bio: ' Flutter geliştirici ',
       avatarUrl: ' ',
     );
 
+    // api-contract.md: avatarUrl zorunlu alandır; boş değer null gönderilir.
     expect(request.toJson(), <String, dynamic>{
       'displayName': 'İlkan',
       'bio': 'Flutter geliştirici',
+      'avatarUrl': null,
     });
   });
 

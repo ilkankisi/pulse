@@ -46,6 +46,7 @@ class PulsePost {
 
   factory PulsePost.fromJson(Map<String, dynamic> json) {
     final authorValue = json['author'] ?? json['user'];
+
     if (authorValue is! Map) {
       throw const FormatException('Gönderi yazarı bulunamadı.');
     }
@@ -65,6 +66,7 @@ class PulsePost {
         'isLikedByMe',
         'isLiked',
         'likedByCurrentUser',
+        'isLikedByCurrentUser',
       ]),
       canDelete: _optionalBool(json, const [
         'canDelete',
@@ -111,6 +113,7 @@ class PulseFeed {
     }
 
     final posts = <PulsePost>[];
+
     for (final item in items) {
       if (item is! Map) {
         throw const FormatException('Gönderi verisi geçerli değil.');
@@ -159,10 +162,14 @@ class PulseProfile {
         'followerCount',
         'followersCount',
       ]),
-      followingCount: _optionalInt(json, const ['followingCount']),
+      followingCount: _optionalInt(json, const [
+        'followingCount',
+        'followingsCount',
+      ]),
       postCount: _optionalInt(json, const ['postCount', 'postsCount']),
       isFollowing: _optionalBool(json, const [
         'isFollowing',
+        'isFollowedByMe',
         'followedByCurrentUser',
       ]),
       isCurrentUser: _optionalBool(json, const ['isCurrentUser', 'isMe']),
@@ -174,7 +181,10 @@ class PulseProfile {
     String? bio,
     String? avatarUrl,
     int? followerCount,
+    int? followingCount,
+    int? postCount,
     bool? isFollowing,
+    bool? isCurrentUser,
   }) {
     return PulseProfile(
       id: id,
@@ -183,10 +193,10 @@ class PulseProfile {
       bio: bio ?? this.bio,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       followerCount: followerCount ?? this.followerCount,
-      followingCount: followingCount,
-      postCount: postCount,
+      followingCount: followingCount ?? this.followingCount,
+      postCount: postCount ?? this.postCount,
       isFollowing: isFollowing ?? this.isFollowing,
-      isCurrentUser: isCurrentUser,
+      isCurrentUser: isCurrentUser ?? this.isCurrentUser,
     );
   }
 }
@@ -214,110 +224,135 @@ class CreateReplyRequest {
 class UpdateProfileRequest {
   const UpdateProfileRequest({
     required this.displayName,
-    required this.bio,
-    required this.avatarUrl,
+    this.bio,
+    this.avatarUrl,
   });
 
   final String displayName;
-  final String bio;
-  final String avatarUrl;
+  final String? bio;
+  final String? avatarUrl;
 
   Map<String, dynamic> toJson() {
-    final trimmedBio = bio.trim();
-    final trimmedAvatarUrl = avatarUrl.trim();
+    final trimmedBio = bio?.trim();
+    final trimmedAvatarUrl = avatarUrl?.trim();
 
-    final json = <String, dynamic>{
+    // api-contract.md: avatarUrl alanı zorunludur, boş değer null gönderilir.
+    return <String, dynamic>{
       'displayName': displayName.trim(),
-      'bio': trimmedBio.isEmpty ? null : trimmedBio,
+      'bio': trimmedBio,
+      'avatarUrl': trimmedAvatarUrl == null || trimmedAvatarUrl.isEmpty
+          ? null
+          : trimmedAvatarUrl,
     };
-
-    if (trimmedAvatarUrl.isNotEmpty) {
-      json['avatarUrl'] = trimmedAvatarUrl;
-    }
-
-    return json;
   }
 }
 
-String _requiredString(Map<String, dynamic> json, List<String> keys) {
+dynamic _firstValue(Map<String, dynamic> json, List<String> keys) {
   for (final key in keys) {
-    final value = json[key];
-    if (value is String && value.trim().isNotEmpty) {
-      return value;
-    }
-  }
-
-  throw FormatException('Zorunlu metin alanı bulunamadı: ${keys.join(', ')}');
-}
-
-int _requiredInt(Map<String, dynamic> json, List<String> keys) {
-  final value = _nullableInt(json, keys);
-  if (value == null) {
-    throw FormatException(
-      'Zorunlu sayısal alan bulunamadı: ${keys.join(', ')}',
-    );
-  }
-
-  return value;
-}
-
-int _optionalInt(Map<String, dynamic> json, List<String> keys) {
-  return _nullableInt(json, keys) ?? 0;
-}
-
-int? _nullableInt(Map<String, dynamic> json, List<String> keys) {
-  for (final key in keys) {
-    final value = json[key];
-
-    if (value is int) {
-      return value;
-    }
-
-    if (value is num) {
-      return value.toInt();
-    }
-
-    if (value is String) {
-      final parsed = int.tryParse(value);
-      if (parsed != null) {
-        return parsed;
-      }
+    if (json.containsKey(key)) {
+      return json[key];
     }
   }
 
   return null;
 }
 
-bool _optionalBool(Map<String, dynamic> json, List<String> keys) {
-  for (final key in keys) {
-    final value = json[key];
-    if (value is bool) {
-      return value;
-    }
+int _requiredInt(Map<String, dynamic> json, List<String> keys) {
+  final value = _firstValue(json, keys);
+
+  if (value is int) {
+    return value;
   }
 
-  return false;
+  if (value is num && value.isFinite && value == value.roundToDouble()) {
+    return value.toInt();
+  }
+
+  throw FormatException('Zorunlu integer alanı bulunamadı: ${keys.first}.');
+}
+
+String _requiredString(Map<String, dynamic> json, List<String> keys) {
+  final value = _firstValue(json, keys);
+
+  if (value is String && value.isNotEmpty) {
+    return value;
+  }
+
+  throw FormatException('Zorunlu string alanı bulunamadı: ${keys.first}.');
 }
 
 DateTime _requiredDateTime(Map<String, dynamic> json, List<String> keys) {
-  for (final key in keys) {
-    final value = json[key];
-    if (value is String) {
-      final parsed = DateTime.tryParse(value);
-      if (parsed != null) {
-        return parsed;
-      }
+  final value = _firstValue(json, keys);
+
+  if (value is String) {
+    final parsed = DateTime.tryParse(value);
+
+    if (parsed != null) {
+      return parsed;
     }
   }
 
-  throw FormatException('Geçerli tarih alanı bulunamadı: ${keys.join(', ')}');
+  throw FormatException('Zorunlu tarih alanı bulunamadı: ${keys.first}.');
 }
 
-String? _optionalString(dynamic value) {
-  if (value is! String) {
+int _optionalInt(Map<String, dynamic> json, List<String> keys) {
+  final value = _firstValue(json, keys);
+
+  if (value == null) {
+    return 0;
+  }
+
+  if (value is int) {
+    return value;
+  }
+
+  if (value is num && value.isFinite && value == value.roundToDouble()) {
+    return value.toInt();
+  }
+
+  throw FormatException('Integer alanı geçerli değil: ${keys.first}.');
+}
+
+int? _nullableInt(Map<String, dynamic> json, List<String> keys) {
+  final value = _firstValue(json, keys);
+
+  if (value == null) {
     return null;
   }
 
-  final trimmedValue = value.trim();
-  return trimmedValue.isEmpty ? null : trimmedValue;
+  if (value is int) {
+    return value;
+  }
+
+  if (value is num && value.isFinite && value == value.roundToDouble()) {
+    return value.toInt();
+  }
+
+  throw FormatException('Nullable integer alanı geçerli değil: ${keys.first}.');
+}
+
+bool _optionalBool(Map<String, dynamic> json, List<String> keys) {
+  final value = _firstValue(json, keys);
+
+  if (value == null) {
+    return false;
+  }
+
+  if (value is bool) {
+    return value;
+  }
+
+  throw FormatException('Boolean alanı geçerli değil: ${keys.first}.');
+}
+
+String? _optionalString(dynamic value) {
+  if (value == null) {
+    return null;
+  }
+
+  if (value is String) {
+    return value;
+  }
+
+  throw const FormatException('String alanı geçerli değil.');
 }

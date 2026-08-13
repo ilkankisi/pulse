@@ -59,9 +59,11 @@ void main() {
       ),
     );
 
+    // api-contract.md golden request: avatarUrl zorunlu alandır, boşsa null.
     final expectedBody = <String, dynamic>{
       'displayName': 'İlkan Kişi',
       'bio': 'Yeni biyografi',
+      'avatarUrl': null,
     };
 
     adapter.onPut(profilePath, (server) {

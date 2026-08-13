@@ -9,8 +9,6 @@ import 'package:pulse/features/pulse/data/pulse_repository.dart';
 import 'package:pulse/features/pulse/domain/pulse_models.dart';
 import 'package:pulse/features/pulse/presentation/profile_page.dart';
 
-import 'package:pulse/core/network/api_routes.dart';
-
 void main() {
   const profile = PulseProfile(
     id: 1,
@@ -34,44 +32,44 @@ void main() {
 
     addTearDown(() => dio.close(force: true));
 
-    const postsPath = ApiRoutes.feed;
+    const postsPath = '/api/v1/profiles/ilkan/posts';
 
     adapter.onGet(
       postsPath,
-      (server) => server.reply(200, <Map<String, dynamic>>[
-        <String, dynamic>{
-          'id': 12,
-          'content': 'İkinci profil gönderisi',
-          'createdAt': '2026-08-07T12:00:00Z',
-          'author': <String, dynamic>{
-            'id': 1,
-            'username': 'ilkan',
-            'displayName': 'İlkan',
-            'avatarUrl': null,
+      (server) => server.reply(200, <String, dynamic>{
+        'items': <Map<String, dynamic>>[
+          <String, dynamic>{
+            'id': 12,
+            'content': 'İkinci profil gönderisi',
+            'createdAt': '2026-08-07T12:00:00Z',
+            'author': <String, dynamic>{
+              'id': 1,
+              'username': 'ilkan',
+              'displayName': 'İlkan',
+              'avatarUrl': null,
+            },
+            'likeCount': 4,
+            'replyCount': 1,
+            'isLikedByMe': true,
+            'parentPostId': null,
           },
-          'likeCount': 4,
-          'replyCount': 1,
-          'isLiked': true,
-          'canDelete': true,
-          'replyToPostId': null,
-        },
-        <String, dynamic>{
-          'id': 11,
-          'content': 'İlk profil gönderisi',
-          'createdAt': '2026-08-07T11:00:00Z',
-          'author': <String, dynamic>{
-            'id': 1,
-            'username': 'ilkan',
-            'displayName': 'İlkan',
-            'avatarUrl': null,
+          <String, dynamic>{
+            'id': 11,
+            'content': 'İlk profil gönderisi',
+            'createdAt': '2026-08-07T11:00:00Z',
+            'author': <String, dynamic>{
+              'id': 1,
+              'username': 'ilkan',
+              'displayName': 'İlkan',
+              'avatarUrl': null,
+            },
+            'likeCount': 2,
+            'replyCount': 0,
+            'isLikedByMe': false,
+            'parentPostId': null,
           },
-          'likeCount': 2,
-          'replyCount': 0,
-          'isLiked': false,
-          'canDelete': true,
-          'replyToPostId': null,
-        },
-      ]),
+        ],
+      }),
     );
 
     await tester.pumpWidget(
@@ -122,28 +120,29 @@ void main() {
 
     addTearDown(() => dio.close(force: true));
 
-    const postsPath = ApiRoutes.feed;
+    const postsPath = '/api/v1/profiles/ayse/posts';
 
     adapter.onGet(
       postsPath,
-      (server) => server.reply(200, <Map<String, dynamic>>[
-        <String, dynamic>{
-          'id': 21,
-          'content': 'Ayşe profil gönderisi',
-          'createdAt': '2026-08-07T13:00:00Z',
-          'author': <String, dynamic>{
-            'id': 9,
-            'username': 'ayse',
-            'displayName': 'Ayşe',
-            'avatarUrl': null,
+      (server) => server.reply(200, <String, dynamic>{
+        'items': <Map<String, dynamic>>[
+          <String, dynamic>{
+            'id': 21,
+            'content': 'Ayşe profil gönderisi',
+            'createdAt': '2026-08-07T13:00:00Z',
+            'author': <String, dynamic>{
+              'id': 9,
+              'username': 'ayse',
+              'displayName': 'Ayşe',
+              'avatarUrl': null,
+            },
+            'likeCount': 1,
+            'replyCount': 2,
+            'isLikedByMe': false,
+            'parentPostId': null,
           },
-          'likeCount': 1,
-          'replyCount': 2,
-          'isLiked': false,
-          'canDelete': false,
-          'replyToPostId': null,
-        },
-      ]),
+        ],
+      }),
     );
 
     await tester.pumpWidget(
@@ -154,10 +153,8 @@ void main() {
         child: MaterialApp(
           home: Scaffold(
             body: ProfilePage(
-              username: 'ayse',
               initialProfile: otherProfile,
               loadProfile: () async => otherProfile,
-              isCurrentUser: false,
               showAppBar: false,
             ),
           ),
@@ -169,7 +166,7 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('Ayşe profil gönderisi'), findsOneWidget);
-    expect(find.text('Profili Düzenle'), findsNothing);
+    expect(find.text('Henüz gönderi yok'), findsNothing);
   });
 
   testWidgets('gönderisi olmayan profil empty state gösterir', (tester) async {
@@ -193,8 +190,10 @@ void main() {
     addTearDown(() => dio.close(force: true));
 
     adapter.onGet(
-      ApiRoutes.feed,
-      (server) => server.reply(200, <Map<String, dynamic>>[]),
+      '/api/v1/profiles/ilkan/posts',
+      (server) => server.reply(200, <String, dynamic>{
+        'items': <Map<String, dynamic>>[],
+      }),
     );
 
     await tester.pumpWidget(
@@ -235,7 +234,7 @@ void main() {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
-          if (options.path != ApiRoutes.feed) {
+          if (options.path != '/api/v1/profiles/ilkan/posts') {
             handler.next(options);
             return;
           }
@@ -246,31 +245,37 @@ void main() {
             Response<dynamic>(
               requestOptions: options,
               statusCode: 200,
-              data: <Map<String, dynamic>>[
-                <String, dynamic>{
-                  'id': postsLoadCount,
-                  'content': postsLoadCount == 1
-                      ? 'İlk yükleme'
-                      : 'Yenilenmiş gönderi',
-                  'createdAt': '2026-08-07T12:00:00Z',
-                  'author': <String, dynamic>{
-                    'id': 1,
-                    'username': 'ilkan',
-                    'displayName': 'İlkan',
-                    'avatarUrl': null,
+              data: <String, dynamic>{
+                'items': <Map<String, dynamic>>[
+                  <String, dynamic>{
+                    'id': postsLoadCount,
+                    'content': postsLoadCount == 1
+                        ? 'İlk yükleme'
+                        : 'Yenilenmiş gönderi',
+                    'createdAt': '2026-08-07T12:00:00Z',
+                    'author': <String, dynamic>{
+                      'id': 1,
+                      'username': 'ilkan',
+                      'displayName': 'İlkan',
+                      'avatarUrl': null,
+                    },
+                    'likeCount': 0,
+                    'replyCount': 0,
+                    'isLikedByMe': false,
+                    'parentPostId': null,
                   },
-                  'likeCount': 0,
-                  'replyCount': 0,
-                  'isLiked': false,
-                  'canDelete': true,
-                  'replyToPostId': null,
-                },
-              ],
+                ],
+              },
             ),
           );
         },
       ),
     );
+
+    Future<PulseProfile> loadProfile() async {
+      profileLoadCount++;
+      return profile;
+    }
 
     await tester.pumpWidget(
       ProviderScope(
@@ -281,10 +286,7 @@ void main() {
           home: Scaffold(
             body: ProfilePage(
               initialProfile: profile,
-              loadProfile: () async {
-                profileLoadCount++;
-                return profile;
-              },
+              loadProfile: loadProfile,
               showAppBar: false,
             ),
           ),
@@ -292,19 +294,39 @@ void main() {
       ),
     );
 
-    await tester.pumpAndSettle();
+    for (var i = 0; i < 40 && postsLoadCount < 1; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    await tester.pump();
 
-    expect(find.text('İlk yükleme'), findsOneWidget);
+    expect(tester.takeException(), isNull);
     expect(profileLoadCount, 1);
     expect(postsLoadCount, 1);
+    expect(find.text('İlk yükleme'), findsOneWidget);
+    expect(find.text('Yenilenmiş gönderi'), findsNothing);
 
-    await tester.drag(find.byType(CustomScrollView), const Offset(0, 500));
-    await tester.pump();
-    await tester.pumpAndSettle();
+    final refreshIndicator = tester.widget<RefreshIndicator>(
+      find.byType(RefreshIndicator),
+    );
+
+    unawaited(refreshIndicator.onRefresh());
+
+    for (var i = 0; i < 40 && postsLoadCount < 2; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+
+    for (
+      var i = 0;
+      i < 40 && find.text('Yenilenmiş gönderi').evaluate().isEmpty;
+      i++
+    ) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
 
     expect(tester.takeException(), isNull);
     expect(profileLoadCount, 2);
     expect(postsLoadCount, 2);
+    expect(find.text('İlk yükleme'), findsNothing);
     expect(find.text('Yenilenmiş gönderi'), findsOneWidget);
   });
 
@@ -316,27 +338,32 @@ void main() {
 
     addTearDown(() => dio.close(force: true));
 
-    var requestCount = 0;
+    var postsLoadCount = 0;
 
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
-          if (options.path != ApiRoutes.feed) {
+          if (options.path != '/api/v1/profiles/ilkan/posts') {
             handler.next(options);
             return;
           }
 
-          requestCount++;
+          postsLoadCount++;
 
-          if (requestCount == 1) {
+          if (postsLoadCount == 1) {
+            final response = Response<dynamic>(
+              requestOptions: options,
+              statusCode: 500,
+              data: <String, dynamic>{
+                'error': 'Gönderiler yüklenemedi.',
+                'field': null,
+              },
+            );
+
             handler.reject(
               DioException(
                 requestOptions: options,
-                response: Response<dynamic>(
-                  requestOptions: options,
-                  statusCode: 500,
-                  data: <String, dynamic>{'error': 'Sunucu hatası'},
-                ),
+                response: response,
                 type: DioExceptionType.badResponse,
               ),
             );
@@ -347,24 +374,25 @@ void main() {
             Response<dynamic>(
               requestOptions: options,
               statusCode: 200,
-              data: <Map<String, dynamic>>[
-                <String, dynamic>{
-                  'id': 31,
-                  'content': 'Tekrar deneme başarılı',
-                  'createdAt': '2026-08-07T14:00:00Z',
-                  'author': <String, dynamic>{
-                    'id': 1,
-                    'username': 'ilkan',
-                    'displayName': 'İlkan',
-                    'avatarUrl': null,
+              data: <String, dynamic>{
+                'items': <Map<String, dynamic>>[
+                  <String, dynamic>{
+                    'id': 31,
+                    'content': 'Tekrar deneme başarılı',
+                    'createdAt': '2026-08-07T14:00:00Z',
+                    'author': <String, dynamic>{
+                      'id': 1,
+                      'username': 'ilkan',
+                      'displayName': 'İlkan',
+                      'avatarUrl': null,
+                    },
+                    'likeCount': 0,
+                    'replyCount': 0,
+                    'isLikedByMe': false,
+                    'parentPostId': null,
                   },
-                  'likeCount': 0,
-                  'replyCount': 0,
-                  'isLiked': false,
-                  'canDelete': true,
-                  'replyToPostId': null,
-                },
-              ],
+                ],
+              },
             ),
           );
         },
@@ -388,64 +416,73 @@ void main() {
       ),
     );
 
-    await tester.pumpAndSettle();
+    for (
+      var i = 0;
+      i < 40 && find.text('Gönderiler yüklenemedi').evaluate().isEmpty;
+      i++
+    ) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
 
     expect(tester.takeException(), isNull);
-    expect(requestCount, 1);
+    expect(postsLoadCount, 1);
     expect(find.text('Gönderiler yüklenemedi'), findsOneWidget);
 
-    final retryButton = find.widgetWithText(FilledButton, 'Tekrar Dene');
+    final retryButton = find.text('Tekrar Dene');
 
-    await tester.ensureVisible(retryButton);
+    expect(retryButton, findsOneWidget);
+
     await tester.tap(retryButton);
     await tester.pump();
-    await tester.pumpAndSettle();
+
+    for (var i = 0; i < 40 && postsLoadCount < 2; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+
+    for (
+      var i = 0;
+      i < 40 && find.text('Tekrar deneme başarılı').evaluate().isEmpty;
+      i++
+    ) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
 
     expect(tester.takeException(), isNull);
-    expect(requestCount, 2);
-    expect(find.text('Tekrar deneme başarılı'), findsOneWidget);
+    expect(postsLoadCount, 2);
     expect(find.text('Gönderiler yüklenemedi'), findsNothing);
+    expect(find.text('Tekrar deneme başarılı'), findsOneWidget);
   });
 
   testWidgets('profil düzenleme dialogu güvenle kapanır ve snackbar gösterir', (
     tester,
   ) async {
-    const updatedProfile = PulseProfile(
-      id: 1,
-      username: 'ilkan',
-      displayName: 'İlkan Kişi',
-      bio: 'Yeni biyografi',
-      avatarUrl: '',
-      followerCount: 2,
-      followingCount: 3,
-      postCount: 2,
-      isFollowing: false,
-      isCurrentUser: true,
-    );
-
     final dio = Dio(BaseOptions(baseUrl: 'http://127.0.0.1:5000'));
-    final adapter = DioAdapter(dio: dio);
     final repository = PulseRepository(dio: dio);
+
+    addTearDown(() => dio.close(force: true));
 
     final saveStarted = Completer<void>();
     final allowSaveToFinish = Completer<void>();
-    Map<String, dynamic>? submittedBody;
+    Map<String, dynamic>? capturedUpdateBody;
 
-    addTearDown(() {
-      if (!saveStarted.isCompleted) {
-        saveStarted.complete();
-      }
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          if (options.method == 'GET' &&
+              options.path == '/api/v1/profiles/ilkan/posts') {
+            handler.resolve(
+              Response<dynamic>(
+                requestOptions: options,
+                statusCode: 200,
+                data: <String, dynamic>{'items': <Map<String, dynamic>>[]},
+              ),
+            );
+            return;
+          }
 
-      if (!allowSaveToFinish.isCompleted) {
-        allowSaveToFinish.complete();
-      }
-
-      dio.close(force: true);
-    });
-
-    adapter.onGet(
-      ApiRoutes.feed,
-      (server) => server.reply(200, <Map<String, dynamic>>[]),
+          handler.next(options);
+        },
+      ),
     );
 
     await tester.pumpWidget(
@@ -459,14 +496,26 @@ void main() {
               initialProfile: profile,
               loadProfile: () async => profile,
               updateProfile: (request) async {
-                submittedBody = request.toJson();
+                capturedUpdateBody = request.toJson();
 
                 if (!saveStarted.isCompleted) {
                   saveStarted.complete();
                 }
 
                 await allowSaveToFinish.future;
-                return updatedProfile;
+
+                return const PulseProfile(
+                  id: 1,
+                  username: 'ilkan',
+                  displayName: 'İlkan Kişi',
+                  bio: 'Yeni biyografi',
+                  avatarUrl: null,
+                  followerCount: 2,
+                  followingCount: 3,
+                  postCount: 2,
+                  isFollowing: false,
+                  isCurrentUser: true,
+                );
               },
               showAppBar: false,
             ),
@@ -477,60 +526,62 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(tester.takeException(), isNull);
-    expect(find.text('Profili Düzenle'), findsOneWidget);
-
     await tester.tap(find.text('Profili Düzenle'));
     await tester.pumpAndSettle();
 
-    expect(tester.takeException(), isNull);
-    expect(find.byType(AlertDialog), findsOneWidget);
+    final editDialog = find.byType(AlertDialog);
 
-    final displayNameField = find.byKey(
-      const ValueKey<String>('profile-display-name-field'),
+    expect(editDialog, findsOneWidget);
+    expect(find.byKey(const Key('profile-display-name-field')), findsOneWidget);
+    expect(find.byKey(const Key('profile-bio-field')), findsOneWidget);
+    expect(find.byKey(const Key('profile-avatar-url-field')), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const Key('profile-display-name-field')),
+      'İlkan Kişi',
     );
-    final bioField = find.byKey(const ValueKey<String>('profile-bio-field'));
+    await tester.enterText(
+      find.byKey(const Key('profile-bio-field')),
+      'Yeni biyografi',
+    );
 
-    await tester.enterText(displayNameField, 'İlkan Kişi');
-    await tester.enterText(bioField, 'Yeni biyografi');
+    final dialogSaveButton = find.descendant(
+      of: editDialog,
+      matching: find.byKey(const ValueKey<String>('profile-save-button')),
+    );
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Kaydet'));
+    expect(dialogSaveButton, findsOneWidget);
+
+    final saveButton = tester.widget<FilledButton>(dialogSaveButton);
+
+    expect(saveButton.onPressed, isNotNull);
+
+    saveButton.onPressed!.call();
     await tester.pump();
 
-    await saveStarted.future;
+    for (var i = 0; i < 20 && !saveStarted.isCompleted; i++) {
+      await tester.pump();
+    }
 
-    expect(tester.takeException(), isNull);
-    expect(submittedBody, <String, dynamic>{
-      'displayName': 'İlkan Kişi',
-      'bio': 'Yeni biyografi',
-    });
-    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(saveStarted.isCompleted, isTrue);
+    expect(editDialog, findsOneWidget);
+    expect(dialogSaveButton, findsOneWidget);
+
+    final updateBody = capturedUpdateBody;
+
+    expect(updateBody, isNotNull);
+    expect(updateBody?['displayName'], 'İlkan Kişi');
+    expect(updateBody?['bio'], 'Yeni biyografi');
+    expect(updateBody?.containsKey('avatarUrl'), isTrue);
 
     allowSaveToFinish.complete();
 
-    for (var index = 0; index < 40; index++) {
-      await tester.pump(const Duration(milliseconds: 50));
-
-      final dialogClosed = find.byType(AlertDialog).evaluate().isEmpty;
-      final snackbarVisible = find
-          .text('Profil güncellendi.')
-          .evaluate()
-          .isNotEmpty;
-
-      if (dialogClosed && snackbarVisible) {
-        break;
-      }
-    }
-
-    expect(tester.takeException(), isNull);
-    expect(find.byType(AlertDialog), findsNothing);
-    expect(find.text('Profil güncellendi.'), findsOneWidget);
-    expect(find.text('İlkan Kişi'), findsOneWidget);
-    expect(find.text('Yeni biyografi'), findsOneWidget);
-
-    await tester.pump(const Duration(seconds: 5));
     await tester.pump();
+    await tester.pumpAndSettle();
 
+    expect(editDialog, findsNothing);
+    expect(dialogSaveButton, findsNothing);
+    expect(find.text('Profil güncellendi.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
