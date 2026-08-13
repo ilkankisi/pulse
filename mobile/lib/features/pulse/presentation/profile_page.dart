@@ -21,6 +21,8 @@ class ProfilePage extends ConsumerStatefulWidget {
     this.isCurrentUser,
     this.showAppBar = true,
     this.onUnauthorized,
+    this.deleteAccount,
+    this.onAccountDeleted,
   });
 
   final String? username;
@@ -31,6 +33,8 @@ class ProfilePage extends ConsumerStatefulWidget {
   final bool? isCurrentUser;
   final bool showAppBar;
   final VoidCallback? onUnauthorized;
+  final Future<void> Function()? deleteAccount;
+  final VoidCallback? onAccountDeleted;
 
   @override
   ConsumerState<ProfilePage> createState() => _ProfilePageState();
@@ -46,10 +50,19 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   bool _isLoadingProfile = true;
   bool _isLoadingPosts = true;
   bool _isBlocked = false;
+  bool _isFollowRequestPending = false;
+  bool? _isFollowingOverride;
+  int? _followerCountOverride;
 
   bool get _isOwnProfile =>
       widget.isCurrentUser ??
       (widget.username == null || (_profile?.isCurrentUser ?? false));
+
+  bool get _isFollowing =>
+      _isFollowingOverride ?? (_profile?.isFollowing ?? false);
+
+  int get _followerCount =>
+      _followerCountOverride ?? (_profile?.followerCount ?? 0);
 
   String? get _profileUsername {
     final loadedUsername = _profile?.username.trim();
@@ -115,6 +128,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
       setState(() {
         _profile = profile;
+        _isFollowingOverride = null;
+        _followerCountOverride = null;
         _isLoadingProfile = false;
       });
     } catch (error) {
@@ -182,6 +197,58 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   Future<void> _retryPosts() async {
     await _loadPosts();
+  }
+
+  Future<void> _toggleFollow() async {
+    final username = _profileUsername;
+
+    if (username == null || _isOwnProfile || _isFollowRequestPending) {
+      return;
+    }
+
+    final wasFollowing = _isFollowing;
+    final previousFollowerCount = _followerCount;
+
+    setState(() {
+      _isFollowRequestPending = true;
+      _isFollowingOverride = !wasFollowing;
+      _followerCountOverride = wasFollowing
+          ? previousFollowerCount - 1
+          : previousFollowerCount + 1;
+    });
+
+    try {
+      if (wasFollowing) {
+        await ref.read(pulseRepositoryProvider).unfollowUser(username);
+      } else {
+        await ref.read(pulseRepositoryProvider).followUser(username);
+      }
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isFollowRequestPending = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isFollowRequestPending = false;
+        _isFollowingOverride = wasFollowing;
+        _followerCountOverride = previousFollowerCount;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Takip işlemi tamamlanamadı. Tekrar deneyin.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Future<void> _toggleBlock() async {
@@ -286,6 +353,19 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       MaterialPageRoute<void>(
         builder: (_) {
           return BlockedUsersPage(onUnauthorized: widget.onUnauthorized);
+        },
+      ),
+    );
+  }
+
+  Future<void> _openSettings() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) {
+          return _ProfileSettingsPage(
+            deleteAccount: widget.deleteAccount,
+            onAccountDeleted: widget.onAccountDeleted,
+          );
         },
       ),
     );
@@ -479,10 +559,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                           label: 'Gönderi',
                         ),
                         const SizedBox(width: 24),
-                        _ProfileStat(
-                          value: profile.followerCount,
-                          label: 'Takipçi',
-                        ),
+                        _ProfileStat(value: _followerCount, label: 'Takipçi'),
                         const SizedBox(width: 24),
                         _ProfileStat(
                           value: profile.followingCount,
@@ -490,6 +567,16 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         ),
                       ],
                     ),
+                    if (!_isOwnProfile) ...[
+                      const SizedBox(height: 20),
+                      FilledButton(
+                        key: const ValueKey<String>('profile-follow-button'),
+                        onPressed: _isFollowRequestPending
+                            ? null
+                            : _toggleFollow,
+                        child: Text(_isFollowing ? 'Takipten Çık' : 'Takip Et'),
+                      ),
+                    ],
                     if (_isOwnProfile) ...[
                       const SizedBox(height: 20),
                       Wrap(
@@ -505,6 +592,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             onPressed: _openBlockedUsers,
                             icon: const Icon(Icons.block_outlined),
                             label: const Text('Engellenen Hesaplar'),
+                          ),
+                          OutlinedButton.icon(
+                            key: const ValueKey<String>(
+                              'profile-settings-button',
+                            ),
+                            onPressed: _openSettings,
+                            icon: const Icon(Icons.settings_outlined),
+                            label: const Text('Ayarlar'),
                           ),
                         ],
                       ),
@@ -604,6 +699,142 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ProfileSettingsPage extends StatelessWidget {
+  const _ProfileSettingsPage({
+    required this.deleteAccount,
+    required this.onAccountDeleted,
+  });
+
+  final Future<void> Function()? deleteAccount;
+  final VoidCallback? onAccountDeleted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Ayarlar')),
+      body: ListView(
+        children: [
+          ListTile(
+            key: const ValueKey<String>('delete-account-tile'),
+            leading: const Icon(Icons.delete_outline),
+            title: const Text('Hesabımı Sil'),
+            onTap: () {
+              showDialog<void>(
+                context: context,
+                builder: (_) {
+                  return _DeleteAccountDialog(
+                    deleteAccount: deleteAccount,
+                    onAccountDeleted: onAccountDeleted,
+                  );
+                },
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DeleteAccountDialog extends StatefulWidget {
+  const _DeleteAccountDialog({
+    required this.deleteAccount,
+    required this.onAccountDeleted,
+  });
+
+  final Future<void> Function()? deleteAccount;
+  final VoidCallback? onAccountDeleted;
+
+  @override
+  State<_DeleteAccountDialog> createState() => _DeleteAccountDialogState();
+}
+
+class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
+  bool _isDeleting = false;
+  String? _errorMessage;
+
+  Future<void> _deleteAccount() async {
+    if (_isDeleting) {
+      return;
+    }
+
+    setState(() {
+      _isDeleting = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final action = widget.deleteAccount;
+
+      if (action == null) {
+        throw StateError('deleteAccount callback is required');
+      }
+
+      await action();
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.of(context).pop();
+      widget.onAccountDeleted?.call();
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isDeleting = false;
+        _errorMessage = 'Hesap silinemedi. Tekrar deneyin.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Hesabımı Sil'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Hesabınızı kalıcı olarak silmek istediğinizden emin misiniz?',
+          ),
+          if (_errorMessage != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              _errorMessage!,
+              key: const ValueKey<String>('delete-account-error'),
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isDeleting
+              ? null
+              : () {
+                  Navigator.of(context).pop();
+                },
+          child: const Text('Vazgeç'),
+        ),
+        FilledButton(
+          key: const ValueKey<String>('confirm-delete-account'),
+          onPressed: _isDeleting ? null : _deleteAccount,
+          child: _isDeleting
+              ? const SizedBox.square(
+                  dimension: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Hesabı Sil'),
+        ),
+      ],
     );
   }
 }
@@ -865,7 +1096,11 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+          onPressed: _isSaving
+              ? null
+              : () {
+                  Navigator.of(context).pop();
+                },
           child: const Text('İptal'),
         ),
         FilledButton(
