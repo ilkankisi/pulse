@@ -1,4 +1,3 @@
-<!-- GENERATED — do not edit. Edit design/DESIGN.core.md and design/features/*.md -->
 ---
 name: "Pulse"
 description: "Açık kayıt, kronolojik kısa gönderi, tek seviyeli yanıt, beğeni, takip, takipçi/takip sosyal grafı, kullanıcı profili, engelleme, şikâyet ve moderasyon özelliklerine sahip Material 3 mikroblog platformu."
@@ -255,12 +254,6 @@ Response yapısı ve varsa pagination davranışı yalnız `docs/api-contract.md
 
 ## Components
 
-# Feature: Uygulama navigasyonu
-
-## Scope
-Ana akış ve profil destination'ları; sosyal graf global nav değildir.
-
-## Components
 ### Uygulama navigasyonu
 
 **Token:** `{components.navigation-drawer}`, `{components.bottom-navigation}`
@@ -304,20 +297,6 @@ Takipçiler ve Takip Edilenler yalnız profil sosyal graf sayaçlarından açıl
 
 401 genel error state olarak render edilmez; merkezi login akışına yönlendirilir.
 
-## Screen states
-Oturum kontrolü loading; 401 login akışına gider.
-
-## Navigation
-Drawer, bottom nav ve FAB ile ana ekranlar arası geçiş.
-
----
-
-# Feature: Ana akış ve gönderi detayı
-
-## Scope
-Kronolojik feed, gönderi kartı ve yanıt detayı.
-
-## Components
 Gönderi listesi satırı
 
 Token: {components.post-card}
@@ -358,190 +337,6 @@ Like durumu API cevabıyla senkronize edilir.
 
 Empty durumda boş SliverList yerine state panel gösterilir.
 
-Empty state
-
-Token: {components.state-panel}
-
-Widget hierarchy:
-
-```
-Center
-└── ConstrainedBox(maxWidth: 360)
-    └── Column(mainAxisSize: min)
-        ├── Icon
-        ├── Text(title)
-        ├── Text(description)
-        └── optional FilledButton.tonal | FilledButton
-```
-
-fluttertemplates kaynağı: States & Errors / Empty State — https://fluttertemplates.dev/widgets/states
-
-Kurallar:
-
-Kayıt yokken hata olarak gösterilmemelidir.
-
-Kayıt yok anlamındaki 404 empty state olarak ele alınır.
-
-Ağ/5xx empty state değildir.
-
-Empty state'te boş SliverList gösterilmez.
-
-Sosyal graf empty state'lerinde gereksiz primary CTA eklenmez.
-
-Birincil oluşturma CTA'sı gereken ekranlarda body içinde bulunur.
-
-Loading state
-
-Token: {components.state-panel}
-
-Widget hierarchy:
-
-```
-Scaffold body
-├── oturum kontrolü:
-│   └── Center(CircularProgressIndicator)
-└── liste:
-    └── CustomScrollView
-        └── SliverList
-            └── skeleton Card/ListTile placeholders
-```
-
-fluttertemplates kaynağı: States & Errors / Loading State — https://fluttertemplates.dev/widgets/states
-
-Kurallar:
-
-Loading sırasında önceki kullanıcıya ait veri gösterilmez.
-
-Follow/unfollow sırasında yalnız ilgili CTA loading olur.
-
-Mutation tekrar tetiklenemez.
-
-Form taslakları loading nedeniyle temizlenmez.
-
-Error state
-
-Token: {components.state-panel}, {colors.error}
-
-Widget hierarchy:
-
-```
-Center
-└── ConstrainedBox(maxWidth: 360)
-    └── Column
-        ├── Icon(error_outline)
-        ├── Text(title)
-        ├── Text(description, optional)
-        └── OutlinedButton("Tekrar Dene")
-```
-
-fluttertemplates kaynağı: States & Errors / Error State — https://fluttertemplates.dev/widgets/states
-
-Kurallar:
-
-401 genel error state değildir; login akışına yönlendirilir.
-
-Kayıt yok anlamındaki 404 error değildir.
-
-403 normal empty state gibi gösterilmez.
-
-Validation hataları ilgili input altında gösterilir.
-
-Ağ hatasında taslak korunur.
-
-Success snackbar
-
-Token: {colors.success}
-
-Widget hierarchy:
-
-```
-ScaffoldMessenger.showSnackBar
-└── SnackBar
-    └── Text(successMessage)
-```
-
-fluttertemplates kaynağı: Dialogs & Sheets / Snackbars — https://fluttertemplates.dev/widgets/dialogs
-
-Kurallar:
-
-Mobilde floating snackbar kullanılır.
-
-İşleme özgü Türkçe başarı metni kullanılır.
-
-Liste yalnız başarılı yüklendi diye snackbar gösterilmez.
-
-## Screen states
-Screen States
-
-Ana Akış
-
-Empty state
-
-Başlık: "Akış henüz boş"
-
-Açıklama: "İlk gönderini paylaşarak konuşmayı başlat."
-
-CTA: "Gönderi Oluştur"
-
-Error state
-
-Başlık: "Akış yüklenemedi"
-
-CTA: "Tekrar Dene"
-
-404 kayıt-yok hata değildir.
-
-401 login akışına gider.
-
-Success
-
-"Gönderi paylaşıldı."
-
-App bar vs body CTA
-
-Empty state CTA body'dedir.
-
-Normal durumda FAB kullanılabilir.
-
-Gönderi Detayı ve Yanıtlar
-
-Empty state
-
-Başlık: "Henüz yanıt yok"
-
-Açıklama: "İlk yanıtı sen yaz."
-
-CTA: "Yanıtla"
-
-Error state
-
-Ana gönderi bulunamazsa: "Gönderi bulunamadı"
-
-Ağ hatası: "Gönderi yüklenemedi"
-
-CTA: "Tekrar Dene"
-
-Yanıt listesinin boş olması hata değildir.
-
-Success
-
-"Yanıt gönderildi."
-
-App bar vs body CTA
-
-"Yanıtla" body içinde bulunur.
-
-## Navigation
-Ana Akış home; kart tap → Gönderi Detayı; FAB → composer.
-
----
-
-# Feature: Gönderi oluşturma
-
-## Scope
-280 karakterlik gönderi ve yanıt composer.
-
-## Components
 Gönderi oluşturucu
 
 Token: {components.composer}, {components.primary-button}
@@ -581,40 +376,6 @@ Loading sırasında gönder CTA'sı disabled olur.
 
 Ağ hatasında taslak korunur.
 
-## Screen states
-Gönderi Oluşturma
-
-Empty state
-
-Form başlangıcı API empty state değildir.
-
-Error state
-
-Validation input altında gösterilir.
-
-Ağ hatasında taslak korunur.
-
-401 login akışına gider.
-
-Success
-
-"Gönderi paylaşıldı."
-
-App bar vs body CTA
-
-Tek primary aksiyon "Gönder"dir.
-
-## Navigation
-FAB veya CTA ile açılır; başarı sonrası feed yenilenir.
-
----
-
-# Feature: Profil özeti ve gönderiler
-
-## Scope
-Profil header, sayaçlar, follow CTA ve gönderi listesi.
-
-## Components
 Profil özeti
 
 Token: {components.profile-summary}, {components.profile-stats}, {components.relationship-button}
@@ -672,56 +433,6 @@ Sayaçlar mutation sonrası backend state ile senkronize edilir.
 
 Profil güncelleme başarı mesajı: “Profil güncellendi.”
 
-## Screen states
-Profil
-
-Empty state
-
-Başlık: "Henüz gönderi yok"
-
-Açıklama: "Bu kullanıcının henüz gönderisi yok."
-
-Kendi profilinde CTA: "Gönderi Oluştur"
-
-Başka profilde zorunlu primary CTA yoktur.
-
-Error state
-
-Ağ/5xx: "Profil yüklenemedi"
-
-Kullanıcı bulunamazsa: "Kullanıcı bulunamadı"
-
-CTA: "Tekrar Dene"
-
-401 login akışına gider.
-
-Success
-
-Profil güncelleme: "Profil güncellendi."
-
-Follow: "Takip edildi."
-
-Unfollow: "Takip bırakıldı."
-
-App bar vs body CTA
-
-"Profili Düzenle" profil header içindedir.
-
-Follow CTA başka profil header'ındadır.
-
-“Takip” ve “Takipçi” sayaçları profil body/header içindeki navigation aksiyonlarıdır.
-
-## Navigation
-Bottom nav / drawer Profil; sayaç tap → social-graph feature.
-
----
-
-# Feature: Takipçiler ve takip edilenler
-
-## Scope
-Profil sayaçlarından açılan sosyal graf listeleri.
-
-## Components
 Sosyal graf kullanıcı satırı
 
 Token: {components.social-graph-list-item}, {components.relationship-button}
@@ -891,106 +602,6 @@ Empty durumda boş SliverList render edilmez.
 
 UI canonical API dışında endpoint veya query parametresi üretmez.
 
-## Screen states
-Takipçiler
-
-Route
-
-FollowersPage(username)
-
-API: GET /api/v1/profiles/{username}/followers
-
-{username} = sosyal grafı görüntülenen profil.
-
-Empty state
-
-Başlık: "Henüz takipçi yok"
-
-Açıklama: "Bu hesabı henüz kimse takip etmiyor."
-
-Birincil CTA yoktur.
-
-Error state
-
-Başlık: "Takipçiler yüklenemedi"
-
-Açıklama: "Takipçi listesi alınırken bir sorun oluştu."
-
-CTA: "Tekrar Dene"
-
-404 kayıt-yok error değildir.
-
-401 login akışına gider.
-
-Success
-
-Liste yüklenmesinde snackbar yoktur.
-
-Follow: "Takip edildi."
-
-Unfollow: "Takip bırakıldı."
-
-App bar vs body CTA
-
-AppBar: geri + "Takipçiler".
-
-Follow/unfollow ilgili satırdadır.
-
-Takip Edilenler
-
-Route
-
-FollowingPage(username)
-
-API: GET /api/v1/profiles/{username}/following
-
-{username} = sosyal grafı görüntülenen profil.
-
-Empty state
-
-Başlık: "Henüz kimse takip edilmiyor"
-
-Açıklama: "Takip edilen hesaplar burada görünür."
-
-Birincil CTA yoktur.
-
-Error state
-
-Başlık: "Takip edilenler yüklenemedi"
-
-Açıklama: "Takip edilen hesaplar alınırken bir sorun oluştu."
-
-CTA: "Tekrar Dene"
-
-404 kayıt-yok error değildir.
-
-401 login akışına gider.
-
-Success
-
-Liste yüklenmesinde snackbar yoktur.
-
-Follow: "Takip edildi."
-
-Unfollow: "Takip bırakıldı."
-
-App bar vs body CTA
-
-AppBar: geri + "Takip Edilenler".
-
-Follow/unfollow ilgili satırdadır.
-
-## Navigation
-Profil Takip/Takipçi sayaçlarından; liste satırı → profil.
-
----
-
-# Feature: Engelleme ve şikâyet
-
-## Scope
-Güvenlik menüsü, şikâyet sheet ve engelleme dialogu.
-
-## Components
 Güvenlik aksiyon menüsü
 
 Token: {components.safety-action-menu}
@@ -1097,7 +708,360 @@ Engeli kaldırma: “Engel kaldırıldı.”
 
 Backend görünürlük kuralları UI'da yeniden tanımlanmaz.
 
-## Screen states
+Moderasyon kuyruğu kartı
+
+Token: {components.moderation-card}
+
+Widget hierarchy:
+
+```
+CustomScrollView
+└── SliverList
+    └── Card
+        └── Padding
+            └── Column(crossAxis: start)
+                ├── Row
+                │   ├── target summary
+                │   └── status badge
+                ├── Text(report reason)
+                ├── Text(report description, optional)
+                ├── Text(metadata)
+                └── action area
+                    └── canonical moderator actions
+```
+
+fluttertemplates kaynağı: Core / Cards — https://fluttertemplates.dev/widgets
+
+Kurallar:
+
+Yalnız moderator kullanıcıya gösterilir.
+
+Status ve action değerleri docs/api-contract.md ile map edilir.
+
+UI yeni role/status/action üretmez.
+
+İşlenen kayıt backend sonucuna göre yenilenir veya listeden çıkarılır.
+
+Empty state
+
+Token: {components.state-panel}
+
+Widget hierarchy:
+
+```
+Center
+└── ConstrainedBox(maxWidth: 360)
+    └── Column(mainAxisSize: min)
+        ├── Icon
+        ├── Text(title)
+        ├── Text(description)
+        └── optional FilledButton.tonal | FilledButton
+```
+
+fluttertemplates kaynağı: States & Errors / Empty State — https://fluttertemplates.dev/widgets/states
+
+Kurallar:
+
+Kayıt yokken hata olarak gösterilmemelidir.
+
+Kayıt yok anlamındaki 404 empty state olarak ele alınır.
+
+Ağ/5xx empty state değildir.
+
+Empty state'te boş SliverList gösterilmez.
+
+Sosyal graf empty state'lerinde gereksiz primary CTA eklenmez.
+
+Birincil oluşturma CTA'sı gereken ekranlarda body içinde bulunur.
+
+Loading state
+
+Token: {components.state-panel}
+
+Widget hierarchy:
+
+```
+Scaffold body
+├── oturum kontrolü:
+│   └── Center(CircularProgressIndicator)
+└── liste:
+    └── CustomScrollView
+        └── SliverList
+            └── skeleton Card/ListTile placeholders
+```
+
+fluttertemplates kaynağı: States & Errors / Loading State — https://fluttertemplates.dev/widgets/states
+
+Kurallar:
+
+Loading sırasında önceki kullanıcıya ait veri gösterilmez.
+
+Follow/unfollow sırasında yalnız ilgili CTA loading olur.
+
+Mutation tekrar tetiklenemez.
+
+Form taslakları loading nedeniyle temizlenmez.
+
+Error state
+
+Token: {components.state-panel}, {colors.error}
+
+Widget hierarchy:
+
+```
+Center
+└── ConstrainedBox(maxWidth: 360)
+    └── Column
+        ├── Icon(error_outline)
+        ├── Text(title)
+        ├── Text(description, optional)
+        └── OutlinedButton("Tekrar Dene")
+```
+
+fluttertemplates kaynağı: States & Errors / Error State — https://fluttertemplates.dev/widgets/states
+
+Kurallar:
+
+401 genel error state değildir; login akışına yönlendirilir.
+
+Kayıt yok anlamındaki 404 error değildir.
+
+403 normal empty state gibi gösterilmez.
+
+Validation hataları ilgili input altında gösterilir.
+
+Ağ hatasında taslak korunur.
+
+Success snackbar
+
+Token: {colors.success}
+
+Widget hierarchy:
+
+```
+ScaffoldMessenger.showSnackBar
+└── SnackBar
+    └── Text(successMessage)
+```
+
+fluttertemplates kaynağı: Dialogs & Sheets / Snackbars — https://fluttertemplates.dev/widgets/dialogs
+
+Kurallar:
+
+Mobilde floating snackbar kullanılır.
+
+İşleme özgü Türkçe başarı metni kullanılır.
+
+Liste yalnız başarılı yüklendi diye snackbar gösterilmez.
+
+Screen States
+
+Ana Akış
+
+Empty state
+
+Başlık: "Akış henüz boş"
+
+Açıklama: "İlk gönderini paylaşarak konuşmayı başlat."
+
+CTA: "Gönderi Oluştur"
+
+Error state
+
+Başlık: "Akış yüklenemedi"
+
+CTA: "Tekrar Dene"
+
+404 kayıt-yok hata değildir.
+
+401 login akışına gider.
+
+Success
+
+"Gönderi paylaşıldı."
+
+App bar vs body CTA
+
+Empty state CTA body'dedir.
+
+Normal durumda FAB kullanılabilir.
+
+Gönderi Detayı ve Yanıtlar
+
+Empty state
+
+Başlık: "Henüz yanıt yok"
+
+Açıklama: "İlk yanıtı sen yaz."
+
+CTA: "Yanıtla"
+
+Error state
+
+Ana gönderi bulunamazsa: "Gönderi bulunamadı"
+
+Ağ hatası: "Gönderi yüklenemedi"
+
+CTA: "Tekrar Dene"
+
+Yanıt listesinin boş olması hata değildir.
+
+Success
+
+"Yanıt gönderildi."
+
+App bar vs body CTA
+
+"Yanıtla" body içinde bulunur.
+
+Profil
+
+Empty state
+
+Başlık: "Henüz gönderi yok"
+
+Açıklama: "Bu kullanıcının henüz gönderisi yok."
+
+Kendi profilinde CTA: "Gönderi Oluştur"
+
+Başka profilde zorunlu primary CTA yoktur.
+
+Error state
+
+Ağ/5xx: "Profil yüklenemedi"
+
+Kullanıcı bulunamazsa: "Kullanıcı bulunamadı"
+
+CTA: "Tekrar Dene"
+
+401 login akışına gider.
+
+Success
+
+Profil güncelleme: "Profil güncellendi."
+
+Follow: "Takip edildi."
+
+Unfollow: "Takip bırakıldı."
+
+App bar vs body CTA
+
+"Profili Düzenle" profil header içindedir.
+
+Follow CTA başka profil header'ındadır.
+
+“Takip” ve “Takipçi” sayaçları profil body/header içindeki navigation aksiyonlarıdır.
+
+Takipçiler
+
+Route
+
+FollowersPage(username)
+
+API: GET /api/v1/profiles/{username}/followers
+
+{username} = sosyal grafı görüntülenen profil.
+
+Empty state
+
+Başlık: "Henüz takipçi yok"
+
+Açıklama: "Bu hesabı henüz kimse takip etmiyor."
+
+Birincil CTA yoktur.
+
+Error state
+
+Başlık: "Takipçiler yüklenemedi"
+
+Açıklama: "Takipçi listesi alınırken bir sorun oluştu."
+
+CTA: "Tekrar Dene"
+
+404 kayıt-yok error değildir.
+
+401 login akışına gider.
+
+Success
+
+Liste yüklenmesinde snackbar yoktur.
+
+Follow: "Takip edildi."
+
+Unfollow: "Takip bırakıldı."
+
+App bar vs body CTA
+
+AppBar: geri + "Takipçiler".
+
+Follow/unfollow ilgili satırdadır.
+
+Takip Edilenler
+
+Route
+
+FollowingPage(username)
+
+API: GET /api/v1/profiles/{username}/following
+
+{username} = sosyal grafı görüntülenen profil.
+
+Empty state
+
+Başlık: "Henüz kimse takip edilmiyor"
+
+Açıklama: "Takip edilen hesaplar burada görünür."
+
+Birincil CTA yoktur.
+
+Error state
+
+Başlık: "Takip edilenler yüklenemedi"
+
+Açıklama: "Takip edilen hesaplar alınırken bir sorun oluştu."
+
+CTA: "Tekrar Dene"
+
+404 kayıt-yok error değildir.
+
+401 login akışına gider.
+
+Success
+
+Liste yüklenmesinde snackbar yoktur.
+
+Follow: "Takip edildi."
+
+Unfollow: "Takip bırakıldı."
+
+App bar vs body CTA
+
+AppBar: geri + "Takip Edilenler".
+
+Follow/unfollow ilgili satırdadır.
+
+Gönderi Oluşturma
+
+Empty state
+
+Form başlangıcı API empty state değildir.
+
+Error state
+
+Validation input altında gösterilir.
+
+Ağ hatasında taslak korunur.
+
+401 login akışına gider.
+
+Success
+
+"Gönderi paylaşıldı."
+
+App bar vs body CTA
+
+Tek primary aksiyon "Gönder"dir.
+
 Şikâyet Formu
 
 Empty state
@@ -1142,52 +1106,6 @@ App bar vs body CTA
 
 Güvenlik menüsünden başlatılır.
 
-## Navigation
-Gönderi overflow veya profil güvenlik menüsünden.
-
----
-
-# Feature: Moderasyon kuyruğu
-
-## Scope
-Moderator-only şikâyet inceleme ve aksiyonlar.
-
-## Components
-Moderasyon kuyruğu kartı
-
-Token: {components.moderation-card}
-
-Widget hierarchy:
-
-```
-CustomScrollView
-└── SliverList
-    └── Card
-        └── Padding
-            └── Column(crossAxis: start)
-                ├── Row
-                │   ├── target summary
-                │   └── status badge
-                ├── Text(report reason)
-                ├── Text(report description, optional)
-                ├── Text(metadata)
-                └── action area
-                    └── canonical moderator actions
-```
-
-fluttertemplates kaynağı: Core / Cards — https://fluttertemplates.dev/widgets
-
-Kurallar:
-
-Yalnız moderator kullanıcıya gösterilir.
-
-Status ve action değerleri docs/api-contract.md ile map edilir.
-
-UI yeni role/status/action üretmez.
-
-İşlenen kayıt backend sonucuna göre yenilenir veya listeden çıkarılır.
-
-## Screen states
 Moderasyon Kuyruğu
 
 Empty state
@@ -1287,6 +1205,3 @@ Moderator olmayan kullanıcıya moderation action gösterme.
 API kontratında olmayan role, status veya moderation action üretme.
 
 Çok seviyeli thread, DM veya kapsam dışı yeni özellik ekleme.
-
-## Navigation
-Drawer Moderasyon destination (moderator rolü).

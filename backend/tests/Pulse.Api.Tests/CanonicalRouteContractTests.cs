@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Routing;
@@ -39,8 +40,11 @@ public sealed class CanonicalRouteContractTests
                                 ?? Array.Empty<string>(),
                             Path =
                                 NormalizeRoute(
-                                    endpoint.RoutePattern.RawText
-                                    ?? string.Empty)
+                                    Regex.Replace(
+                                        endpoint.RoutePattern.RawText
+                                        ?? string.Empty,
+                                        @"\{([^}:]+):[^}]+\}",
+                                        "{$1}"))
                         };
                     })
                 .SelectMany(
@@ -69,6 +73,8 @@ public sealed class CanonicalRouteContractTests
                 "GET /api/v1/me",
                 "PUT /api/v1/me",
                 "GET /api/v1/profiles/{username}",
+                "GET /api/v1/profiles/{username}/followers",
+                "GET /api/v1/profiles/{username}/following",
                 "GET /api/v1/profiles/{username}/posts",
                 "POST /api/v1/profiles/{username}/follow",
                 "DELETE /api/v1/profiles/{username}/follow",
@@ -116,55 +122,8 @@ public sealed class CanonicalRouteContractTests
                 ? route
                 : $"/{route}";
 
-        var result =
-            new System.Text.StringBuilder(
-                normalized.Length);
-
-        for (var index = 0;
-             index < normalized.Length;
-             index++)
-        {
-            var current = normalized[index];
-
-            if (current != '{')
-            {
-                result.Append(current);
-                continue;
-            }
-
-            var closingBrace =
-                normalized.IndexOf(
-                    '}',
-                    index + 1);
-
-            if (closingBrace < 0)
-            {
-                result.Append(
-                    normalized.AsSpan(index));
-                break;
-            }
-
-            var parameter =
-                normalized.Substring(
-                    index + 1,
-                    closingBrace - index - 1);
-
-            var constraintIndex =
-                parameter.IndexOf(':');
-
-            if (constraintIndex >= 0)
-            {
-                parameter =
-                    parameter[..constraintIndex];
-            }
-
-            result.Append('{');
-            result.Append(parameter);
-            result.Append('}');
-
-            index = closingBrace;
-        }
-
-        return result.ToString();
+        return normalized.Length > 1
+            ? normalized.TrimEnd('/')
+            : normalized;
     }
 }

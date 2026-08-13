@@ -28,25 +28,21 @@ if (string.IsNullOrWhiteSpace(jwtKey)
     jwtKey = "development-only-key-at-least-32-bytes";
 }
 
-if (string.IsNullOrWhiteSpace(jwtKey)
-    || Encoding.UTF8.GetByteCount(jwtKey) < 32)
+if (string.IsNullOrWhiteSpace(jwtKey))
 {
-    throw new InvalidOperationException(
-        "Jwt:Key must be configured and contain at least 32 bytes.");
+    throw new InvalidOperationException("Jwt:Key configuration is required.");
 }
 
-var jwtIssuer =
-    builder.Configuration["Jwt:Issuer"]
-    ?? "Pulse.Api";
+if (Encoding.UTF8.GetByteCount(jwtKey) < 32)
+{
+    throw new InvalidOperationException(
+        "Jwt:Key must be at least 32 bytes.");
+}
 
-var jwtAudience =
-    builder.Configuration["Jwt:Audience"]
-    ?? "Pulse.Client";
-
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "Pulse.Api";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "Pulse.Client";
 var jwtExpirationMinutes =
-    builder.Configuration.GetValue<int?>(
-        "Jwt:ExpirationMinutes")
-    ?? 60;
+    builder.Configuration.GetValue<int?>("Jwt:ExpirationMinutes") ?? 60;
 
 builder.Services.Configure<JwtOptions>(
     options =>
@@ -67,38 +63,26 @@ builder.Services
         options =>
         {
             options.MapInboundClaims = false;
-            options.TokenValidationParameters =
-                new TokenValidationParameters
-                {
-                    ValidateIssuer = true,
-                    ValidIssuer = jwtIssuer,
-                    ValidateAudience = true,
-                    ValidAudience = jwtAudience,
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(jwtKey)),
-                    ValidateLifetime = true,
-                    ClockSkew = TimeSpan.Zero,
-                    NameClaimType = ClaimTypes.NameIdentifier,
-                    RoleClaimType = ClaimTypes.Role,
-                };
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateIssuerSigningKey = true,
+                ValidateLifetime = true,
+                ValidIssuer = jwtIssuer,
+                ValidAudience = jwtAudience,
+                IssuerSigningKey = new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(jwtKey)),
+                ClockSkew = TimeSpan.Zero,
+                NameClaimType = ClaimTypes.NameIdentifier,
+                RoleClaimType = ClaimTypes.Role,
+            };
         });
 
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
-
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(
-    options =>
-    {
-        options.SwaggerDoc(
-            "v1",
-            new Microsoft.OpenApi.Models.OpenApiInfo
-            {
-                Title = "Pulse API",
-                Version = "v1",
-            });
-    });
+builder.Services.AddSwaggerGen();
 
 builder.Services.AddCors(
     options =>
@@ -106,14 +90,12 @@ builder.Services.AddCors(
         options.AddPolicy(
             FlutterWebCorsPolicy,
             policy =>
-            {
                 policy
                     .WithOrigins(
                         "http://127.0.0.1:8080",
                         "http://localhost:8080")
                     .AllowAnyHeader()
-                    .AllowAnyMethod();
-            });
+                    .AllowAnyMethod());
     });
 
 var app = builder.Build();
@@ -121,24 +103,14 @@ var app = builder.Build();
 if (!app.Environment.IsEnvironment("Testing"))
 {
     using var scope = app.Services.CreateScope();
-
-    var dbContext =
-        scope.ServiceProvider.GetRequiredService<PulseDbContext>();
-
-    dbContext.Database.Migrate();
+    var db = scope.ServiceProvider.GetRequiredService<PulseDbContext>();
+    db.Database.Migrate();
 }
 
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI(
-        options =>
-        {
-            options.SwaggerEndpoint(
-                "/swagger/v1/swagger.json",
-                "Pulse API v1");
-            options.RoutePrefix = "swagger";
-        });
+    app.UseSwaggerUI();
 }
 
 app.UseRouting();
@@ -148,11 +120,7 @@ app.UseAuthorization();
 
 app.MapGet(
     "/health",
-    () => Results.Ok(
-        new
-        {
-            status = "ok",
-        }));
+    () => Results.Ok(new { status = "ok" }));
 
 app.MapControllers();
 app.MapAuthEndpoints();
@@ -160,6 +128,7 @@ app.MapPostEndpoints();
 app.MapFeedEndpoints();
 app.MapMeEndpoints();
 app.MapProfileEndpoints();
+app.MapSocialGraphEndpoints();
 app.MapFollowEndpoints();
 app.MapSecurityModerationEndpoints();
 
