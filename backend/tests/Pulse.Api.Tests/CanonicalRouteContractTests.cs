@@ -1,142 +1,129 @@
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Hosting;
-
 using Microsoft.AspNetCore.Mvc.Testing;
-
 using Microsoft.AspNetCore.Routing;
-
 using Microsoft.Extensions.DependencyInjection;
-
 using Xunit;
 
 namespace Pulse.Api.Tests;
 
 public sealed class CanonicalRouteContractTests
-
 {
-
-[Fact]
-
-public void Backend_routes_match_canonical_contract()
-
-{
-
-using var factory = new TestFactory();
-
-using var scope = factory.Services.CreateScope();
-
-    var source =
-        scope.ServiceProvider.GetRequiredService<EndpointDataSource>();
-
-    var actual = new HashSet<string>(StringComparer.Ordinal);
-
-    foreach (var endpoint in source.Endpoints.OfType<RouteEndpoint>())
+    [Fact]
+    public void Backend_routes_match_canonical_contract()
     {
-        var methods =
-            endpoint.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods;
+        using var factory =
+            new CanonicalRouteWebApplicationFactory();
 
-        if (methods is null)
-        {
-            continue;
-        }
+        using var scope =
+            factory.Services.CreateScope();
 
-        var path = Normalize(endpoint.RoutePattern.RawText ?? string.Empty);
+        var endpointDataSource =
+            scope.ServiceProvider
+                .GetRequiredService<EndpointDataSource>();
 
-        foreach (var method in methods)
-        {
-            var route = method.ToUpperInvariant() + " " + path;
+        var actualRoutes =
+            endpointDataSource.Endpoints
+                .OfType<RouteEndpoint>()
+                .Select(
+                    endpoint =>
+                    {
+                        var httpMethods =
+                            endpoint.Metadata
+                                .GetMetadata<HttpMethodMetadata>()?
+                                .HttpMethods;
 
-            if (route == "GET /health"
-                || route.Contains(" /api/v1/", StringComparison.Ordinal))
+                        return new
+                        {
+                            Methods =
+                                httpMethods
+                                ?? Array.Empty<string>(),
+                            Path =
+                                NormalizeRoute(
+                                    Regex.Replace(
+                                        endpoint.RoutePattern.RawText
+                                        ?? string.Empty,
+                                        @"\{([^}:]+):[^}]+\}",
+                                        "{$1}"))
+                        };
+                    })
+                .SelectMany(
+                    endpoint =>
+                        endpoint.Methods.Select(
+                            method =>
+                                $"{method.ToUpperInvariant()} {endpoint.Path}"))
+                .Where(
+                    route =>
+                        route.StartsWith(
+                            "GET /health",
+                            StringComparison.Ordinal)
+                        || route.Contains(
+                            " /api/v1/",
+                            StringComparison.Ordinal))
+                .ToHashSet(
+                    StringComparer.Ordinal);
+
+        var expectedRoutes =
+            new HashSet<string>(
+                StringComparer.Ordinal)
             {
-                actual.Add(route);
-            }
+                "GET /health",
+                "POST /api/v1/auth/register",
+                "POST /api/v1/auth/login",
+                "GET /api/v1/me",
+                "PUT /api/v1/me",
+                "GET /api/v1/profiles/{username}",
+                "GET /api/v1/profiles/{username}/followers",
+                "GET /api/v1/profiles/{username}/following",
+                "GET /api/v1/profiles/{username}/posts",
+                "POST /api/v1/profiles/{username}/follow",
+                "DELETE /api/v1/profiles/{username}/follow",
+                "GET /api/v1/feed",
+                "POST /api/v1/posts",
+                "DELETE /api/v1/posts/{postId}",
+                "POST /api/v1/posts/{postId}/replies",
+                "POST /api/v1/posts/{postId}/likes",
+                "DELETE /api/v1/posts/{postId}/likes",
+                "POST /api/v1/profiles/{username}/block",
+                "DELETE /api/v1/profiles/{username}/block",
+                "GET /api/v1/blocks",
+                "POST /api/v1/reports",
+                "GET /api/v1/moderation/reports",
+                "GET /api/v1/moderation/reports/{reportId}",
+                "POST /api/v1/moderation/reports/{reportId}/resolve",
+                "POST /api/v1/moderation/reports/{reportId}/dismiss"
+            };
+
+        Assert.Equal(
+            expectedRoutes.OrderBy(
+                route => route),
+            actualRoutes.OrderBy(
+                route => route));
+    }
+
+    private sealed class CanonicalRouteWebApplicationFactory
+        : WebApplicationFactory<Program>
+    {
+        protected override void ConfigureWebHost(
+            IWebHostBuilder builder)
+        {
+            builder.UseEnvironment(
+                "Testing");
         }
     }
 
-    var u = Parameter("username");
-    var p = Parameter("postId");
-    var r = Parameter("reportId");
-
-    var expected = new HashSet<string>(
-        new[]
-        {
-            "GET /health",
-            "POST /api/v1/auth/register",
-            "POST /api/v1/auth/login",
-            "GET /api/v1/me",
-            "PUT /api/v1/me",
-            "GET /api/v1/profiles/" + u,
-            "GET /api/v1/profiles/" + u + "/followers",
-            "GET /api/v1/profiles/" + u + "/following",
-            "GET /api/v1/profiles/" + u + "/posts",
-            "POST /api/v1/profiles/" + u + "/follow",
-            "DELETE /api/v1/profiles/" + u + "/follow",
-            "GET /api/v1/feed",
-            "POST /api/v1/posts",
-            "DELETE /api/v1/posts/" + p,
-            "POST /api/v1/posts/" + p + "/replies",
-            "POST /api/v1/posts/" + p + "/likes",
-            "DELETE /api/v1/posts/" + p + "/likes",
-            "POST /api/v1/profiles/" + u + "/block",
-            "DELETE /api/v1/profiles/" + u + "/block",
-            "GET /api/v1/blocks",
-            "POST /api/v1/reports",
-            "GET /api/v1/moderation/reports",
-            "GET /api/v1/moderation/reports/" + r,
-            "POST /api/v1/moderation/reports/" + r + "/resolve",
-            "POST /api/v1/moderation/reports/" + r + "/dismiss"
-        },
-        StringComparer.Ordinal);
-
-    Assert.Equal(
-        expected.OrderBy(x => x),
-        actual.OrderBy(x => x));
-}
-
-private static string Normalize(string route)
-{
-    var value =
-        route.StartsWith("/", StringComparison.Ordinal)
-            ? route
-            : "/" + route;
-
-    value = value.Replace(
-        Parameter("postId", "int"),
-        Parameter("postId"),
-        StringComparison.Ordinal);
-
-    value = value.Replace(
-        Parameter("reportId", "int"),
-        Parameter("reportId"),
-        StringComparison.Ordinal);
-
-    return value.Length > 1 ? value.TrimEnd('/') : value;
-}
-
-private static string Parameter(string name)
-{
-    return string.Concat(
-        Convert.ToChar(123),
-        name,
-        Convert.ToChar(125));
-}
-
-private static string Parameter(string name, string constraint)
-{
-    return string.Concat(
-        Convert.ToChar(123),
-        name,
-        ":",
-        constraint,
-        Convert.ToChar(125));
-}
-
-private sealed class TestFactory : WebApplicationFactory<Program>
-{
-    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    private static string NormalizeRoute(
+        string route)
     {
-        builder.UseEnvironment("Testing");
-    }
-}
+        var normalized =
+            route.StartsWith(
+                "/",
+                StringComparison.Ordinal)
+                ? route
+                : $"/{route}";
 
+        return normalized.Length > 1
+            ? normalized.TrimEnd('/')
+            : normalized;
+    }
 }

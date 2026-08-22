@@ -1,44 +1,37 @@
-import 'dart:typed_data';
-
 import 'package:dio/dio.dart';
-
-import '../domain/pulse_models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/network/api_client.dart';
+import '../domain/pulse_models.dart';
+
+final pulseRepositoryProvider = Provider<PulseRepository>((ref) {
+  return PulseRepository(dio: ref.watch(dioProvider));
+});
 
 class PulseRepository {
-  PulseRepository(this._dio);
+  PulseRepository({required Dio dio}) : _dio = dio;
 
   final Dio _dio;
 
-  Future<PulseFeed> getFeed() async {
+  Future<List<PulsePost>> getFeed() async {
     try {
       final response = await _dio.get<dynamic>('/api/v1/feed');
-
-      return PulseFeed.fromJson(response.data);
+      return PulseFeed.fromJson(response.data).posts;
     } on DioException catch (error) {
       if (_isNotFound(error)) {
-        return PulseFeed.fromJson(<String, dynamic>{'items': <dynamic>[]});
+        return const <PulsePost>[];
       }
-
       rethrow;
     }
   }
 
-  Future<PulsePost> createPost({
-    required String content,
-
-    List<int> mediaIds = const <int>[],
-  }) async {
+  Future<PulsePost> createPost(CreatePostRequest request) async {
     final response = await _dio.post<dynamic>(
       '/api/v1/posts',
-
-      data: <String, dynamic>{'content': content},
-
-      options: _jsonOptions,
+      data: request.toJson(),
     );
 
-    return PulsePost.fromJson(_jsonMap(response.data));
+    return PulsePost.fromJson(_asJsonMap(response.data));
   }
 
   Future<void> deletePost(int postId) async {
@@ -47,18 +40,14 @@ class PulseRepository {
 
   Future<PulsePost> createReply({
     required int postId,
-
-    required String content,
+    required CreateReplyRequest request,
   }) async {
     final response = await _dio.post<dynamic>(
       '/api/v1/posts/$postId/replies',
-
-      data: <String, dynamic>{'content': content},
-
-      options: _jsonOptions,
+      data: request.toJson(),
     );
 
-    return PulsePost.fromJson(_jsonMap(response.data));
+    return PulsePost.fromJson(_asJsonMap(response.data));
   }
 
   Future<void> likePost(int postId) async {
@@ -69,32 +58,46 @@ class PulseRepository {
     await _dio.delete<void>('/api/v1/posts/$postId/likes');
   }
 
-  Future<int> uploadMedia({
-    required Uint8List bytes,
-
-    required String fileName,
-  }) {
-    return Future<int>.error(
-      UnsupportedError(
-        'Standalone media upload is not defined by the canonical API contract.',
-      ),
-    );
-  }
-
-  Future<PulseProfile> getMe() async {
-    final response = await _dio.get<dynamic>('/api/v1/me');
-
-    return PulseProfile.fromJson(_jsonMap(response.data));
-  }
-
   Future<PulseProfile?> getMyProfile() async {
     try {
-      return await getMe();
+      final response = await _dio.get<dynamic>('/api/v1/me');
+      return PulseProfile.fromJson(_asJsonMap(response.data));
     } on DioException catch (error) {
       if (_isNotFound(error)) {
         return null;
       }
+      rethrow;
+    }
+  }
 
+  Future<PulseProfile?> getProfile(String username) async {
+    try {
+      final encodedUsername = Uri.encodeComponent(username);
+      final response = await _dio.get<dynamic>(
+        '/api/v1/profiles/$encodedUsername',
+      );
+
+      return PulseProfile.fromJson(_asJsonMap(response.data));
+    } on DioException catch (error) {
+      if (_isNotFound(error)) {
+        return null;
+      }
+      rethrow;
+    }
+  }
+
+  Future<List<PulsePost>> getProfilePosts(String username) async {
+    try {
+      final encodedUsername = Uri.encodeComponent(username);
+      final response = await _dio.get<dynamic>(
+        '/api/v1/profiles/$encodedUsername/posts',
+      );
+
+      return PulseFeed.fromJson(response.data).posts;
+    } on DioException catch (error) {
+      if (_isNotFound(error)) {
+        return const <PulsePost>[];
+      }
       rethrow;
     }
   }
@@ -102,79 +105,31 @@ class PulseRepository {
   Future<PulseProfile> updateMyProfile(UpdateProfileRequest request) async {
     final response = await _dio.put<dynamic>(
       '/api/v1/me',
-
       data: request.toJson(),
-
-      options: _jsonOptions,
     );
 
-    return PulseProfile.fromJson(_jsonMap(response.data));
+    return PulseProfile.fromJson(_asJsonMap(response.data));
   }
 
-  Future<PulseProfile> getProfile(String username) async {
-    final encoded = Uri.encodeComponent(username);
-
-    final response = await _dio.get<dynamic>('/api/v1/profiles/$encoded');
-
-    return PulseProfile.fromJson(_jsonMap(response.data));
+  Future<void> followUser(String username) async {
+    final encodedUsername = Uri.encodeComponent(username);
+    await _dio.post<void>('/api/v1/profiles/$encodedUsername/follow');
   }
 
-  Future<PulseFeed> getProfilePosts(String username) async {
-    final encoded = Uri.encodeComponent(username);
-
-    try {
-      final response = await _dio.get<dynamic>(
-        '/api/v1/profiles/$encoded/posts',
-      );
-
-      return PulseFeed.fromJson(response.data);
-    } on DioException catch (error) {
-      if (_isNotFound(error)) {
-        return PulseFeed.fromJson(<String, dynamic>{'items': <dynamic>[]});
-      }
-
-      rethrow;
-    }
+  Future<void> unfollowUser(String username) async {
+    final encodedUsername = Uri.encodeComponent(username);
+    await _dio.delete<void>('/api/v1/profiles/$encodedUsername/follow');
   }
 
-  Future<void> follow(String username) async {
-    final encoded = Uri.encodeComponent(username);
-
-    await _dio.post<void>('/api/v1/profiles/$encoded/follow');
-  }
-
-  Future<void> unfollow(String username) async {
-    final encoded = Uri.encodeComponent(username);
-
-    await _dio.delete<void>('/api/v1/profiles/$encoded/follow');
-  }
-
-  Future<void> followUser(String username) {
-    return follow(username);
-  }
-
-  Future<void> unfollowUser(String username) {
-    return unfollow(username);
-  }
-
-  bool _isNotFound(DioException error) {
+  static bool _isNotFound(DioException error) {
     return error.response?.statusCode == 404;
   }
 
-  Options get _jsonOptions {
-    return Options(contentType: Headers.jsonContentType);
-  }
-
-  Map<String, dynamic> _jsonMap(dynamic value) {
-    if (value is Map) {
-      return Map<String, dynamic>.from(value);
+  static Map<String, dynamic> _asJsonMap(dynamic data) {
+    if (data is Map) {
+      return Map<String, dynamic>.from(data);
     }
 
-    throw const FormatException('Response must be a JSON object');
+    throw const FormatException('API yanıtı geçerli bir JSON nesnesi değil.');
   }
 }
-
-final pulseRepositoryProvider = Provider<PulseRepository>((ref) {
-  final dio = ref.watch(dioProvider);
-  return PulseRepository(dio);
-});

@@ -10,7 +10,7 @@ void main() {
   test('GET /api/v1/me 404 mevcut profil için null döner', () async {
     final dio = Dio(BaseOptions(baseUrl: 'http://127.0.0.1:5000'));
     final adapter = DioAdapter(dio: dio);
-    final repository = PulseRepository(dio);
+    final repository = PulseRepository(dio: dio);
 
     RequestOptions? capturedRequest;
 
@@ -46,7 +46,7 @@ void main() {
   test('PUT /api/v1/me canonical update body kullanır', () async {
     final dio = Dio(BaseOptions(baseUrl: 'http://127.0.0.1:5000'));
     final adapter = DioAdapter(dio: dio);
-    final repository = PulseRepository(dio);
+    final repository = PulseRepository(dio: dio);
 
     RequestOptions? capturedRequest;
 

@@ -1,1131 +1,389 @@
-# Pulse Veritabanı Modeli
+# Pulse — Database Model
 
 ## 1. Amaç
 
-Bu doküman güncel Pulse MVP için PostgreSQL veri modelini tanımlar.
-
-Model aşağıdaki canonical dokümanlarla uyumludur:
-
-- `docs/architecture.md`
-- `docs/api-contract.md`
-
-Backend Entity Framework Core modeli, migration'lar ve persistence testleri bu dokümandaki kararlarla uyumlu olmalıdır.
+Bu doküman Pulse canonical PostgreSQL veri modelini tanımlar.
 
-## 2. Genel kurallar
+API wire-format kaynağı `docs/api-contract.md` dosyasıdır.
 
-- Veritabanı: PostgreSQL
-- ORM: Entity Framework Core
-- Birincil kimlikler: integer identity
-- Tarih-zaman: UTC `timestamp with time zone`
-- Tablo ve sütun isimleri: snake_case
-- HTTP JSON alanları: camelCase
-- Şifreler düz metin saklanmaz.
-- Kullanıcı sahipliği JWT `sub` claim'inden belirlenir.
-- Gönderi metni veritabanında `content` sütununda saklanır.
-- `description`, `title`, `text` veya `body` gönderi sütunu olarak kullanılmaz.
-- Persistence enum string değerleri `docs/api-contract.md` içindeki canonical casing ile birebir aynı olmalıdır.
-- Aynı enum için persistence, backend veya mobil katmanda ikinci bir string formatı tanımlanmaz.
+İlkeler:
 
-## 3. Güncel MVP tabloları
+- primary key integer
+- timestamp UTC
+- foreign key ile referential integrity
+- sosyal ilişkilerde duplicate engeli
+- MinIO binary, PostgreSQL metadata
+- ownership backend tarafından doğrulanır
 
-Güncel MVP aşağıdaki tabloları gerektirir:
+## 2. Users
 
-- `users`
-- `posts`
-- `follows`
-- `likes`
-- `user_blocks`
-- `reports`
-- `moderation_actions`
+Tablo: `Users`
 
-Arama, bildirim, bookmark, repost ve medya tabloları güncel MVP için zorunlu değildir.
+Alanlar:
 
-`user_blocks`, `reports` ve `moderation_actions` Güvenlik & Moderasyon kapsamının canonical persistence tablolarıdır.
+- `Id`: integer, PK
+- `Username`: string, required
+- `NormalizedUsername`: string, required
+- `Email`: string, required
+- `NormalizedEmail`: string, required
+- `PasswordHash`: string, required
+- `Role`: string, required
+- `CreatedAt`: UTC timestamp
 
-Sosyal Graf & Profil Tamamlama fazı yeni tablo gerektirmez. Bu faz mevcut `users`, `posts`, `follows` ve `user_blocks` tablolarından read model üretir.
+Constraint:
 
-## 4. İlişki diyagramı
+- `NormalizedUsername` unique
+- `NormalizedEmail` unique
 
-~~~mermaid
-erDiagram
-    USERS ||--o{ POSTS : authors
-    USERS ||--o{ FOLLOWS : follower
-    USERS ||--o{ FOLLOWS : following
-    USERS ||--o{ LIKES : creates
-    USERS ||--o{ USER_BLOCKS : blocker
-    USERS ||--o{ USER_BLOCKS : blocked
-    USERS ||--o{ REPORTS : reporter
-    USERS ||--o{ REPORTS : target_user
-    USERS ||--o{ REPORTS : resolves
-    USERS ||--o{ MODERATION_ACTIONS : moderator
-    POSTS ||--o{ POSTS : receives_replies
-    POSTS ||--o{ LIKES : receives
-    POSTS ||--o{ REPORTS : target_post
-    REPORTS ||--o{ MODERATION_ACTIONS : receives
-~~~
+## 3. Follows
 
-## 5. users
+Tablo: `Follows`
 
-### 5.1 Sütunlar
+Alanlar:
 
-| Sütun | PostgreSQL türü | Null | Kural |
-|---|---|---|---|
-| `id` | integer | Hayır | Primary key, identity |
-| `username` | varchar(30) | Hayır | Benzersiz |
-| `normalized_username` | varchar(30) | Hayır | Küçük harf, benzersiz |
-| `email` | varchar(320) | Hayır | Benzersiz |
-| `normalized_email` | varchar(320) | Hayır | Küçük harf, benzersiz |
-| `password_hash` | text | Hayır | BCrypt hash |
-| `display_name` | varchar(80) | Hayır | Trim sonrası boş olamaz |
-| `bio` | varchar(160) | Evet | Trimlenmiş |
-| `avatar_url` | text | Evet | URL |
-| `role` | varchar(32) | Hayır | Canonical kullanıcı rolü |
-| `is_active` | boolean | Hayır | Varsayılan `true` |
-| `created_at` | timestamptz | Hayır | UTC |
-| `updated_at` | timestamptz | Evet | UTC |
+- `FollowerId`: FK → `Users.Id`
+- `FollowingId`: FK → `Users.Id`
+- `CreatedAt`: UTC timestamp
 
-### 5.2 Role değerleri
+Unique:
 
-`role` yalnız aşağıdaki canonical persistence değerlerinden birini saklar:
+`(FollowerId, FollowingId)`
 
-- `User`
-- `Moderator`
+Kurallar:
 
-Bu string'ler JWT/API rol kararlarıyla birebir aynıdır.
+- self-follow yasak
+- duplicate aktif follow yasak
 
-Aşağıdaki gibi alternatif role persistence değerleri kullanılmaz:
+## 4. Posts
 
-- küçük harfli alias
-- snake_case alias
-- endpoint'e özel farklı rol string'i
+Tablo: `Posts`
 
-### 5.3 İndeksler
+Alanlar:
 
-- Unique index: `normalized_username`
-- Unique index: `normalized_email`
-- Index: `(is_active, created_at DESC)`
-- Index: `(role, is_active)`
+- `Id`: integer, PK
+- `AuthorId`: FK → `Users.Id`
+- `Text`: string, required
+- `Kind`: string, required
+- `OriginalPostId`: nullable FK → `Posts.Id`
+- `CreatedAt`: UTC timestamp
 
-### 5.4 Kurallar
+`Kind`:
 
-Kullanıcı adı karşılaştırmaları normalize edilmiş alan üzerinden yapılır.
+- `Post`
+- `Repost`
+- `Quote`
 
-E-posta karşılaştırmaları normalize edilmiş alan üzerinden yapılır.
+Normal Post:
 
-Password hash dışında şifre verisi saklanmaz.
+- `OriginalPostId = null`
 
-Kullanıcı kendi kimliğini request body ile belirleyemez.
+Repost:
 
-`is_active=false` kullanıcı hesabının aktif kabul edilmediğini gösterir.
+- `OriginalPostId` required
+- aynı author + original post için tek aktif repost
 
-Authentication ve korumalı kaynak erişimi application katmanında `is_active` durumunu dikkate almalıdır.
+Database invariant:
 
-Moderator yetkisi yalnız istemci UI kontrolüne bırakılmaz; backend rol doğrulaması zorunludur.
+`Kind = Repost` kayıtlarında `(AuthorId, OriginalPostId)` unique olmalıdır.
 
-`created_at`, profile response içindeki canonical `createdAt` alanının persistence kaynağıdır.
+Quote:
 
-Profil sayaçları `users` tablosunda zorunlu denormalize sütunlar değildir.
+- `OriginalPostId` required
+- `Text` quote sahibinin içeriğidir
 
-## 6. posts
+Text maksimum uzunluğu API canonical kontratındaki 280 karakter kuralıyla uyumludur.
 
-### 6.1 Sütunlar
+## 5. Replies
 
-| Sütun | PostgreSQL türü | Null | Kural |
-|---|---|---|---|
-| `id` | integer | Hayır | Primary key, identity |
-| `author_id` | integer | Hayır | FK → `users.id` |
-| `content` | varchar(280) | Hayır | Trim sonrası 1–280 karakter |
-| `parent_post_id` | integer | Evet | Self FK → `posts.id` |
-| `created_at` | timestamptz | Hayır | UTC |
-| `deleted_at` | timestamptz | Evet | Kullanıcı soft delete zamanı |
-| `is_hidden` | boolean | Hayır | Varsayılan `false`; moderasyon görünürlüğü |
+Tablo: `Replies`
 
-### 6.2 İndeksler
+Alanlar:
 
-- Index: `(created_at DESC, id DESC)`
-- Index: `(author_id, created_at DESC, id DESC)`
-- Index: `(parent_post_id, created_at ASC, id ASC)`
-- Index: `(is_hidden, created_at DESC, id DESC)`
-- Partial index: `deleted_at IS NULL`
-- Görünür feed/profil sorguları için uygun index: `deleted_at IS NULL AND is_hidden = false`
+- `Id`: integer, PK
+- `PostId`: FK → `Posts.Id`
+- `AuthorId`: FK → `Users.Id`
+- `Text`: string
+- `CreatedAt`: UTC timestamp
 
-### 6.3 Kurallar
+Tek seviyeli reply kullanılır; reply-to-reply parent alanı yoktur.
 
-`content` null olamaz.
+## 6. PostLikes
 
-`content` trim sonrası boş olamaz.
+Tablo: `PostLikes`
 
-`content` en fazla 280 karakterdir.
+Alanlar:
 
-`author_id` request body üzerinden alınmaz.
+- `PostId`: FK → `Posts.Id`
+- `UserId`: FK → `Users.Id`
+- `CreatedAt`: UTC timestamp
 
-Ana gönderide `parent_post_id` null olur.
+Unique:
 
-Yanıtta `parent_post_id` üst gönderinin kimliğidir.
+`(PostId, UserId)`
 
-`parent_post_id` dolu olan bir gönderiye yeni yanıt oluşturulamaz.
+Retry/double-tap ikinci aktif like oluşturmaz.
 
-Bir gönderinin standart kullanıcı silme yetkisi sahibine aittir.
+## 7. Bookmarks
 
-Standart kullanıcı silmesi fiziksel DELETE yerine `deleted_at` ile soft delete olarak uygulanabilir.
+Tablo: `Bookmarks`
 
-Moderasyon kaldırması standart kullanıcı silmesinden ayrıdır.
+Alanlar:
 
-`RemovePost` moderasyon aksiyonunda:
+- `UserId`: FK → `Users.Id`
+- `PostId`: FK → `Posts.Id`
+- `CreatedAt`: UTC timestamp
 
-~~~text
-is_hidden = true
-~~~
+Unique:
 
-uygulanır.
+`(UserId, PostId)`
 
-Moderasyon kararı fiziksel DELETE yapmaz.
+Kurallar:
 
-Bir gönderinin normal istemciye görünür kabul edilmesi için iki koşul birlikte sağlanmalıdır:
+- kullanıcıya özeldir
+- duplicate aktif bookmark yoktur
+- başka kullanıcı bookmark'ı silinemez
 
-~~~text
-deleted_at IS NULL
-is_hidden = false
-~~~
+## 8. Notifications
 
-`deleted_at IS NOT NULL` veya `is_hidden=true` olan gönderiler:
+Tablo: `Notifications`
 
-- feed içinde dönmez,
-- profil gönderi listesinde dönmez,
-- normal görünür gönderi kabul edilmez,
-- yeni like kabul etmez,
-- yeni reply kabul etmez.
+Alanlar:
 
-### 6.4 Tek seviyeli yanıt doğrulaması
+- `Id`: integer, PK
+- `RecipientUserId`: FK → `Users.Id`
+- `ActorUserId`: FK → `Users.Id`
+- `Type`: string
+- `PostId`: nullable FK → `Posts.Id`
+- `IsRead`: boolean, default false
+- `CreatedAt`: UTC timestamp
 
-Yeni yanıt oluşturulmadan önce üst gönderi okunur.
+Canonical `Type`:
 
-Aşağıdaki koşul sağlanmalıdır:
+- `Like`
+- `Reply`
+- `Follow`
+- `Mention`
 
-~~~text
-parent.parent_post_id IS NULL
-~~~
+Index:
 
-Üst gönderinin `parent_post_id` değeri doluysa işlem reddedilir.
+- `(RecipientUserId, CreatedAt)`
+- `(RecipientUserId, IsRead)`
 
-Üst gönderi ayrıca görünür olmalıdır:
+Duplicate prevention:
 
-~~~text
-parent.deleted_at IS NULL
-parent.is_hidden = false
-~~~
+Aynı source interaction aynı recipient için tekrar işlendiğinde ikinci notification üretilmez.
 
-### 6.5 Profil gönderileri read modeli
+Mention source identity için:
 
-Canonical profil gönderileri sorgusu:
+`(RecipientUserId, ActorUserId, PostId, Type)`
 
-- `author_id = profile_user_id`
-- `parent_post_id IS NULL`
-- `deleted_at IS NULL`
-- `is_hidden = false`
+kombinasyonu duplicate Mention notification'ı engellemelidir.
 
-koşullarını birlikte uygular.
+Read-state update yeni notification oluşturmaz.
 
-Sıralama:
+## 9. Hashtags
 
-~~~text
-created_at DESC
-id DESC
-~~~
+Tablo: `Hashtags`
 
-Profil `postCount` değeri aynı görünür kök gönderi koşullarını kullanan sayımdan türetilir.
+Alanlar:
 
-Reply kayıtları profil ana gönderi collection'ına dahil edilmez.
+- `Id`: integer, PK
+- `Tag`: string
+- `NormalizedTag`: string
 
-## 7. follows
+Unique:
 
-### 7.1 Sütunlar
+`NormalizedTag`
 
-| Sütun | PostgreSQL türü | Null | Kural |
-|---|---|---|---|
-| `follower_id` | integer | Hayır | FK → `users.id` |
-| `following_id` | integer | Hayır | FK → `users.id` |
-| `created_at` | timestamptz | Hayır | UTC |
+### PostHashtags
 
-### 7.2 Anahtar ve indeksler
+Alanlar:
 
-Composite primary key:
+- `PostId`: FK → `Posts.Id`
+- `HashtagId`: FK → `Hashtags.Id`
 
-~~~text
-(follower_id, following_id)
-~~~
+Unique:
 
-Check constraint:
+`(PostId, HashtagId)`
 
-~~~text
-follower_id <> following_id
-~~~
+Hashtag modeli trend skoru içermez.
 
-İndeksler:
+## 10. PostMentions
 
-- Index: `(following_id, created_at DESC)`
-- Index: `(follower_id, created_at DESC)`
+Tablo: `PostMentions`
 
-### 7.3 Kurallar
+Alanlar:
 
-Kullanıcı kendisini takip edemez.
+- `PostId`: FK → `Posts.Id`
+- `MentionedUserId`: FK → `Users.Id`
 
-Aynı takip ilişkisi birden fazla kez oluşturulamaz.
+Unique:
 
-Takip eden kullanıcı JWT `sub` claim'inden belirlenir.
+`(PostId, MentionedUserId)`
 
-Takip hedefi path'teki username üzerinden çözülür.
+Kurallar:
 
-Request body içinde `followerId` veya `followingId` bulunmaz.
+- geçersiz username için kayıt yok
+- aynı postta aynı kullanıcı tekrar mention edilse tek kayıt
+- geçerli recipient author'dan farklıysa tek Mention notification üretilebilir
 
-İki kullanıcı arasında herhangi bir yönde block ilişkisi bulunuyorsa yeni follow oluşturulamaz.
+## 11. PostMedia
 
-Yeni block oluşturulduğunda iki kullanıcı arasındaki mevcut follow kayıtları kaldırılır.
+Tablo: `PostMedia`
 
-Unblock işlemi eski follow kayıtlarını otomatik geri oluşturmaz.
+Alanlar:
 
-### 7.4 Sosyal graf read modeli
+- `Id`: integer, PK
+- `OwnerUserId`: FK → `Users.Id`
+- `PostId`: nullable FK → `Posts.Id`
+- `ObjectKey`: string, required
+- `MediaType`: string, required
+- `ContentType`: string, required
+- `Width`: nullable integer
+- `Height`: nullable integer
+- `CreatedAt`: UTC timestamp
 
-`followerCount`, hedef kullanıcının `following_id` olduğu follow kayıtlarının sayısıdır.
+`MediaType`:
 
-`followingCount`, hedef kullanıcının `follower_id` olduğu follow kayıtlarının sayısıdır.
+- `Image`
+- `Video`
 
-`isFollowedByCurrentUser` aşağıdaki ilişkinin varlığından türetilir:
+Unique:
 
-~~~text
-follower_id = current_user_id
-following_id = response_user_id
-~~~
+`ObjectKey`
 
-Bu alan persistence sütunu değildir.
+Kurallar:
 
-Followers collection sorgusu:
+- binary MinIO'dadır
+- PostgreSQL yalnız metadata tutar
+- upload authenticated user'a aittir
+- başka kullanıcının media id'si bağlanamaz
+- storage credential API response'unda açığa çıkarılmaz
 
-~~~text
-following_id = profile_user_id
-~~~
+## 12. Blocks
 
-koşulunu kullanır.
+Tablo: `Blocks`
 
-Following collection sorgusu:
+Alanlar:
 
-~~~text
-follower_id = profile_user_id
-~~~
+- `BlockerUserId`: FK → `Users.Id`
+- `BlockedUserId`: FK → `Users.Id`
+- `CreatedAt`: UTC timestamp
 
-koşulunu kullanır.
+Unique:
 
-Her iki collection da follow ilişkisinin:
+`(BlockerUserId, BlockedUserId)`
 
-~~~text
-created_at DESC
-~~~
+Self-block yasaktır.
 
-sırasını kullanır; eşitlikte response kullanıcı `id DESC` ile deterministik sıralama uygulanır.
+Block feed/profile sosyal görünürlüğüne backend tarafından uygulanır.
 
-Followers ve following için mevcut indeksler yeterlidir; yeni sosyal graf tablosu gerekmez.
-## 8. likes
+## 13. Reports
 
-### 8.1 Sütunlar
+Tablo: `Reports`
 
-| Sütun | PostgreSQL türü | Null | Kural |
-|---|---|---|---|
-| `user_id` | integer | Hayır | FK → `users.id` |
-| `post_id` | integer | Hayır | FK → `posts.id` |
-| `created_at` | timestamptz | Hayır | UTC |
+Alanlar:
 
-### 8.2 Anahtar ve indeksler
+- `Id`: integer, PK
+- `ReporterUserId`: FK → `Users.Id`
+- `ReportedUserId`: nullable FK → `Users.Id`
+- `PostId`: nullable FK → `Posts.Id`
+- `Reason`: string
+- `Status`: string
+- `CreatedAt`: UTC timestamp
+- `ResolvedAt`: nullable UTC timestamp
 
-Composite primary key:
+Report reason/status wire token'ları yalnız `docs/api-contract.md` tarafından belirlenir.
 
-~~~text
-(user_id, post_id)
-~~~
+## 14. Türetilmiş PostResponse alanları
 
-Foreign key'ler:
+- `likeCount` → `PostLikes`
+- `replyCount` → `Replies`
+- `repostCount` → `Posts` where `Kind = Repost`
+- `isLiked` → current user + `PostLikes`
+- `isBookmarked` → current user + `Bookmarks`
+- `originalPost` → `OriginalPostId`
+- `media` → `PostMedia`
 
-~~~text
-user_id -> users.id
-post_id -> posts.id
-~~~
+Physical counter eklenmesi ayrı performans kararıdır ve API kontratını değiştirmez.
 
-İndeksler:
+## 15. Referential integrity
 
-- Index: `(post_id, created_at DESC)`
-- Index: `(user_id, created_at DESC)`
+Post/account deletion sırasında en az:
 
-### 8.3 Kurallar
+- follows
+- likes
+- replies
+- bookmarks
+- notifications
+- hashtags
+- mentions
+- media
+- blocks
+- reports
+- repost/quote references
 
-Bir kullanıcı aynı gönderiyi en fazla bir kez beğenebilir.
+değerlendirilir.
 
-Like sahibi JWT `sub` claim'inden belirlenir.
+Cascade yalnız business semantics ile uyumluysa kullanılır.
 
-Request body içinde `userId` bulunmaz.
+Ownership kontrolü backend için zorunludur.
 
-Like hedefi path'teki `postId` üzerinden çözülür.
+## 16. Index ve uniqueness özeti
 
-Aşağıdaki postlara yeni like oluşturulamaz:
-
-- `deleted_at IS NOT NULL`
-- `is_hidden = true`
-- block ilişkisi nedeniyle kullanıcıya görünmeyen post
-
-Block veya görünürlük nedeniyle erişilemeyen hedef HTTP katmanında canonical `404` semantiğini kullanır.
-
-## 9. user_blocks
-
-### 9.1 Sütunlar
-
-| Sütun | PostgreSQL türü | Null | Kural |
-|---|---|---|---|
-| `blocker_user_id` | integer | Hayır | FK → `users.id` |
-| `blocked_user_id` | integer | Hayır | FK → `users.id` |
-| `created_at` | timestamptz | Hayır | UTC |
-
-### 9.2 Anahtar ve indeksler
-
-Composite primary key:
-
-~~~text
-(blocker_user_id, blocked_user_id)
-~~~
-
-Foreign key'ler:
-
-~~~text
-blocker_user_id -> users.id
-blocked_user_id -> users.id
-~~~
-
-Check constraint:
-
-~~~text
-blocker_user_id <> blocked_user_id
-~~~
-
-Unique invariant:
-
-~~~text
-(blocker_user_id, blocked_user_id)
-~~~
-
-aynı yönlü block ilişkisini tekilleştirir.
+| İlişki | Kural |
+|---|---|
+| User username | `NormalizedUsername` unique |
+| User email | `NormalizedEmail` unique |
+| Follow | `(FollowerId, FollowingId)` unique |
+| Like | `(PostId, UserId)` unique |
+| Bookmark | `(UserId, PostId)` unique |
+| Repost | `Kind=Repost` için `(AuthorId, OriginalPostId)` unique |
+| PostHashtag | `(PostId, HashtagId)` unique |
+| Mention | `(PostId, MentionedUserId)` unique |
+| Block | `(BlockerUserId, BlockedUserId)` unique |
+| Media object | `ObjectKey` unique |
 
 Ek index:
 
-~~~text
-(blocked_user_id, created_at DESC)
-~~~
+- `Posts(AuthorId, CreatedAt)`
+- `Posts(OriginalPostId, Kind)`
+- `Replies(PostId, CreatedAt)`
+- `Bookmarks(UserId, CreatedAt)`
+- `Notifications(RecipientUserId, CreatedAt)`
 
-### 9.3 Kurallar
+## 17. Idempotency invariant'ları
 
-Engelleyen kullanıcı JWT `sub` claim'inden belirlenir.
+Create retry veya kullanıcı double-tap davranışı aşağıdaki ilişkilerde duplicate aktif kayıt üretmemelidir:
 
-Engellenen kullanıcı canonical profile path'indeki username üzerinden çözülür.
+- Follow
+- Like
+- Bookmark
+- Repost
+- PostHashtag
+- PostMention
+- Block
 
-Request body içinde `blockerUserId` veya `blockedUserId` bulunmaz.
+Mention aynı post içinde tekrarlandığında:
 
-Kullanıcı kendisini engelleyemez.
+- tek `PostMentions` kaydı
+- tek recipient Mention notification
 
-Aynı block ilişkisi ikinci kez oluşturulmaz.
+oluşur.
 
-Create işlemi idempotent API davranışı gösterebilir ancak persistence'ta duplicate satır oluşturmaz.
+## 18. Altyapı
 
-Block oluşturulduğunda:
+PostgreSQL:
 
-1. `user_blocks` ilişkisi oluşturulur.
-2. `blocker -> blocked` follow kaydı varsa kaldırılır.
-3. `blocked -> blocker` follow kaydı varsa kaldırılır.
-4. İşlem tek transaction içinde tamamlanır.
+- relational application state
+- EF Core migration target
 
-Unblock eski follow kayıtlarını geri oluşturmaz.
+MinIO:
 
-### 9.4 Görünürlük kontrolü
+- image/video binary
 
-Etkileşim ve içerik görünürlüğü için iki kullanıcı arasında herhangi bir yönde block bulunması yeterlidir.
+Redis:
 
-Örnek mantık:
+- bu fazda zorunlu değil
 
-~~~text
-EXISTS (
-  blocker_user_id = current_user_id
-  AND blocked_user_id = target_user_id
-)
-OR
-EXISTS (
-  blocker_user_id = target_user_id
-  AND blocked_user_id = current_user_id
-)
-~~~
-
-Bu kontrol server-side olarak:
-
-- profil görünürlüğünde,
-- profil gönderileri collection'ında,
-- followers collection'ında,
-- following collection'ında,
-- feed filtrelemesinde,
-- follow oluşturmada,
-- like hedefinde,
-- reply hedefinde
-
-uygulanmalıdır.
-
-Followers ve following collection'larında response öğesindeki kullanıcı oturum sahibine block nedeniyle görünmüyorsa ilgili öğe sonuçtan çıkarılır.
-
-Hedef profil oturum sahibine block nedeniyle görünmüyorsa profile bağlı collection sorgusu çalıştırılmaz; HTTP katmanı canonical `404` sonucu üretir.
-
-## 10. reports
-
-### 10.1 Sütunlar
-
-| Sütun | PostgreSQL türü | Null | Kural |
-|---|---|---|---|
-| `id` | integer | Hayır | Primary key, identity |
-| `reporter_user_id` | integer | Hayır | FK → `users.id` |
-| `target_type` | varchar(32) | Hayır | Canonical `ReportTargetType` |
-| `target_post_id` | integer | Evet | FK → `posts.id` |
-| `target_user_id` | integer | Evet | FK → `users.id` |
-| `reason` | varchar(32) | Hayır | Canonical `ReportReason` |
-| `details` | varchar(500) | Evet | Kullanıcı açıklaması |
-| `status` | varchar(32) | Hayır | Canonical `ReportStatus`; varsayılan `Pending` |
-| `created_at` | timestamptz | Hayır | UTC |
-| `resolved_at` | timestamptz | Evet | UTC |
-| `resolved_by_user_id` | integer | Evet | FK → `users.id` |
-
-### 10.2 ReportTargetType
-
-`target_type` için tam canonical persistence değerleri:
-
-- `Post`
-- `User`
-
-Persistence değeri API enum string'i ile birebir aynıdır.
-
-### 10.3 ReportReason
-
-`reason` için tam canonical persistence değerleri:
-
-- `Spam`
-- `Harassment`
-- `HateSpeech`
-- `Violence`
-- `SexualContent`
-- `Impersonation`
-- `Other`
-
-### 10.4 ReportStatus
-
-`status` için tam canonical persistence değerleri:
-
-- `Pending`
-- `Resolved`
-- `Dismissed`
-
-Yeni report başlangıç durumu:
-
-~~~text
-Pending
-~~~
-
-Enum değerlerinde küçük harfli alias, snake_case veya endpoint'e özel farklı casing kullanılmaz.
-
-### 10.5 Target bütünlüğü
-
-Bir report tam olarak bir hedefe sahip olmalıdır.
-
-`target_type = Post` olduğunda:
-
-~~~text
-target_post_id IS NOT NULL
-target_user_id IS NULL
-~~~
-
-`target_type = User` olduğunda:
-
-~~~text
-target_user_id IS NOT NULL
-target_post_id IS NULL
-~~~
-
-Database check constraint iki target foreign key'in aynı anda dolu olmasını veya ikisinin de null olmasını engellemelidir.
-
-Mantıksal constraint:
-
-~~~text
-(
-  target_type = 'Post'
-  AND target_post_id IS NOT NULL
-  AND target_user_id IS NULL
-)
-OR
-(
-  target_type = 'User'
-  AND target_user_id IS NOT NULL
-  AND target_post_id IS NULL
-)
-~~~
-
-### 10.6 Foreign key'ler
-
-~~~text
-reporter_user_id -> users.id
-target_post_id -> posts.id
-target_user_id -> users.id
-resolved_by_user_id -> users.id
-~~~
-
-### 10.7 İndeksler
-
-- Index: `(status, created_at)`
-- Index: `(reporter_user_id, target_type, target_post_id)`
-- Index: `(reporter_user_id, target_type, target_user_id)`
-- Index: `(resolved_by_user_id, resolved_at)`
-
-Aynı reporter ve aynı target için yalnızca bir açık `Pending` rapora izin verilir.
-
-Bu invariant application katmanında zorunlu olarak kontrol edilir.
-
-PostgreSQL tarafında uygun partial unique index/constraint ile desteklenmelidir.
-Post target için mantıksal tekillik:
-
-~~~text
-reporter_user_id
-target_type
-target_post_id
-WHERE status = 'Pending'
-~~~
-
-User target için mantıksal tekillik:
-
-~~~text
-reporter_user_id
-target_type
-target_user_id
-WHERE status = 'Pending'
-~~~
-
-### 10.8 Kurallar
-
-Reporter kullanıcı JWT `sub` claim'inden belirlenir.
-
-Request body reporter id içermez.
-
-Kullanıcı kendi hesabını şikâyet edemez.
-
-Kullanıcı kendi postunu şikâyet edemez.
-
-`details` null olabilir.
-
-`details` en fazla 500 karakterdir.
-
-Report oluşturmak hedef post veya kullanıcı üzerinde otomatik persistence değişikliği oluşturmaz.
-
-Bir report yalnız `Pending` durumundayken resolve/dismiss edilebilir.
-
-Resolve sonucunda:
-
-~~~text
-status = Resolved
-resolved_at = current UTC
-resolved_by_user_id = moderator id
-~~~
-
-Dismiss sonucunda:
-
-~~~text
-status = Dismissed
-resolved_at = current UTC
-resolved_by_user_id = moderator id
-~~~
-
-## 11. moderation_actions
-
-### 11.1 Sütunlar
-
-| Sütun | PostgreSQL türü | Null | Kural |
-|---|---|---|---|
-| `id` | integer | Hayır | Primary key, identity |
-| `report_id` | integer | Hayır | FK → `reports.id` |
-| `moderator_user_id` | integer | Hayır | FK → `users.id` |
-| `action` | varchar(32) | Hayır | Canonical `ModerationAction` |
-| `note` | varchar(500) | Evet | Moderasyon notu |
-| `created_at` | timestamptz | Hayır | UTC |
-
-### 11.2 ModerationAction
-
-`action` için canonical persistence değerleri:
-
-- `NoAction`
-- `RemovePost`
-
-Bu değerler `docs/api-contract.md` içindeki string değerleriyle birebir aynıdır.
-
-Alternatif küçük harf veya farklı format kullanılmaz.
-
-### 11.3 Foreign key ve indeksler
-
-Foreign key'ler:
-
-~~~text
-report_id -> reports.id
-moderator_user_id -> users.id
-~~~
-
-İndeksler:
-
-- Index: `(report_id)`
-- Index: `(moderator_user_id, created_at DESC)`
-- Index: `(action, created_at DESC)`
-
-### 11.4 Audit davranışı
-
-Moderasyon kararı denetlenebilir bir persistence kaydı oluşturmalıdır.
-
-Kayıt en az:
-
-- report kimliği,
-- moderator kullanıcı kimliği,
-- canonical action,
-- opsiyonel note,
-- UTC karar zamanı
-
-içermelidir.
-
-`note` null olabilir ve en fazla 500 karakterdir.
-
-## 12. Moderasyon persistence davranışı
-
-### 12.1 NoAction
-
-`NoAction` işlemi:
-
-1. report'un `Pending` olduğunu doğrular.
-2. `moderation_actions` kaydı oluşturur.
-3. report `Resolved` yapılır.
-4. `resolved_at` doldurulur.
-5. `resolved_by_user_id` doldurulur.
-6. hedef kullanıcı veya post değiştirilmez.
-
-### 12.2 RemovePost
-
-`RemovePost` yalnız `target_type=Post` raporlarında geçerlidir.
-
-Persistence işlemi:
-
-1. report'un `Pending` olduğunu doğrular.
-2. target postu doğrular.
-3. `moderation_actions` kaydı oluşturur.
-4. report'u `Resolved` yapar.
-5. `resolved_at` ve `resolved_by_user_id` alanlarını doldurur.
-6. hedef postta `is_hidden=true` yapar.
-
-`RemovePost`:
-
-- fiziksel DELETE yapmaz,
-- post `deleted_at` alanını kullanıcı silmesiyle karıştırmaz,
-- moderasyon görünürlüğünü `is_hidden` ile temsil eder.
-
-### 12.3 Dismiss
-
-Dismiss:
-
-1. report'un `Pending` olduğunu doğrular.
-2. report'u `Dismissed` yapar.
-3. `resolved_at` doldurur.
-4. `resolved_by_user_id` doldurur.
-5. denetlenebilir moderasyon kaydı oluşturur.
-6. hedef kaynağı değiştirmez.
-
-### 12.4 Transaction sınırı
-
-Aşağıdaki değişiklikler tek database transaction içinde yapılmalıdır:
-
-- moderation action audit kaydı,
-- report state transition,
-- gerekiyorsa post `is_hidden` değişikliği.
-
-Ara adımlardan biri başarısız olursa transaction rollback edilmelidir.
-
-İkinci concurrent resolve/dismiss işlemi güncel report state kontrolü nedeniyle uygulanmamalıdır.
-
-API bu state çakışmasını `409 Conflict` olarak temsil eder.
-
-## 13. Görünürlük ve sorgu kuralları
-
-### 13.1 Post görünürlüğü
-
-Normal kullanıcıya görünür post filtresi en az:
-
-~~~text
-deleted_at IS NULL
-AND is_hidden = false
-~~~
-
-koşullarını kullanır.
-
-Feed ve profil gönderileri ayrıca block ilişkisini de dikkate alır.
-
-### 13.2 Profile görünürlüğü
-
-Profile hedef kullanıcı ile oturum sahibi arasında herhangi bir yönde block varsa canonical API görünürlük kuralı uygulanır.
-
-Persistence katmanı block ilişkisinin varlığını sağlayan sorguyu sunar.
-
-HTTP katmanı bunu `404` semantiğiyle temsil eder.
-
-Profile bağlı aşağıdaki collection'lar aynı görünürlük ön koşulunu kullanır:
-
-- profil gönderileri,
-- followers,
-- following.
-
-### 13.3 Like ve reply hedefi
-
-Like/reply hedef postu:
-
-~~~text
-deleted_at IS NULL
-AND is_hidden = false
-~~~
-
-olmalıdır.
-
-Post author ile oturum sahibi arasında block ilişkisi bulunmamalıdır.
-
-### 13.4 Sosyal graf görünürlüğü
-
-Followers ve following collection'ları için:
-
-1. hedef profil görünür olmalıdır,
-2. follow ilişkileri mevcut `follows` tablosundan okunmalıdır,
-3. response kullanıcısı oturum sahibine block nedeniyle görünmüyorsa sonuçtan çıkarılmalıdır.
-
-Sosyal graf görünürlük filtresi follow ilişkisini fiziksel olarak değiştirmez.
-
-Block oluşturma sırasında mevcut follow kayıtlarının kaldırılması ayrı transaction davranışıdır.
-
-## 14. Delete davranışları ve foreign key stratejisi
-
-İlişkisel bütünlük korunmalıdır.
-
-Kullanıcı veya postların fiziksel silinmesi MVP'nin normal kullanıcı akışı değildir.
-
-Post silme soft-delete/görünürlük modeli kullandığından report ve moderation audit kayıtlarının tarihsel referansları korunmalıdır.
-
-Önerilen davranışlar:
-
-- `posts.author_id -> users.id`: restrict
-- `posts.parent_post_id -> posts.id`: restrict veya audit bütünlüğünü koruyan eşdeğer davranış
-- `follows.* -> users.id`: cascade yalnız açıkça hesap fiziksel silme süreci tanımlanırsa
-- `likes.user_id -> users.id`: hesap fiziksel silme sürecine göre cascade
-- `likes.post_id -> posts.id`: normal akışta post fiziksel silinmez
-- `user_blocks.* -> users.id`: hesap fiziksel silme sürecine göre cascade
-- `reports.reporter_user_id -> users.id`: audit gereksinimine göre restrict
-- `reports.target_user_id -> users.id`: audit gereksinimine göre restrict
-- `reports.target_post_id -> posts.id`: audit gereksinimine göre restrict
-- `reports.resolved_by_user_id -> users.id`: audit gereksinimine göre restrict
-- `moderation_actions.report_id -> reports.id`: restrict
-- `moderation_actions.moderator_user_id -> users.id`: restrict
-
-Production retention veya kullanıcı hesabı fiziksel silme politikası ayrı bir ürün kararıdır.
-## 15. Canonical database ↔ API eşlemeleri
-
-Database snake_case alanları HTTP JSON property adlarını değiştirmez.
-
-Örnekler:
-
-| Database | API |
-|---|---|
-| `display_name` | `displayName` |
-| `avatar_url` | `avatarUrl` |
-| `created_at` | `createdAt` |
-| `parent_post_id` | `parentPostId` |
-| `target_type` | `targetType` |
-| `target_post_id` / `target_user_id` | `targetId` + `targetType` |
-| `resolved_at` | `resolvedAt` |
-| `resolved_by_user_id` | `resolvedByUserId` |
-
-`is_hidden` persistence görünürlük alanıdır.
-
-Moderasyon resolve request body için `isHidden` alanı tanımlanmaz.
-
-İstemci `RemovePost` canonical moderation action'ını gönderir; persistence katmanı bunun sonucunu `posts.is_hidden=true` olarak uygular.
-
-Profil read modelinde:
-
-- `users.created_at` → `createdAt`
-- görünür kök post sayımı → `postCount`
-- hedef kullanıcının takipçi sayımı → `followerCount`
-- hedef kullanıcının takip ettiği hesap sayımı → `followingCount`
-- current user ile response kullanıcısı arasındaki follow ilişkisi → `isFollowedByCurrentUser`
-
-olarak eşlenir.
-
-`postCount`, `followerCount`, `followingCount` ve `isFollowedByCurrentUser` için ayrı persistence sütunu zorunlu değildir.
-
-## 16. Persistence enum tek kaynak kuralı
-
-Canonical string değerleri:
-
-### UserRole
-
-- `User`
-- `Moderator`
-
-### ReportTargetType
-
-- `Post`
-- `User`
-
-### ReportReason
-
-- `Spam`
-- `Harassment`
-- `HateSpeech`
-- `Violence`
-- `SexualContent`
-- `Impersonation`
-- `Other`
-
-### ReportStatus
-
-- `Pending`
-- `Resolved`
-- `Dismissed`
-
-### ModerationAction
-
-- `NoAction`
-- `RemovePost`
-
-Bu değerler API contract ile birebir aynıdır.
-
-Backend persistence enum/string dönüşümü bu değerlerden başka format üretmemelidir.
-
-Mobil serializer için de `docs/api-contract.md` tek kaynak olmaya devam eder.
-
-## 17. Migration gereksinimleri
-
-Güvenlik & Moderasyon migration'ı en az aşağıdaki şema değişikliklerini içermelidir:
-
-- `users.role`
-- mevcut `users.is_active` alanının korunması
-- `posts.is_hidden`
-- `user_blocks` tablosu
-- `reports` tablosu
-- `moderation_actions` tablosu
-- gerekli foreign key'ler
-- block composite unique/primary key
-- report target integrity constraint
-- duplicate pending report invariant'ını destekleyen index/constraint'ler
-- görünür post sorgularını destekleyen index'ler
-- moderation queue için `reports(status, created_at)` index'i
-- moderation audit için `moderation_actions(report_id)` index'i
-
-Migration mevcut `users`, `posts`, `follows` veya `likes` verilerini gereksiz yere yeniden oluşturmaz.
-
-Yeni non-null boolean alan için güvenli varsayılan:
-
-~~~text
-posts.is_hidden = false
-~~~
-
-Yeni kullanıcı rolü için güvenli başlangıç değeri:
-
-~~~text
-users.role = User
-~~~
-
-Moderator kullanıcı ataması seed/admin operasyonu tarafından açıkça yapılmalıdır.
-
-### 17.1 Sosyal Graf & Profil Tamamlama migration kararı
-
-Sosyal Graf & Profil Tamamlama fazı için yeni migration zorunlu değildir.
-
-Gerekli veriler mevcut alanlardan türetilir:
-
-- `users.created_at`
-- `posts.author_id`
-- `posts.parent_post_id`
-- `posts.deleted_at`
-- `posts.is_hidden`
-- `follows.follower_id`
-- `follows.following_id`
-- `follows.created_at`
-- `user_blocks.blocker_user_id`
-- `user_blocks.blocked_user_id`
-
-Yeni:
-
-- `post_count`
-- `follower_count`
-- `following_count`
-- `is_followed_by_current_user`
-- `profile_posts`
-- `social_graph`
-
-sütun veya tabloları bu MVP kapsamında oluşturulmaz.
-
-İleride performans nedeniyle denormalize sayaçlar eklenirse bunların transaction/tutarlılık stratejisi ayrı migration ve mimari karar gerektirir.
-
-## 18. Test doğrulamaları
-
-Backend persistence/integration testleri en az aşağıdakileri doğrulamalıdır:
-
-- `users.role` canonical değerleri
-- `users.is_active` davranışı
-- `posts.is_hidden` varsayılan `false`
-- block composite tekilliği
-- self-block iş kuralı
-- block sonrası follow temizliği
-- block görünürlük filtresi
-- report Post target bütünlüğü
-- report User target bütünlüğü
-- iki target'ın aynı anda dolmasının reddi
-- target bulunmadığında report oluşturulmaması
-- duplicate `Pending` report invariant'ı
-- canonical `ReportTargetType`
-- canonical `ReportReason`
-- canonical `ReportStatus`
-- canonical `ModerationAction`
-- moderator resolve `NoAction`
-- moderator resolve `RemovePost`
-- `RemovePost` sonrası `posts.is_hidden=true`
-- dismiss sonrası hedef kaynağın değişmemesi
-- ikinci resolve/dismiss state çakışmasının reddi
-- moderation audit kaydının oluşturulması
-- hidden/deleted postların feed, like ve reply sorgularından filtrelenmesi
-- `users.created_at` değerinin profile `createdAt` alanına kaynak olması
-- `postCount` hesabının yalnız görünür kök gönderileri sayması
-- `followerCount` hesabının `following_id` üzerinden doğru üretilmesi
-- `followingCount` hesabının `follower_id` üzerinden doğru üretilmesi
-- `isFollowedByCurrentUser` hesabının current-user follow ilişkisine göre üretilmesi
-- profil gönderilerinin yalnız hedef kullanıcıya ait görünür kök postları döndürmesi
-- profil gönderilerinin `created_at DESC, id DESC` sıralanması
-- followers sorgusunun `following_id = profile_user_id` kullanması
-- following sorgusunun `follower_id = profile_user_id` kullanması
-- sosyal graf listelerinde block nedeniyle görünmeyen kullanıcıların filtrelenmesi
-- mevcut profil için boş collection'ın hata olarak değerlendirilmemesi
-
-Persistence testlerindeki canonical enum değerleri `docs/api-contract.md` golden sample değerlerinden farklı casing kullanmamalıdır.
-
-## 19. Model özeti
-
-Güncel persistence modeli:
-
-~~~text
-users
-  role
-  is_active
-  created_at
-
-posts
-  author_id
-  parent_post_id
-  deleted_at
-  is_hidden
-
-follows
-  follower_id
-  following_id
-  created_at
-
-likes
-user_blocks
-reports
-moderation_actions
-~~~
-
-Güvenlik & Moderasyon kararları:
-
-- block ilişkisi yönlüdür,
-- block persistence tekildir,
-- block iki kullanıcı arasındaki mevcut follow ilişkilerini kaldırır,
-- report hedefi tam olarak `Post` veya `User` olur,
-- duplicate açık report oluşturulmaz,
-- moderator işlemleri audit edilir,
-- `NoAction` hedefi değiştirmez,
-- `RemovePost` `posts.is_hidden=true` uygular,
-- kullanıcı soft delete davranışı `deleted_at` ile ayrı tutulur,
-- canonical persistence enum değerleri API contract ile birebir aynıdır.
-
-Sosyal Graf & Profil Tamamlama kararları:
-
-- yeni sosyal graf tablosu yoktur,
-- yeni profil-post ilişki tablosu yoktur,
-- yeni sayaç sütunları zorunlu değildir,
-- `createdAt` kaynağı `users.created_at` değeridir,
-- `postCount` görünür kök postlardan türetilir,
-- `followerCount` mevcut `follows` tablosundan türetilir,
-- `followingCount` mevcut `follows` tablosundan türetilir,
-- `isFollowedByCurrentUser` mevcut follow ilişkisinden türetilir,
-- profil gönderileri mevcut `posts` tablosundan okunur,
-- followers/following mevcut `follows` tablosundan okunur,
-- sosyal graf görünürlüğü mevcut `user_blocks` modeliyle server-side filtrelenir.
-
-## 20. Sosyal Graf ve Profil read-model özeti
-
-Canonical kaynak eşlemesi:
-
-~~~text
-Profile
-  users
-  posts
-  follows
-  user_blocks
-
-Profile Posts
-  posts
-  users
-  user_blocks
-
-Followers
-  follows
-  users
-  user_blocks
-
-Following
-  follows
-  users
-  user_blocks
-~~~
-
-Profile read model:
-
-~~~text
-id
-username
-displayName
-bio
-avatarUrl
-createdAt
-postCount
-followerCount
-followingCount
-isFollowedByCurrentUser
-~~~
-
-bu alanları mevcut persistence modelinden üretir.
-
-Followers ve following liste öğeleri aynı persistence projection yaklaşımını kullanır:
-
-~~~text
-id
-username
-displayName
-avatarUrl
-isFollowedByCurrentUser
-~~~
-
-Bu alanlar yeni tablo veya kalıcı projection olarak zorunlu değildir.
-
-Backend sorguları:
-
-- canonical profile namespace ile hedef kullanıcıyı çözer,
-- block görünürlüğünü uygular,
-- yalnız gerekli projection alanlarını seçer,
-- collection sıralamasını deterministic tutar,
-- API katmanına canonical camelCase response modeli sağlar.
-
-Bu fazın persistence kararı mevcut ilişkisel modeli yeniden kullanmak ve ikinci bir sosyal graf veri kaynağı oluşturmamaktır.
+`docker-compose.yml` Infra Agent tarafından üretilir.
