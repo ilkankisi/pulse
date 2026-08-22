@@ -12,8 +12,13 @@ API wire-format kaynağı `docs/api-contract.md` dosyasıdır.
 - timestamp UTC
 - foreign key ile referential integrity
 - sosyal ilişkilerde duplicate engeli
+- retry/double-tap için idempotency invariant'ları
 - MinIO binary, PostgreSQL metadata
 - ownership backend tarafından doğrulanır
+
+Database kolon adları API JSON alan adları olmak zorunda değildir.
+
+Persistence `Text` alanı API canonical `content` alanına map edilir; wire-formatta `text` alanı oluşturulmaz.
 
 ## 2. Users
 
@@ -53,6 +58,7 @@ Kurallar:
 
 - self-follow yasak
 - duplicate aktif follow yasak
+- retry/double-tap ikinci aktif row üretmez
 
 ## 4. Posts
 
@@ -67,18 +73,24 @@ Alanlar:
 - `OriginalPostId`: nullable FK → `Posts.Id`
 - `CreatedAt`: UTC timestamp
 
-`Kind`:
+`Text` persistence alanı API canonical `content` alanına map edilir.
+
+Maksimum post içeriği 280 karakterdir.
+
+`Kind` canonical değerleri:
 
 - `Post`
 - `Repost`
 - `Quote`
 
-Normal Post:
+### Normal Post
 
+- `Kind = Post`
 - `OriginalPostId = null`
 
-Repost:
+### Repost
 
+- `Kind = Repost`
 - `OriginalPostId` required
 - aynı author + original post için tek aktif repost
 
@@ -86,12 +98,16 @@ Database invariant:
 
 `Kind = Repost` kayıtlarında `(AuthorId, OriginalPostId)` unique olmalıdır.
 
-Quote:
+Bu kural retry/double-tap sonucunda duplicate aktif repost oluşmasını engeller.
 
+### Quote
+
+- `Kind = Quote`
 - `OriginalPostId` required
-- `Text` quote sahibinin içeriğidir
-
-Text maksimum uzunluğu API canonical kontratındaki 280 karakter kuralıyla uyumludur.
+- `Text` quote sahibinin içeriğidir ve API'de `content` olarak yayınlanır
+- Quote ayrı Post resource create işlemidir
+- aynı author aynı original postu birden fazla ayrı quote ile paylaşabilir
+- Repost `(AuthorId, OriginalPostId)` uniqueness kuralı Quote kayıtlarına uygulanmaz
 
 ## 5. Replies
 
@@ -102,10 +118,14 @@ Alanlar:
 - `Id`: integer, PK
 - `PostId`: FK → `Posts.Id`
 - `AuthorId`: FK → `Users.Id`
-- `Text`: string
+- `Text`: string, required
 - `CreatedAt`: UTC timestamp
 
-Tek seviyeli reply kullanılır; reply-to-reply parent alanı yoktur.
+`Replies.Text` API canonical `content` alanına map edilir.
+
+Tek seviyeli reply kullanılır.
+
+Reply-to-reply parent ilişkisi bu fazda yoktur.
 
 ## 6. PostLikes
 
@@ -139,8 +159,9 @@ Unique:
 
 Kurallar:
 
-- kullanıcıya özeldir
+- bookmark kullanıcıya özeldir
 - duplicate aktif bookmark yoktur
+- retry/double-tap ikinci aktif bookmark oluşturmaz
 - başka kullanıcı bookmark'ı silinemez
 
 ## 8. Notifications
@@ -152,9 +173,10 @@ Alanlar:
 - `Id`: integer, PK
 - `RecipientUserId`: FK → `Users.Id`
 - `ActorUserId`: FK → `Users.Id`
-- `Type`: string
+- `Type`: string, required
 - `PostId`: nullable FK → `Posts.Id`
-- `IsRead`: boolean, default false
+- `SourceKey`: string, required
+- `IsRead`: boolean, required, default false
 - `CreatedAt`: UTC timestamp
 
 Canonical `Type`:
@@ -169,17 +191,26 @@ Index:
 - `(RecipientUserId, CreatedAt)`
 - `(RecipientUserId, IsRead)`
 
-Duplicate prevention:
+Stable source identity örnekleri:
 
-Aynı source interaction aynı recipient için tekrar işlendiğinde ikinci notification üretilmez.
+- Like: `like:{postId}:{actorUserId}`
+- Follow: `follow:{actorUserId}:{recipientUserId}`
+- Reply: `reply:{replyId}`
+- Mention: `mention:{postId}:{mentionedUserId}`
 
-Mention source identity için:
+Unique invariant:
 
-`(RecipientUserId, ActorUserId, PostId, Type)`
+`(RecipientUserId, Type, SourceKey)` unique.
 
-kombinasyonu duplicate Mention notification'ı engellemelidir.
+Bu invariant:
 
-Read-state update yeni notification oluşturmaz.
+- aynı source event retry edildiğinde duplicate notification oluşmasını engeller
+- aynı post için farklı reply kaynaklarının ayrı Reply notification üretmesine izin verir
+- duplicate mention event'inin ikinci Mention notification üretmesini engeller
+
+Read/unread state update aynı notification satırını değiştirir.
+
+Read/unread update yeni notification oluşturmaz.
 
 ## 9. Hashtags
 
@@ -206,7 +237,11 @@ Unique:
 
 `(PostId, HashtagId)`
 
-Hashtag modeli trend skoru içermez.
+Kurallar:
+
+- aynı post/tag duplicate relation oluşturmaz
+- hashtag modeli trend skoru içermez
+- popularity/ranking state'i tutulmaz
 
 ## 10. PostMentions
 
@@ -223,9 +258,10 @@ Unique:
 
 Kurallar:
 
-- geçersiz username için kayıt yok
-- aynı postta aynı kullanıcı tekrar mention edilse tek kayıt
-- geçerli recipient author'dan farklıysa tek Mention notification üretilebilir
+- geçersiz/bulunmayan username için kayıt yok
+- aynı postta aynı kullanıcı tekrar mention edilse tek relation vardır
+- geçerli recipient author'dan farklıysa Mention notification üretilir
+- notification duplicate engeli `Notifications.SourceKey` invariant'ıyla birlikte uygulanır
 
 ## 11. PostMedia
 
@@ -243,7 +279,7 @@ Alanlar:
 - `Height`: nullable integer
 - `CreatedAt`: UTC timestamp
 
-`MediaType`:
+Canonical `MediaType`:
 
 - `Image`
 - `Video`
@@ -255,10 +291,13 @@ Unique:
 Kurallar:
 
 - binary MinIO'dadır
-- PostgreSQL yalnız metadata tutar
-- upload authenticated user'a aittir
-- başka kullanıcının media id'si bağlanamaz
+- PostgreSQL yalnız metadata ve ilişki tutar
+- upload authenticated `OwnerUserId` kullanıcısına aittir
+- başka kullanıcının media id'si post/quote içine bağlanamaz
+- `ObjectKey` aynı MinIO object'in duplicate metadata kaydını engeller
 - storage credential API response'unda açığa çıkarılmaz
+
+Tek görselli postta bir `PostMedia` kaydı ilgili `PostId` ile bağlanır ve API `media[]` alanında yayınlanır.
 
 ## 12. Blocks
 
@@ -274,9 +313,12 @@ Unique:
 
 `(BlockerUserId, BlockedUserId)`
 
-Self-block yasaktır.
+Kurallar:
 
-Block feed/profile sosyal görünürlüğüne backend tarafından uygulanır.
+- self-block yasak
+- duplicate aktif block yasak
+- retry/double-tap ikinci aktif row üretmez
+- block feed/profile sosyal görünürlüğüne backend tarafından uygulanır
 
 ## 13. Reports
 
@@ -293,23 +335,32 @@ Alanlar:
 - `CreatedAt`: UTC timestamp
 - `ResolvedAt`: nullable UTC timestamp
 
-Report reason/status wire token'ları yalnız `docs/api-contract.md` tarafından belirlenir.
+Canonical report reason/status wire token'ları yalnız `docs/api-contract.md` tarafından belirlenir.
+
+Database katmanı alternatif public enum string üretmez.
 
 ## 14. Türetilmiş PostResponse alanları
 
+API `PostResponse` alanlarının veri kaynakları:
+
+- `id` → `Posts.Id`
+- `content` → `Posts.Text`
+- `author` → `Users`
 - `likeCount` → `PostLikes`
 - `replyCount` → `Replies`
-- `repostCount` → `Posts` where `Kind = Repost`
-- `isLiked` → current user + `PostLikes`
+- `repostCount` → `Posts` where `Kind = Repost` ve ilgili `OriginalPostId`
+- `isLikedByMe` → current user + `PostLikes`
 - `isBookmarked` → current user + `Bookmarks`
-- `originalPost` → `OriginalPostId`
+- `parentPostId` → reply/post ilişkisindeki parent bilgi
+- `kind` → `Posts.Kind`
+- `originalPost` → `Posts.OriginalPostId`
 - `media` → `PostMedia`
 
-Physical counter eklenmesi ayrı performans kararıdır ve API kontratını değiştirmez.
+Physical counter kolonları eklenmesi ayrı performans kararıdır ve API kontratını değiştirmez.
 
 ## 15. Referential integrity
 
-Post/account deletion sırasında en az:
+Post/account deletion sırasında en az şu ilişkiler değerlendirilir:
 
 - follows
 - likes
@@ -321,13 +372,14 @@ Post/account deletion sırasında en az:
 - media
 - blocks
 - reports
-- repost/quote references
-
-değerlendirilir.
+- repost references
+- quote references
 
 Cascade yalnız business semantics ile uyumluysa kullanılır.
 
 Ownership kontrolü backend için zorunludur.
+
+Başka kullanıcıya ait relation veya resource yanlışlıkla silinemez.
 
 ## 16. Index ve uniqueness özeti
 
@@ -339,8 +391,10 @@ Ownership kontrolü backend için zorunludur.
 | Like | `(PostId, UserId)` unique |
 | Bookmark | `(UserId, PostId)` unique |
 | Repost | `Kind=Repost` için `(AuthorId, OriginalPostId)` unique |
+| Quote | ayrı Post resource; repost unique constraint'i uygulanmaz |
 | PostHashtag | `(PostId, HashtagId)` unique |
 | Mention | `(PostId, MentionedUserId)` unique |
+| Notification source | `(RecipientUserId, Type, SourceKey)` unique |
 | Block | `(BlockerUserId, BlockedUserId)` unique |
 | Media object | `ObjectKey` unique |
 
@@ -351,10 +405,11 @@ Ek index:
 - `Replies(PostId, CreatedAt)`
 - `Bookmarks(UserId, CreatedAt)`
 - `Notifications(RecipientUserId, CreatedAt)`
+- `Notifications(RecipientUserId, IsRead)`
 
 ## 17. Idempotency invariant'ları
 
-Create retry veya kullanıcı double-tap davranışı aşağıdaki ilişkilerde duplicate aktif kayıt üretmemelidir:
+Create retry veya kullanıcı double-tap davranışı aşağıdaki toggle/relationship kaynaklarında duplicate aktif kayıt üretmemelidir:
 
 - Follow
 - Like
@@ -371,6 +426,16 @@ Mention aynı post içinde tekrarlandığında:
 
 oluşur.
 
+Notification retry güvenliği stable `SourceKey` ve `(RecipientUserId, Type, SourceKey)` uniqueness ile sağlanır.
+
+`IsRead` true→false veya false→true update aynı notification satırını değiştirir; yeni row oluşturmaz.
+
+Quote toggle değildir.
+
+Her başarılı quote create yeni `Posts.Id` üreten ayrı Post resource'dur.
+
+Bu nedenle aynı author/original çiftinin birden fazla ayrı quote resource oluşturması geçerlidir.
+
 ## 18. Altyapı
 
 PostgreSQL:
@@ -384,6 +449,21 @@ MinIO:
 
 Redis:
 
-- bu fazda zorunlu değil
+- bu faz için zorunlu değildir
 
 `docker-compose.yml` Infra Agent tarafından üretilir.
+
+Architect yalnız servis gereksinimini tanımlar.
+
+## 19. Acceptance veri modeli kanıtı
+
+Canonical veri modeli aşağıdaki Sosyal Etkileşim Fazı acceptance maddelerini karşılar:
+
+- repost: `Posts.Kind + OriginalPostId` ve filtered uniqueness
+- quote: `Posts.Kind + OriginalPostId`, ayrı resource create
+- bookmark: `(UserId, PostId)` unique
+- notifications: canonical type + persistent read state + stable source idempotency
+- mention: yalnız valid user FK relation, duplicate relation engeli
+- hashtag: normalized tag ve unique post/tag relation, trend state yok
+- media: owner + post relation + unique object key + MinIO binary
+- text-only backward compatibility: persistence `Text` → API `content`, maksimum 280 karakter

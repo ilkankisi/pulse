@@ -19,29 +19,33 @@ Kimlikler integer'dır.
 
 Tarih/zaman UTC ISO 8601'dir.
 
-Standart hata:
+Standart hata gövdesi:
 
 {"error":"message"}
+
+HTTP status kodu endpoint bölümünde aksi belirtilmedikçe gövdenin anlamını belirler.
 
 2. Health
 
 GET /health
 
-Auth: anonim
+Auth: anonim.
 
 Başarı: 200
 
 {"status":"ok"}
 
-Orchestrator workspace sağlık kontrolü bu endpoint'e bağlıdır.
+Bu endpoint /api/v1 CRUD kaynaklarından ayrıdır.
+
+Orchestrator workspace sağlık kontrolü doğrudan GET /health endpoint'ine bağlıdır.
 
 3. Auth
 
 POST /api/v1/auth/register
 
-Auth: anonim
+Auth: anonim.
 
-Request:
+Request alanları:
 
 username: string, required
 
@@ -61,9 +65,9 @@ Golden response:
 
 POST /api/v1/auth/login
 
-Auth: anonim
+Auth: anonim.
 
-Request:
+Request alanları:
 
 email: string, required
 
@@ -79,19 +83,25 @@ Golden response:
 
 {"userId":1,"username":"ada","email":"ada@example.com","accessToken":"<jwt>"}
 
-Development JWT:
+Development JWT gereksinimleri:
 
-Jwt:Key ≥32 byte
+appsettings.Development.json içinde Jwt:Key
+
+Jwt:Key en az 32 byte
 
 Jwt:Issuer
 
 Jwt:Audience
 
-Production secret repository'de tutulmaz.
+Orchestrator backend'i ASPNETCORE_ENVIRONMENT=Development ile başlattığından development JWT configuration hazır olmalıdır.
 
-4. Shared PostResponse
+Production'da Jwt:Key repository içinde tutulmaz; environment variable veya secret store zorunludur.
 
-PostKind:
+4. Paylaşılan tipler
+
+PostKind
+
+Canonical string değerleri:
 
 Post
 
@@ -99,13 +109,29 @@ Repost
 
 Quote
 
-MediaType:
+MediaType
+
+Canonical string değerleri:
 
 Image
 
 Video
 
-PostMediaResponse:
+AuthorResponse
+
+Alanlar:
+
+id: integer
+
+username: string
+
+displayName: string
+
+avatarUrl: string|null
+
+PostMediaResponse
+
+Alanlar:
 
 id: integer
 
@@ -119,17 +145,17 @@ width: integer|null
 
 height: integer|null
 
-PostResponse:
+PostResponse
+
+Alanlar:
 
 id: integer
 
-authorId: integer
-
-authorUsername: string
-
-text: string
+content: string
 
 createdAt: string
+
+author: AuthorResponse
 
 likeCount: integer
 
@@ -137,9 +163,11 @@ replyCount: integer
 
 repostCount: integer
 
-isLiked: boolean
+isLikedByMe: boolean
 
 isBookmarked: boolean
+
+parentPostId: integer|null
 
 kind: Post | Repost | Quote
 
@@ -147,29 +175,52 @@ originalPost: PostResponse | null
 
 media: PostMediaResponse[]
 
+Backward compatibility kuralı:
+
+Sosyal Etkileşim Fazı mevcut /api/v1 post DTO alanlarını yeniden adlandırmaz.
+
+Gönderi metninin canonical wire alanı yalnızca content'tir.
+
+Aşağıdaki alternatifler geçersizdir:
+
+text
+
+title
+
+description
+
+body
+
 Normal post golden response:
 
 {
   "id":10,
-  "authorId":1,
-  "authorUsername":"ada",
-  "text":"Merhaba Pulse",
+  "content":"Merhaba Pulse",
   "createdAt":"2026-08-18T20:00:00Z",
+  "author":{
+    "id":1,
+    "username":"ada",
+    "displayName":"Ada",
+    "avatarUrl":null
+  },
   "likeCount":2,
   "replyCount":1,
   "repostCount":0,
-  "isLiked":false,
+  "isLikedByMe":false,
   "isBookmarked":false,
+  "parentPostId":null,
   "kind":"Post",
   "originalPost":null,
   "media":[]
 }
 
+Feed ve Post Detail aynı PostResponse shape'ini kullanır.
+
 5. Feed
 
 GET /api/v1/feed
 
-Auth: Bearer
+Auth: Bearer.
 
 Query:
 
@@ -179,7 +230,7 @@ limit: integer, optional
 
 Başarı: 200
 
-Response:
+Response alanları:
 
 items: PostResponse[]
 
@@ -191,15 +242,20 @@ Golden response:
   "items":[
     {
       "id":10,
-      "authorId":1,
-      "authorUsername":"ada",
-      "text":"Merhaba Pulse",
+      "content":"Merhaba Pulse",
       "createdAt":"2026-08-18T20:00:00Z",
+      "author":{
+        "id":1,
+        "username":"ada",
+        "displayName":"Ada",
+        "avatarUrl":null
+      },
       "likeCount":2,
       "replyCount":1,
       "repostCount":0,
-      "isLiked":false,
+      "isLikedByMe":false,
       "isBookmarked":false,
+      "parentPostId":null,
       "kind":"Post",
       "originalPost":null,
       "media":[]
@@ -208,125 +264,150 @@ Golden response:
   "nextCursor":null
 }
 
-Empty:
+Empty golden response:
 
 {"items":[],"nextCursor":null}
 
-Feed empty durumunda 404 kullanılmaz.
+Feed boşken 404 kullanılmaz.
 
-Feed kronolojiktir; trend/For You sıralaması yoktur.
+Feed kronolojiktir. Algoritmik “For You”, trend skoru veya trend sıralaması bu fazda yoktur.
 
 6. Post detail
 
 GET /api/v1/posts/{postId}
 
-Auth: Bearer
+Auth: Bearer.
 
-Başarı: 200, tam PostResponse.
+Başarı: 200
+
+Response: tam PostResponse.
 
 Golden response:
 
 {
   "id":10,
-  "authorId":1,
-  "authorUsername":"ada",
-  "text":"Merhaba Pulse",
+  "content":"Merhaba Pulse",
   "createdAt":"2026-08-18T20:00:00Z",
+  "author":{
+    "id":1,
+    "username":"ada",
+    "displayName":"Ada",
+    "avatarUrl":null
+  },
   "likeCount":2,
   "replyCount":1,
   "repostCount":0,
-  "isLiked":false,
+  "isLikedByMe":false,
   "isBookmarked":false,
+  "parentPostId":null,
   "kind":"Post",
   "originalPost":null,
   "media":[]
 }
 
-Bulunamazsa 404; bu empty collection değildir.
+Post bulunamazsa 404.
 
-7. Post create
+Bu 404 collection empty-state değildir.
+
+7. Post oluşturma
 
 POST /api/v1/posts
 
-Auth: Bearer
+Auth: Bearer.
 
-Create gövdesinde kimlik yoktur.
+Create gövdesinde resource kimliği bulunmaz.
 
-Request:
+Request alanları:
 
-text: string, required, maksimum 280 karakter
+content: string, required, maksimum 280 karakter
 
-mediaIds: integer[], required; text-only için boş olabilir
+mediaIds: integer[], optional
 
-Golden text-only request:
+Mevcut text-only golden request:
 
-{"text":"İlk gönderim","mediaIds":[]}
+{"content":"İlk gönderim"}
 
-Golden media request:
+Bu request backward-compatible kalır.
 
-{"text":"Merhaba #pulse @ada","mediaIds":[12]}
+Media alanı kullanmayan istemcinin mediaIds göndermesi zorunlu değildir.
 
-Başarı: 201, PostResponse.
+Media post golden request:
 
-Text-only post geriye uyumludur. Media, mention, hashtag, repost veya quote zorunlu değildir.
+{"content":"Merhaba #pulse @ada","mediaIds":[12]}
 
-8. Delete post
+Başarı: 201
+
+Response: PostResponse.
+
+content 280 karakteri aşarsa validation error döner.
+
+Media, mention, hashtag, repost veya quote normal text-only post oluşturmak için zorunlu değildir.
+
+8. Post silme
 
 DELETE /api/v1/posts/{postId}
 
-Auth: Bearer
+Auth: Bearer.
 
-Yalnız owner silebilir.
+Yalnız resource owner silebilir.
 
-Başarı: 204.
+Başarı: 204
 
-Bulunamazsa 404.
+Post bulunamazsa 404.
 
 9. Replies
 
 GET /api/v1/posts/{postId}/replies
 
-Auth: Bearer
+Auth: Bearer.
 
 Başarı: 200
 
-{"items":[],"nextCursor":null}
+Response:
 
-Empty collection 200 döner.
+items: PostResponse[]
+
+nextCursor: string|null
+
+Empty golden response:
+
+{"items":[],"nextCursor":null}
 
 POST /api/v1/posts/{postId}/replies
 
-Auth: Bearer
+Auth: Bearer.
 
 Request:
 
-text: string, required
+content: string, required, maksimum 280 karakter
 
 Golden request:
 
-{"text":"Katılıyorum"}
+{"content":"Katılıyorum"}
 
-Başarı: 201.
+Başarı: 201
 
-Reply nesting bu fazda yoktur.
+Reply response canonical post/reply DTO shape'ini kullanır.
+
+Bu fazda reply-to-reply nesting yoktur.
 
 10. Likes
 
 POST /api/v1/posts/{postId}/likes
 
-Auth: Bearer
+Auth: Bearer.
 
-Body yok.
+Request body yoktur.
 
-Başarı: 204.
+Başarı: 204
 
-Aynı user + post duplicate aktif like üretmez.
+Aynı user + post için duplicate aktif like oluşturulamaz.
 
 DELETE /api/v1/posts/{postId}/likes
 
-Auth: Bearer
+Auth: Bearer.
 
-Başarı: 204.
+Başarı: 204
 
 İlişki yoksa 404.
 
@@ -334,9 +415,9 @@ Başarı: 204.
 
 POST /api/v1/posts/{postId}/reposts
 
-Auth: Bearer
+Auth: Bearer.
 
-Body yok.
+Request body yoktur.
 
 Golden request:
 
@@ -344,33 +425,43 @@ POST /api/v1/posts/10/reposts
 Authorization: Bearer <token>
 <empty body>
 
-Başarı: 201.
+Başarı: 201
 
 Golden response:
 
 {
   "id":50,
-  "authorId":7,
-  "authorUsername":"ilkan",
-  "text":"",
+  "content":"",
   "createdAt":"2026-08-19T00:00:00Z",
+  "author":{
+    "id":7,
+    "username":"ilkan",
+    "displayName":"İlkan",
+    "avatarUrl":null
+  },
   "likeCount":0,
   "replyCount":0,
   "repostCount":0,
-  "isLiked":false,
+  "isLikedByMe":false,
   "isBookmarked":false,
+  "parentPostId":null,
   "kind":"Repost",
   "originalPost":{
     "id":10,
-    "authorId":1,
-    "authorUsername":"ada",
-    "text":"Merhaba",
+    "content":"Merhaba",
     "createdAt":"2026-08-18T20:00:00Z",
+    "author":{
+      "id":1,
+      "username":"ada",
+      "displayName":"Ada",
+      "avatarUrl":null
+    },
     "likeCount":2,
     "replyCount":1,
     "repostCount":1,
-    "isLiked":false,
+    "isLikedByMe":false,
     "isBookmarked":false,
+    "parentPostId":null,
     "kind":"Post",
     "originalPost":null,
     "media":[]
@@ -382,55 +473,67 @@ Aynı current user + postId için ikinci aktif repost oluşturulamaz.
 
 DELETE /api/v1/posts/{postId}/reposts
 
-Auth: Bearer
+Auth: Bearer.
 
-Başarı: 204.
+Request body yoktur.
+
+Başarı: 204
 
 İlişki yoksa 404.
 
-12. Quote
+12. Quote post
 
 POST /api/v1/posts/{postId}/quotes
 
-Auth: Bearer
+Auth: Bearer.
 
-Request:
+Request alanları:
 
-text: string, required, maksimum 280 karakter
+content: string, required, maksimum 280 karakter
 
-mediaIds: integer[], required
+mediaIds: integer[], optional
 
 Golden request:
 
-{"text":"Buna katılıyorum","mediaIds":[]}
+{"content":"Buna katılıyorum"}
 
-Başarı: 201.
+Başarı: 201
 
 Golden response:
 
 {
   "id":51,
-  "authorId":7,
-  "authorUsername":"ilkan",
-  "text":"Buna katılıyorum",
+  "content":"Buna katılıyorum",
   "createdAt":"2026-08-19T00:05:00Z",
+  "author":{
+    "id":7,
+    "username":"ilkan",
+    "displayName":"İlkan",
+    "avatarUrl":null
+  },
   "likeCount":0,
   "replyCount":0,
   "repostCount":0,
-  "isLiked":false,
+  "isLikedByMe":false,
   "isBookmarked":false,
+  "parentPostId":null,
   "kind":"Quote",
   "originalPost":{
     "id":10,
-    "authorId":1,
-    "authorUsername":"ada",
-    "text":"Merhaba",
+    "content":"Merhaba",
     "createdAt":"2026-08-18T20:00:00Z",
+    "author":{
+      "id":1,
+      "username":"ada",
+      "displayName":"Ada",
+      "avatarUrl":null
+    },
     "likeCount":2,
     "replyCount":1,
     "repostCount":1,
-    "isLiked":false,
+    "isLikedByMe":false,
     "isBookmarked":false,
+    "parentPostId":null,
     "kind":"Post",
     "originalPost":null,
     "media":[]
@@ -438,29 +541,31 @@ Golden response:
   "media":[]
 }
 
-13. Bookmark
+Quote yeni bir Post resource'dur; repost toggle ilişkisi değildir.
+
+13. Bookmark / Kaydedilenler
 
 POST /api/v1/posts/{postId}/bookmarks
 
-Auth: Bearer
+Auth: Bearer.
 
-Body yok.
+Request body yoktur.
 
-Başarı: 204.
+Başarı: 204
 
-Aynı user + post duplicate bookmark üretmez.
+Aynı user + post için duplicate aktif bookmark oluşturulamaz.
 
 DELETE /api/v1/posts/{postId}/bookmarks
 
-Auth: Bearer
+Auth: Bearer.
 
-Başarı: 204.
+Başarı: 204
 
 İlişki yoksa 404.
 
 GET /api/v1/bookmarks
 
-Auth: Bearer
+Auth: Bearer.
 
 Query:
 
@@ -468,17 +573,25 @@ cursor: string, optional
 
 limit: integer, optional
 
-Response:
+Başarı: 200
+
+Response alanları:
+
+items: PostResponse[]
+
+nextCursor: string|null
+
+Golden response:
 
 {"items":[],"nextCursor":null}
 
-items: PostResponse[].
-
-Empty: 200 + boş items.
+Boş liste 200 + boş items döndürür.
 
 14. Notifications
 
-NotificationType canonical string değerleri yalnızca:
+NotificationType
+
+Canonical string değerleri yalnızca:
 
 Like
 
@@ -488,11 +601,15 @@ Follow
 
 Mention
 
-NotificationResponse:
+Alternatif casing veya token geçersizdir.
+
+NotificationResponse
+
+Alanlar:
 
 id: integer
 
-type: NotificationType
+type: Like | Reply | Follow | Mention
 
 actorUserId: integer
 
@@ -506,7 +623,15 @@ createdAt: string
 
 GET /api/v1/notifications
 
-Auth: Bearer
+Auth: Bearer.
+
+Query:
+
+cursor: string, optional
+
+limit: integer, optional
+
+Başarı: 200
 
 Golden response:
 
@@ -525,17 +650,25 @@ Golden response:
   "nextCursor":null
 }
 
-Empty: 200 + boş items.
+Empty:
+
+{"items":[],"nextCursor":null}
 
 PUT /api/v1/notifications/{notificationId}/read
 
-Auth: Bearer
+Auth: Bearer.
 
-Request:
+Read request:
 
 {"isRead":true}
 
-Başarı:
+Unread request:
+
+{"isRead":false}
+
+Başarı: 200
+
+Golden response:
 
 {
   "id":41,
@@ -547,37 +680,41 @@ Başarı:
   "createdAt":"2026-08-19T00:10:00Z"
 }
 
-Bulunamazsa veya current user'a ait değilse 404.
+Notification bulunamazsa veya current user'a ait değilse 404.
+
+Read/unread update aynı notification resource'unu değiştirir; yeni notification oluşturmaz.
 
 15. Mention
 
 Mention ayrı create endpoint değildir.
 
-Post/quote text içindeki @username backend tarafından çözülür.
+Post ve quote content alanındaki @username backend tarafından çözümlenir.
 
 Kesin davranış:
 
-mevcut username → mention relation
+username mevcutsa mention relation oluşturulur
 
-recipient author'dan farklıysa → Mention notification
+mention edilen kullanıcı author'dan farklıysa Mention notification üretilir
 
-aynı postta aynı recipient tekrar mention edilirse → tek relation + tek notification
+aynı post içinde aynı recipient birden fazla kez mention edilirse tek relation ve tek notification oluşur
 
-bulunmayan username → notification yok
+bulunmayan/geçersiz username notification üretmez
 
-Golden text:
+Golden request:
 
-{"text":"Merhaba @ada","mediaIds":[]}
+{"content":"Merhaba @ada"}
+
+Mention seçimi istemcide ilgili Profile ekranına yönlenir; bu presentation davranışıdır ve wire alanını değiştirmez.
 
 16. Hashtag
 
 Hashtag ayrı create endpoint değildir.
 
-Post/quote text içindeki #tag normalize edilir.
+Post ve quote content alanındaki #tag backend tarafından normalize edilir.
 
 GET /api/v1/hashtags/{tag}/posts
 
-Auth: Bearer
+Auth: Bearer.
 
 Query:
 
@@ -585,25 +722,43 @@ cursor: string, optional
 
 limit: integer, optional
 
+Başarı: 200
+
 Golden response:
 
 {"tag":"flutter","items":[],"nextCursor":null}
 
-items: PostResponse[].
+Response:
 
-Empty: 200.
+tag: string
 
-Hashtag özelliğinde trend endpoint'i, trend skoru veya popularity-based sıralama yoktur.
+items: PostResponse[]
+
+nextCursor: string|null
+
+Boş hashtag sonucu 200 + boş items döndürür.
+
+Hashtag özelliği yalnız ilgili normalize tag'e bağlı gönderileri listeler.
+
+Bu fazda:
+
+trend endpoint'i yoktur
+
+trend skoru yoktur
+
+trend/ranking listesi yoktur
+
+popularity-based hashtag sıralaması yoktur
 
 17. Media
 
 POST /api/v1/media
 
-Auth: Bearer
+Auth: Bearer.
 
 Content-Type: multipart/form-data
 
-Alan:
+Request alanı:
 
 file: binary, required
 
@@ -615,11 +770,13 @@ Content-Type: multipart/form-data
 
 file=<binary>
 
-Desteklenen media enum:
+Desteklenen MediaType değerleri:
 
 Image
 
 Video
+
+Başarı: 201
 
 Image golden response:
 
@@ -629,81 +786,123 @@ Video golden response:
 
 {"id":13,"url":"http://127.0.0.1:5000/api/v1/media/13/content","mediaType":"Video","contentType":"video/mp4","width":1920,"height":1080}
 
-Başarı: 201.
+Media current user'a aittir.
 
-Media current user'a aittir. Başka kullanıcıya ait mediaIds post/quote create içinde kabul edilmez.
+Başka kullanıcıya ait media id POST /api/v1/posts veya quote create içinde kullanılamaz.
 
 Binary MinIO'da, metadata PostgreSQL'de tutulur.
+
+Tek görselli post golden akışı
+
+POST /api/v1/media başarılı olur ve media id = 12 döner.
+
+Mobile bu id'yi post create gövdesinde kullanır:
+
+{"content":"Görselli gönderi","mediaIds":[12]}
+
+POST /api/v1/posts → 201
+
+{
+  "id":52,
+  "content":"Görselli gönderi",
+  "createdAt":"2026-08-19T00:15:00Z",
+  "author":{
+    "id":7,
+    "username":"ilkan",
+    "displayName":"İlkan",
+    "avatarUrl":null
+  },
+  "likeCount":0,
+  "replyCount":0,
+  "repostCount":0,
+  "isLikedByMe":false,
+  "isBookmarked":false,
+  "parentPostId":null,
+  "kind":"Post",
+  "originalPost":null,
+  "media":[
+    {
+      "id":12,
+      "url":"http://127.0.0.1:5000/api/v1/media/12/content",
+      "mediaType":"Image",
+      "contentType":"image/jpeg",
+      "width":1200,
+      "height":800
+    }
+  ]
+}
+
+Bu akış Sosyal Etkileşim Fazı için en az tek görselli post acceptance örneğidir.
 
 18. Follow
 
 POST /api/v1/profiles/{username}/follow
 
-Auth: Bearer
+Auth: Bearer.
 
-Body yok.
+Request body yoktur.
 
-Başarı: 204.
+Başarı: 204
 
 Duplicate aktif follow oluşturulamaz.
 
 DELETE /api/v1/profiles/{username}/follow
 
-Auth: Bearer
+Auth: Bearer.
 
-Başarı: 204.
+Başarı: 204
 
 19. Followers removal
 
 DELETE /api/v1/profiles/{username}/followers/{followerId}
 
-Auth: Bearer
+Auth: Bearer.
 
 Profile owner yetkisi gerekir.
 
-Başarı: 204.
+Başarı: 204
 
-20. HTTP semantics
+20. HTTP semantiği
 
 Create:
 
 POST
 
-create body içinde resource id yok
+create request body içinde resource id bulunmaz
 
 Update:
 
 PUT
 
-notification read state örneği yukarıda tanımlıdır
+notification read/unread state bu semantiği kullanır
 
 Read:
 
 collection boşsa 200 + boş items
 
-tekil resource yoksa 404
+tekil resource bulunamazsa 404
 
 Delete:
 
 başarı 204
 
-kontratta tanımlanan bulunamama durumları 404
+kontratta belirtilen bulunamama durumları 404
 
 Auth:
 
-401 → session/auth error
+401 auth/session error
 
 Mobile Login akışına döner
 
 Server failure:
 
-5xx → error state
+5xx error state
 
 empty state değildir
 
-21. Mobile state contract
+21. Mobile / Design state kontratı
 
-Zorunlu state'ler:
+Canonical API davranışından türeyen zorunlu state'ler:
 
 Feed: loading / empty / error / success
 
@@ -717,13 +916,25 @@ Hashtag Posts: loading / empty / error / success
 
 Composer/Media: idle / uploading / upload-error / ready / submitting / submit-error
 
-Feed/Profile/Kaydedilenler/Hashtag yüzeyleri aynı PostResponse alanlarını kullanır.
+HTTP eşlemesi:
 
-Repost ve Quote için original içerik originalPost üzerinden parse edilir.
+collection 200 + items: [] → empty
+
+tekil resource 404 → not-found
+
+401 → Login
+
+5xx → error
+
+Feed, Profile, Kaydedilenler ve Hashtag Posts aynı PostResponse alanlarını kullanır.
+
+kind = Repost ve kind = Quote için original içerik originalPost üzerinden parse edilir.
+
+Media post media alanından parse edilir.
 
 22. CORS
 
-Flutter Web:
+Flutter Web origin:
 
 http://127.0.0.1:8080
 
@@ -735,19 +946,27 @@ Backend:
 
 CORS sağlar
 
-OPTIONS destekler
+preflight OPTIONS destekler
 
 Authorization header'a izin verir
 
 Content-Type header'a izin verir
 
+gerekli REST metotlarına izin verir
+
 23. Golden sample governance
 
-Backend integration testlerindeki PostAsJsonAsync / PutAsJsonAsync gövdeleri bu dokümandaki kesin alan adlarıyla eşleşmelidir.
+Backend integration testlerindeki PostAsJsonAsync ve PutAsJsonAsync gövdeleri bu dokümandaki kesin camelCase alan adlarıyla eşleşmelidir.
 
-Mobile kontratta bulunmayan alternatif adlar kullanamaz.
+Mobile canonical kontratta bulunmayan alternatif alan adlarını kullanamaz.
 
-Örneğin kontratta text varsa aşağıdakiler geçersizdir:
+Gönderi metninin tek canonical JSON alanı:
+
+content
+
+Geçersiz alternatifler:
+
+text
 
 title
 
@@ -755,4 +974,31 @@ description
 
 body
 
-Canonical doküman Backend veya Mobile uygulama görevi içinde değiştirilmez.
+Canonical docs/api-contract.md Backend veya Mobile uygulama görevi kapsamında patch edilmez.
+
+Kontrat değişikliği ayrı Architect görevidir.
+
+24. Acceptance doğrulama matrisi
+
+Sosyal Etkileşim Fazı canonical kanıtları:
+
+DavranışCanonical kanıt
+Text-only postPOST /api/v1/posts, {"content":"..."}, maksimum 280 karakter
+Feed DTOGET /api/v1/feed → PostResponse[]
+Post-detail DTOGET /api/v1/posts/{postId} → PostResponse
+Repost createPOST /api/v1/posts/{postId}/reposts, empty body, 201
+Repost removeDELETE /api/v1/posts/{postId}/reposts, 204
+QuotePOST /api/v1/posts/{postId}/quotes, content, 201
+Bookmark savePOST /api/v1/posts/{postId}/bookmarks
+Bookmark removeDELETE /api/v1/posts/{postId}/bookmarks
+Bookmark listGET /api/v1/bookmarks
+NotificationsGET /api/v1/notifications
+Notification readPUT .../read, {"isRead":true}
+Notification unreadPUT .../read, {"isRead":false}
+Notification typesLike, Reply, Follow, Mention
+Valid mentionexisting @username → relation + eligible Mention notification
+Invalid mentionnotification yok
+Duplicate mentiontek relation + tek notification
+Hashtagilgili postları listeler; trend/ranking yok
+Mediaupload → media id → mediaIds → populated media[]
+Backward compatibilitymevcut content field ve 280 karakter korunur
