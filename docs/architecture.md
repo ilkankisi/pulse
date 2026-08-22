@@ -374,7 +374,50 @@ post create mediaIds
 
 response media[]
 
+action: update
 şeklindedir.
+
+### Design Agent feature/state gereksinimleri
+
+Bu gereksinimler görsel implementasyon tarif etmez; Design Agent'ın canonical
+ürün davranışlarını eksiksiz kapsaması için zorunlu feature/state sınırını
+tanımlar.
+
+Ortak state'ler:
+
+- loading
+- empty: collection endpoint başarılı fakat boş sonuç döndürdüğünde
+- not-found: tekil resource 404 olduğunda
+- auth-error: korumalı endpoint 401 olduğunda
+- error: network/server hatası; empty state olarak gösterilmez
+- success
+
+Feature state kapsamı:
+
+- Feed: loading / empty / error / success; `Post`, `Repost`, `Quote` ve
+  media varyantları aynı canonical `PostResponse` üzerinden ele alınır.
+- Post Detail: loading / not-found / auth-error / error / success;
+  `originalPost` ve `media[]` feed ile aynı shape'i kullanır.
+- Repost: idle / pending / reposted / failure; retry veya double-tap
+  duplicate aktif repost varsayamaz.
+- Quote: idle / submitting / validation-error / success / failure;
+  original post bağlamı korunur.
+- Bookmark/Kaydedilenler: saved / unsaved / pending ve liste için
+  loading / empty / error / success.
+- Notifications: loading / empty / error / success ve item bazında
+  read / unread. `Like`, `Reply`, `Mention` post detail'e; `Follow`
+  profile'a yönlenir.
+- Mention suggestion: loading / empty / error / success; bulunmayan veya
+  geçersiz username için notification üretildiği varsayılmaz.
+- Hashtag Posts: loading / empty / error / success; trend/ranking veya
+  popularity skoru gösterilmez.
+- Media composer: idle / uploading / upload-error / uploaded / submitting /
+  success; create işleminde yalnız backend'in döndürdüğü media id kullanılır.
+- Text-only composer: `content` maksimum 280 karakterdir; media seçilmemesi
+  hata değildir ve mevcut text-only akış backward-compatible kalır.
+
+Design Agent API path, wire-format, persistence modeli veya backend
+uniqueness/idempotency invariant'larını değiştiremez.
 
 14. Feed ve pagination
 

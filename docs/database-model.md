@@ -186,10 +186,46 @@ Canonical `Type`:
 - `Follow`
 - `Mention`
 
+action: update
 Index:
 
 - `(RecipientUserId, CreatedAt)`
 - `(RecipientUserId, IsRead)`
+
+Unique:
+
+- `(RecipientUserId, SourceKey)`
+
+Notification idempotency kuralı:
+
+- aynı source interaction retry edildiğinde aynı recipient için ikinci
+  notification row'u oluşturulmaz
+- `SourceKey` source interaction için stable kimliktir
+
+action: update
+Canonical sosyal ilişki uniqueness/idempotency invariant'ları:
+
+- Mention relation için `(PostId, MentionedUserId)` unique olmalıdır.
+- Aynı post içinde aynı geçerli kullanıcı birden fazla kez mention edilse
+  bile tek mention relation ve tek Mention notification oluşur.
+- Bulunmayan veya geçersiz `@username` için mention relation ya da
+  notification oluşturulmaz.
+- Hashtag relation için `(PostId, HashtagId)` unique olmalıdır; aynı normalize
+  hashtag aynı posta ikinci kez bağlanmaz.
+- Hashtag persistence yalnız ilgili gönderilerin listelenmesini destekler;
+  trend skoru, trend/ranking veya popularity modeli tanımlamaz.
+- Post-media relation için `(PostId, MediaId)` unique olmalıdır; aynı media
+  aynı posta ikinci kez bağlanmaz.
+- Media ownership post veya quote ile bağlama öncesinde backend tarafından
+  doğrulanır.
+- Media binary PostgreSQL'de tutulmaz; PostgreSQL yalnız owner/object key,
+  media type, content type, dimensions ve post ilişki metadata'sını tutar.
+- Repost için yalnız `Kind = Repost` kayıtlarında
+  `(AuthorId, OriginalPostId)` tek aktif relation olarak unique uygulanır;
+  bu uniqueness `Quote` kayıtlarına uygulanmaz.
+- `Bookmarks (UserId, PostId)`, `PostLikes (PostId, UserId)` ve
+  `Follows (FollowerId, FollowingId)` mevcut unique invariant'larını korur;
+  retry/double-tap ikinci aktif relation oluşturmaz.
 
 Stable source identity örnekleri:
 

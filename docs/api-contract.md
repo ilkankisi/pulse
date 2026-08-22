@@ -216,6 +216,45 @@ Normal post golden response:
 
 Feed ve Post Detail aynı PostResponse shape'ini kullanır.
 
+### Acceptance doğrulama matrisi
+
+Bu bölüm yeni bir wire contract tanımlamaz; aşağıdaki canonical bölümlerde
+tanımlanan sözleşmelerin Sosyal Etkileşim Fazı kabul kriterleriyle birebir
+eşleşmesini görünür kılar.
+
+- Repost oluşturma ve kaldırma: Repost bölümündeki `POST` ve `DELETE`
+  operation'ları normative'dir; path, Bearer auth, request/body kuralı,
+  success status, response ve golden JSON örnekleri birlikte doğrulanır.
+- Quote post: Quote bölümündeki create operation normative'dir; oluşturulan
+  resource `kind = Quote` kullanır ve `originalPost` hedef gönderiyi taşır.
+- Media post: Media upload bölümündeki upload operation ile
+  `POST /api/v1/posts` içindeki `mediaIds` akışı birlikte normative'dir.
+  En az tek görselli golden akış upload sonucu alınan media id'nin
+  `{"content":"Merhaba #pulse @ada","mediaIds":[12]}` request'inde
+  kullanılmasını ve create response içindeki `media[]` alanını kapsar.
+- Notifications: Notification bölümündeki listeleme ve read/unread state
+  operation'ları normative'dir. Canonical tipler yalnız `Like`, `Reply`,
+  `Follow`, `Mention` değerleridir.
+- Bookmarks: Bookmark bölümündeki kaydetme, kaldırma ve listeleme
+  operation'ları normative'dir.
+- Mention: yalnız çözümlenebilen/geçerli `@username` relation ve gerekiyorsa
+  `Mention` notification üretir; bulunmayan/geçersiz username notification
+  üretmez.
+- Hashtag: hashtag operation yalnız seçilen normalize tag ile ilişkili
+  gönderileri listeler; trend skoru, trend endpoint'i veya ranking üretmez.
+- Feed ve Post Detail aynı `PostResponse` shape'ini kullanır. Repost/quote
+  için `kind` ve `originalPost`, media için `media[]` zorunlu canonical
+  alanlardır.
+- Mevcut text-only create request'i
+  `{"content":"İlk gönderim"}` olarak backward-compatible kalır.
+  `content` maksimum 280 karakterdir; media, mention, hashtag, repost veya
+  quote normal text-only create için zorunlu değildir.
+
+Acceptance denetiminde yukarıdaki maddelerin method/path/auth/request/
+response/status ayrıntıları ve golden JSON'ları ilgili normative endpoint
+bölümlerinden okunur; bu matris bunların yerine alternatif bir endpoint veya
+wire shape oluşturmaz.
+
 5. Feed
 
 GET /api/v1/feed
@@ -1002,3 +1041,4 @@ Duplicate mentiontek relation + tek notification
 Hashtagilgili postları listeler; trend/ranking yok
 Mediaupload → media id → mediaIds → populated media[]
 Backward compatibilitymevcut content field ve 280 karakter korunur
+action: update
