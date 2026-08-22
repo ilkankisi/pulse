@@ -1,0 +1,11 @@
+{
+  "name": "Pulse",
+  "short_name": "Pulse",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#FFFBFE",
+  "theme_color": "#6750A4",
+  "description": "Pulse açık mikroblog platformunun Flutter Web istemcisi.",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false
+}
