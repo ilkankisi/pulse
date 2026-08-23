@@ -28,3 +28,7 @@ features:
   file: moderation.md
   title: Moderasyon kuyruğu
   api_contract_refs: []
+- id: social-interaction
+  file: social-interaction.md
+  title: Sosyal Etkileşim Fazı
+  api_contract_refs: []

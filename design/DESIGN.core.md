@@ -148,7 +148,9 @@ Temel kapsam:
 - Şikâyetlerin yetkili moderatör tarafından incelendiği moderasyon kuyruğu
 - Architect API kontratında tanımlanan moderasyon aksiyonları
 
-Özel mesaj, bildirim merkezi, anket, medya gönderisi, yer imi, yeniden paylaşım, alıntı paylaşım, hashtag trendleri ve çok seviyeli thread kapsam dışıdır.
+Sosyal Etkileşim Fazı kapsamında bildirim merkezi, en az tek görselli medya gönderisi, yer imi/Kaydedilenler, yeniden paylaşım ve alıntı paylaşım davranışları design/features/social-interaction.md tarafından tanımlanır.
+
+Özel mesaj/DM, anket/poll, hashtag trendleri veya trend keşif ekranı, algoritmik For You feed ve çok seviyeli thread kapsam dışıdır.
 
 Flutter uygulaması `ThemeData(useMaterial3: true)` ve semantik `ColorScheme` token'larıyla uygulanır.
 
