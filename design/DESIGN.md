@@ -1333,6 +1333,22 @@ Kapsam dışı:
 - İkinci root navigation
 - Public bookmark count
 
+## Acceptance Checklist
+
+- Feed ve Post Detail aynı `SocialPostCard` Post/Repost/Quote semantiğini ve hierarchy'sini kullanır.
+- Repost aksiyonu `idle-not-reposted`, `loading-add`, `reposted`, `loading-remove`, `error` state'lerini tanımlar.
+- Quote aksiyonu `idle`, `opening-composer`, `submitting`, `success`, `error` state'lerini tanımlar.
+- Notifications; Like, Reply, Follow ve Mention event'lerini, read/unread davranışını ve loading/empty/error/success state'lerini tanımlar.
+- `@username` → `ProfilePage(username)` ve `#tag` → `HashtagPostsPage(tag)` navigation davranışı açıktır.
+- Bookmark save/remove state'leri tanımlıdır ve `BookmarksPage` mevcut Profil/Hesap alanından erişilebilirdir.
+- Composer en az tek görsel için select, remove, upload/loading, upload error/retry ve submit-preservation davranışlarını tanımlar.
+- Feed ve Post Detail için Post/Repost/Quote media preview hierarchy'si açıkça ayrılmıştır.
+- `NotificationsPage`, `BookmarksPage`, `HashtagPostsPage` ve `QuoteComposer` mevcut UI içindeki somut giriş noktalarından açılır; orphan ekran oluşturulmaz.
+- Mevcut root navigation, back-stack, Ana Akış, Profil, Followers/Following, Safety, Moderation ve FAB composer davranışları korunur.
+- Yeni root destination ve ikinci root navigation oluşturulmaz.
+- DM, poll, hashtag trends/trend keşfi ve algoritmik For You feed açıkça kapsam dışıdır.
+- Modular compile başarısı aşağıdaki içerik acceptance kriterlerinin yerine geçmez.
+
 ## Acceptance Evidence
 
 ### Feed ve Post Detail repost / quote
