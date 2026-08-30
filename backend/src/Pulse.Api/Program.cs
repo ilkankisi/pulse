@@ -125,6 +125,7 @@ app.MapGet(
 app.MapControllers();
 app.MapAuthEndpoints();
 app.MapPostEndpoints();
+app.MapSocialInteractionEndpoints();
 app.MapFeedEndpoints();
 app.MapMeEndpoints();
 app.MapProfileEndpoints();

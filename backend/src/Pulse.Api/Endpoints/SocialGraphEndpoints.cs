@@ -23,6 +23,10 @@ public static class SocialGraphEndpoints
             "/{username}/following",
             GetFollowingAsync);
 
+        group.MapDelete(
+            "/{username}/followers/{followerId:int}",
+            RemoveFollowerAsync);
+
         return endpoints;
     }
 
@@ -152,6 +156,53 @@ public static class SocialGraphEndpoints
 
         return Results.Ok(
             new SocialGraphCollectionResponse(items));
+    }
+
+    private static async Task<IResult> RemoveFollowerAsync(
+        string username,
+        int followerId,
+        ClaimsPrincipal principal,
+        PulseDbContext db,
+        CancellationToken cancellationToken)
+    {
+        if (!PostEndpoints.TryGetUserId(
+                principal,
+                out var currentUserId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var targetUserId = await FindUserIdAsync(
+            username,
+            db,
+            cancellationToken);
+
+        if (targetUserId is null)
+        {
+            return Results.NotFound(
+                new ApiErrorResponse(
+                    "User was not found."));
+        }
+
+        if (targetUserId.Value != currentUserId)
+        {
+            return Results.Forbid();
+        }
+
+        var follow = await db.Follows
+            .SingleOrDefaultAsync(
+                relation =>
+                    relation.FollowerId == followerId &&
+                    relation.FollowingId == currentUserId,
+                cancellationToken);
+
+        if (follow is not null)
+        {
+            db.Follows.Remove(follow);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        return Results.NoContent();
     }
 
     private static async Task<int?> FindUserIdAsync(

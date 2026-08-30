@@ -33,8 +33,24 @@ public sealed record CreatePostRequest(
 public sealed record CreateReplyRequest(
     string Content);
 
-public sealed record PostAuthorResponse(
+public sealed record CreateQuoteRequest(
+    string Content,
+    IReadOnlyList<int>? MediaIds = null);
+
+public sealed record SetNotificationReadRequest(
+    bool IsRead);
+
+public sealed record NotificationResponse(
     int Id,
+    string Type,
+    int ActorUserId,
+    string ActorUsername,
+    int? PostId,
+    bool IsRead,
+    DateTimeOffset CreatedAt);
+
+public sealed record PostAuthorResponse(
+int Id,
     string Username,
     string DisplayName,
     string? AvatarUrl);
