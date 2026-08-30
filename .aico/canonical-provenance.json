@@ -9,7 +9,7 @@
   "requirement_set_revision": "v16-test",
   "source_document_hashes": {
     "docs/ARCHITECTURE.md": "ab2b1fd37870318e8d4f104b9f961253f447aa9a128b3ae0238515815ffdcd11",
-    "docs/api-contract.md": "4cbcd79409a4b717a65562f16a46abfb2d83282b973fdd8896371b53866d03f9",
+    "docs/api-contract.md": "df194818d6f64885325556219403925fa5f62c91ab22fd2f2322d0f2f9ca0fa7",
     "docs/architecture.md": "ab2b1fd37870318e8d4f104b9f961253f447aa9a128b3ae0238515815ffdcd11"
   },
   "verifier_version": "2.2.0"

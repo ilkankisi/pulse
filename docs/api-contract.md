@@ -255,6 +255,49 @@ response/status ayrıntıları ve golden JSON'ları ilgili normative endpoint
 bölümlerinden okunur; bu matris bunların yerine alternatif bir endpoint veya
 wire shape oluşturmaz.
 
+### Canonical route verification entries
+
+Route-contract doğrulamasında aşağıdaki mevcut sistem/auth operation'ları da
+canonical METHOD/path olarak zorunludur:
+
+| Method | Path | Auth | Canonical bölüm |
+| --- | --- | --- | --- |
+| GET | `/health` | Anonymous | Health |
+| POST | `/api/v1/auth/register` | Anonymous | Auth / Register |
+| POST | `/api/v1/auth/login` | Anonymous | Auth / Login |
+
+Bu satırlar yeni endpoint tanımlamaz. Yukarıdaki Health ve Auth bölümlerinde
+zaten normative olarak tanımlanan operation'ları route-matrix doğrulaması için
+doğrudan görünür hale getirir.
+
+### Acceptance evidence requirements
+
+Sosyal Etkileşim Fazı acceptance doğrulaması yalnız feature adının geçmesini
+yeterli kanıt saymaz. İlgili normative bölümden aşağıdaki kanıtların birlikte
+okunabilmesi gerekir:
+
+- repost: create ve delete METHOD/path, Bearer auth, success status,
+  canonical `PostResponse` ve golden JSON
+- quote: create METHOD/path, request, success status, `kind = "Quote"`,
+  hedef `originalPost` ve golden JSON
+- media: upload METHOD/path ve upload response'u ile post create
+  `mediaIds` request'i ve `media[]` içeren golden response
+- feed/post detail: aynı `PostResponse` alan seti; `kind`,
+  `originalPost` ve `media` dahil
+- notification: liste/read-state operation'ları, yalnız `Like`, `Reply`,
+  `Follow`, `Mention` canonical tipleri
+- bookmark: create/delete/list operation'ları ve user+post idempotency
+- mention: yalnız çözümlenebilen username için relation; author dışındaki
+  geçerli recipient için `Mention` notification
+- hashtag: normalize seçili tag gönderilerinin listelenmesi; trend endpoint,
+  trend skoru veya ranking olmaması
+- backward compatibility: text-only
+  `{"content":"İlk gönderim"}` request'inin geçerli kalması ve
+  `content` değerinin maksimum 280 karakter olması
+
+Golden JSON denetiminde canonical post metin alanı yalnız `content`'tir;
+`text`, `title`, `description` veya `body` alternatif wire alanı değildir.
+
 5. Feed
 
 GET /api/v1/feed
