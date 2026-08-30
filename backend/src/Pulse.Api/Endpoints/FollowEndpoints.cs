@@ -18,6 +18,9 @@ public static class FollowEndpoints
 
         group.MapPost("/follow", FollowAsync);
         group.MapDelete("/follow", UnfollowAsync);
+        group.MapDelete(
+            "/followers/{followerId:int}",
+            RemoveFollowerAsync);
 
         return endpoints;
     }
@@ -137,6 +140,52 @@ public static class FollowEndpoints
                 targetUser.Username,
                 false,
                 cancellationToken));
+    }
+
+    private static async Task<IResult> RemoveFollowerAsync(
+        string username,
+        int followerId,
+        ClaimsPrincipal principal,
+        PulseDbContext db,
+        CancellationToken cancellationToken)
+    {
+        if (!PostEndpoints.TryGetUserId(
+                principal,
+                out var currentUserId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var profileOwner = await FindUserAsync(
+            username,
+            db,
+            cancellationToken);
+
+        if (profileOwner is null)
+        {
+            return Results.NotFound(
+                new ApiErrorResponse("User was not found."));
+        }
+
+        if (profileOwner.Id != currentUserId)
+        {
+            return Results.Forbid();
+        }
+
+        var existingFollow = await db.Follows
+            .SingleOrDefaultAsync(
+                follow =>
+                    follow.FollowerId == followerId &&
+                    follow.FollowingId == profileOwner.Id,
+                cancellationToken);
+
+        if (existingFollow is not null)
+        {
+            db.Follows.Remove(existingFollow);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        return Results.NoContent();
     }
 
     private static async Task<User?> FindUserAsync(

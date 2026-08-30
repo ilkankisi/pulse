@@ -68,6 +68,12 @@ public sealed class Post
 
     public Post? ParentPost { get; set; }
 
+    public PostKind Kind { get; set; } = PostKind.Post;
+
+    public int? OriginalPostId { get; set; }
+
+    public Post? OriginalPost { get; set; }
+
     public DateTimeOffset CreatedAtUtc { get; set; }
 
     public DateTime? DeletedAt { get; set; }
