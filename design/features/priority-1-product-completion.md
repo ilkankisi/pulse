@@ -85,23 +85,38 @@ Token: {components.post-card}, {components.composer}, {components.list-item-card
 Widget hierarchy:
 
 PostCard | ReplyCard
+
 └── Column
-    ├── author row
-    ├── RichText
-    │   ├── normal text spans
-    │   └── tappable mention spans: @username
-    ├── metadata row
-    └── action row
+
+├── author row
+
+├── RichText
+
+│   ├── normal text spans
+
+│   └── tappable mention spans: @username
+
+├── metadata row
+
+└── action row
 
 Composer
+
 └── Column
-    ├── TextField(maxLength: 280)
-    ├── optional mention suggestions
-    │   └── ListTile
-    │       ├── CircleAvatar
-    │       ├── Text(displayName)
-    │       └── Text("@username")
-    └── primary submit action
+
+├── TextField(maxLength: 280)
+
+├── optional mention suggestions
+
+│   └── ListTile
+
+│       ├── CircleAvatar
+
+│       ├── Text(displayName)
+
+│       └── Text("@username")
+
+└── primary submit action
 
 fluttertemplates kaynağı: Core → Card; Forms → Inputs; Lists — /widgets/cards, /widgets/forms, /widgets/lists
 
@@ -140,25 +155,44 @@ Token: {components.profile-summary}, {components.profile-stats}, {components.pos
 Widget hierarchy:
 
 CustomScrollView
+
 ├── SliverAppBar
+
 ├── SliverToBoxAdapter
+
 │   └── profile-summary
+
 │       ├── CircleAvatar(80px)
+
 │       ├── Text(displayName)
+
 │       ├── Text("@username")
+
 │       ├── optional Text(bio)
+
 │       ├── Row
+
 │       │   ├── Icon(calendar)
+
 │       │   └── Text(joinedAt)
+
 │       └── profile-stats
+
 ├── optional SliverToBoxAdapter
+
 │   └── pinned section
+
 │       ├── Row
+
 │       │   ├── Icon(push_pin)
+
 │       │   └── Text("Sabitlenmiş gönderi")
+
 │       └── existing post-card
+
 └── posts section
-    └── SliverList | empty-state
+
+└── SliverList | empty-state
 
 fluttertemplates kaynağı: Dashboard / Summary; Core → Card; Lists — /widgets/dashboard, /widgets/cards, /widgets/lists
 
@@ -185,10 +219,14 @@ Token: {components.safety-action-menu}, {components.snackbar-success}, {componen
 Widget hierarchy:
 
 Profile | Post overflow
+
 └── PopupMenuButton | ModalBottomSheet
-    └── ListTile
-        ├── Icon(volume_off)
-        └── Text("Sessize Al" | "Sesi Aç")
+
+└── ListTile
+
+├── Icon(volume_off)
+
+└── Text("Sessize Al" | "Sesi Aç")
 
 fluttertemplates kaynağı: Dialogs & Sheets — /widgets/dialogs
 
@@ -243,11 +281,16 @@ Token: {components.composer}, {components.primary-button}
 Widget hierarchy:
 
 Composer
+
 └── PopScope
-    └── Column
-        ├── optional Text("Taslak")
-        ├── TextField(maxLength: 280)
-        └── FilledButton
+
+└── Column
+
+├── optional Text("Taslak")
+
+├── TextField(maxLength: 280)
+
+└── FilledButton
 
 fluttertemplates kaynağı: Forms → Inputs — /widgets/forms
 
@@ -302,11 +345,16 @@ Token: {components.composer}, {components.primary-button}, {components.snackbar-
 Widget hierarchy:
 
 Own Post overflow
+
 └── action: "Düzenle"
-    └── Edit Composer
-        ├── TextField(existingText, maxLength: 280)
-        ├── Text("Gönderiler ilk 5 dakika içinde düzenlenebilir.")
-        └── FilledButton("Değişiklikleri Kaydet")
+
+└── Edit Composer
+
+├── TextField(existingText, maxLength: 280)
+
+├── Text("Gönderiler ilk 5 dakika içinde düzenlenebilir.")
+
+└── FilledButton("Değişiklikleri Kaydet")
 
 fluttertemplates kaynağı: Forms → Inputs, Validation — /widgets/forms
 
