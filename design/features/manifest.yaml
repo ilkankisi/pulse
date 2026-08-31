@@ -1,0 +1,30 @@
+version: 1
+features:
+- id: navigation
+  file: navigation.md
+  title: Uygulama navigasyonu
+  api_contract_refs: []
+- id: feed
+  file: feed.md
+  title: Ana akış ve gönderi detayı
+  api_contract_refs: []
+- id: composer
+  file: composer.md
+  title: Gönderi oluşturma
+  api_contract_refs: []
+- id: profile
+  file: profile.md
+  title: Profil özeti ve gönderiler
+  api_contract_refs: []
+- id: social-graph
+  file: social-graph.md
+  title: Takipçiler ve takip edilenler
+  api_contract_refs: []
+- id: safety
+  file: safety.md
+  title: Engelleme ve şikâyet
+  api_contract_refs: []
+- id: moderation
+  file: moderation.md
+  title: Moderasyon kuyruğu
+  api_contract_refs: []

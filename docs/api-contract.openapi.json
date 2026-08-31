@@ -1,0 +1,1059 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Architect Canonical API Contract",
+    "version": "1.0.0",
+    "x-artifact-type": "CANONICAL_API_CONTRACT",
+    "x-owner": "architect"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "Health_get_health",
+        "summary": "Health",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "x-error-semantics": [
+          {
+            "status": 400,
+            "semantic": "validation_error"
+          },
+          {
+            "status": 401,
+            "semantic": "authentication_required"
+          },
+          {
+            "status": 403,
+            "semantic": "forbidden"
+          },
+          {
+            "status": 404,
+            "semantic": "not_found_or_hidden"
+          },
+          {
+            "status": 409,
+            "semantic": "conflict"
+          },
+          {
+            "status": 500,
+            "semantic": "server_error"
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "operationId": "Auth_post_api_v1_auth_register",
+        "summary": "Auth",
+        "responses": {
+          "201": {
+            "description": "Success"
+          }
+        },
+        "x-error-semantics": [
+          {
+            "status": 400,
+            "semantic": "validation_error"
+          },
+          {
+            "status": 401,
+            "semantic": "authentication_required"
+          },
+          {
+            "status": 403,
+            "semantic": "forbidden"
+          },
+          {
+            "status": 404,
+            "semantic": "not_found_or_hidden"
+          },
+          {
+            "status": 409,
+            "semantic": "conflict"
+          },
+          {
+            "status": 500,
+            "semantic": "server_error"
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "Auth_post_api_v1_auth_login",
+        "summary": "Auth",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "x-error-semantics": [
+          {
+            "status": 400,
+            "semantic": "validation_error"
+          },
+          {
+            "status": 401,
+            "semantic": "authentication_required"
+          },
+          {
+            "status": 403,
+            "semantic": "forbidden"
+          },
+          {
+            "status": 404,
+            "semantic": "not_found_or_hidden"
+          },
+          {
+            "status": 409,
+            "semantic": "conflict"
+          },
+          {
+            "status": 500,
+            "semantic": "server_error"
+          }
+        ]
+      }
+    },
+    "/api/v1/me": {
+      "get": {
+        "operationId": "Profile_get_api_v1_me",
+        "summary": "Profile",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "x-error-semantics": [
+          {
+            "status": 400,
+            "semantic": "validation_error"
+          },
+          {
+            "status": 401,
+            "semantic": "authentication_required"
+          },
+          {
+            "status": 403,
+            "semantic": "forbidden"
+          },
+          {
+            "status": 404,
+            "semantic": "not_found_or_hidden"
+          },
+          {
+            "status": 409,
+            "semantic": "conflict"
+          },
+          {
+            "status": 500,
+            "semantic": "server_error"
+          }
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      },
+      "put": {
+        "operationId": "Profile_put_api_v1_me",
+        "summary": "Profile",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "x-error-semantics": [
+          {
+            "status": 400,
+            "semantic": "validation_error"
+          },
+          {
+            "status": 401,
+            "semantic": "authentication_required"
+          },
+          {
+            "status": 403,
+            "semantic": "forbidden"
+          },
+          {
+            "status": 404,
+            "semantic": "not_found_or_hidden"
+          },
+          {
+            "status": 409,
+            "semantic": "conflict"
+          },
+          {
+            "status": 500,
+            "semantic": "server_error"
+          }
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/profiles/{username}": {
+      "get": {
+        "operationId": "Profile_get_api_v1_profiles_username",
+        "summary": "Profile",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "x-error-semantics": [
+          {
+            "status": 400,
+            "semantic": "validation_error"
+          },
+          {
+            "status": 401,
+            "semantic": "authentication_required"
+          },
+          {
+            "status": 403,
+            "semantic": "forbidden"
+          },
+          {
+            "status": 404,
+            "semantic": "not_found_or_hidden"
+          },
+          {
+            "status": 409,
+            "semantic": "conflict"
+          },
+          {
+            "status": 500,
+            "semantic": "server_error"
+          }
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/profiles/{username}/posts": {
+      "get": {
+        "operationId": "Profile_get_api_v1_profiles_username_posts",
+        "summary": "Profile",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "x-error-semantics": [
+          {
+            "status": 400,
+            "semantic": "validation_error"
+          },
+          {
+            "status": 401,
+            "semantic": "authentication_required"
+          },
+          {
+            "status": 403,
+            "semantic": "forbidden"
+          },
+          {
+            "status": 404,
+            "semantic": "not_found_or_hidden"
+          },
+          {
+            "status": 409,
+            "semantic": "conflict"
+          },
+          {
+            "status": 500,
+            "semantic": "server_error"
+          }
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/profiles/{username}/followers": {
+      "get": {
+        "operationId": "SocialGraph_get_api_v1_profiles_username_followers",
+        "summary": "SocialGraph",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "x-error-semantics": [
+          {
+            "status": 400,
+            "semantic": "validation_error"
+          },
+          {
+            "status": 401,
+            "semantic": "authentication_required"
+          },
+          {
+            "status": 403,
+            "semantic": "forbidden"
+          },
+          {
+            "status": 404,
+            "semantic": "not_found_or_hidden"
+          },
+          {
+            "status": 409,
+            "semantic": "conflict"
+          },
+          {
+            "status": 500,
+            "semantic": "server_error"
+          }
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/profiles/{username}/following": {
+      "get": {
+        "operationId": "SocialGraph_get_api_v1_profiles_username_following",
+        "summary": "SocialGraph",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "x-error-semantics": [
+          {
+            "status": 400,
+            "semantic": "validation_error"
+          },
+          {
+            "status": 401,
+            "semantic": "authentication_required"
+          },
+          {
+            "status": 403,
+            "semantic": "forbidden"
+          },
+          {
+            "status": 404,
+            "semantic": "not_found_or_hidden"
+          },
+          {
+            "status": 409,
+            "semantic": "conflict"
+          },
+          {
+            "status": 500,
+            "semantic": "server_error"
+          }
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/profiles/{username}/follow": {
+      "post": {
+        "operationId": "Follow_post_api_v1_profiles_username_follow",
+        "summary": "Follow",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "x-error-semantics": [
+          {
+            "status": 400,
+            "semantic": "validation_error"
+          },
+          {
+            "status": 401,
+            "semantic": "authentication_required"
+          },
+          {
+            "status": 403,
+            "semantic": "forbidden"
+          },
+          {
+            "status": 404,
+            "semantic": "not_found_or_hidden"
+          },
+          {
+            "status": 409,
+            "semantic": "conflict"
+          },
+          {
+            "status": 500,
+            "semantic": "server_error"
+          }
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "Follow_delete_api_v1_profiles_username_follow",
+        "summary": "Follow",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "x-error-semantics": [
+          {
+            "status": 400,
+            "semantic": "validation_error"
+          },
+          {
+            "status": 401,
+            "semantic": "authentication_required"
+          },
+          {
+            "status": 403,
+            "semantic": "forbidden"
+          },
+          {
+            "status": 404,
+            "semantic": "not_found_or_hidden"
+          },
+          {
+            "status": 409,
+            "semantic": "conflict"
+          },
+          {
+            "status": 500,
+            "semantic": "server_error"
+          }
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/feed": {
+      "get": {
+        "operationId": "Feed_get_api_v1_feed",
+        "summary": "Feed",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "x-error-semantics": [
+          {
+            "status": 400,
+            "semantic": "validation_error"
+          },
+          {
+            "status": 401,
+            "semantic": "authentication_required"
+          },
+          {
+            "status": 403,
+            "semantic": "forbidden"
+          },
+          {
+            "status": 404,
+            "semantic": "not_found_or_hidden"
+          },
+          {
+            "status": 409,
+            "semantic": "conflict"
+          },
+          {
+            "status": 500,
+            "semantic": "server_error"
+          }
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/posts": {
+      "post": {
+        "operationId": "Posts_post_api_v1_posts",
+        "summary": "Posts",
+        "responses": {
+          "201": {
+            "description": "Success"
+          }
+        },
+        "x-error-semantics": [
+          {
+            "status": 400,
+            "semantic": "validation_error"
+          },
+          {
+            "status": 401,
+            "semantic": "authentication_required"
+          },
+          {
+            "status": 403,
+            "semantic": "forbidden"
+          },
+          {
+            "status": 404,
+            "semantic": "not_found_or_hidden"
+          },
+          {
+            "status": 409,
+            "semantic": "conflict"
+          },
+          {
+            "status": 500,
+            "semantic": "server_error"
+          }
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/posts/{postId}": {
+      "delete": {
+        "operationId": "Posts_delete_api_v1_posts_postId",
+        "summary": "Posts",
+        "responses": {
+          "204": {
+            "description": "Success"
+          }
+        },
+        "x-error-semantics": [
+          {
+            "status": 400,
+            "semantic": "validation_error"
+          },
+          {
+            "status": 401,
+            "semantic": "authentication_required"
+          },
+          {
+            "status": 403,
+            "semantic": "forbidden"
+          },
+          {
+            "status": 404,
+            "semantic": "not_found_or_hidden"
+          },
+          {
+            "status": 409,
+            "semantic": "conflict"
+          },
+          {
+            "status": 500,
+            "semantic": "server_error"
+          }
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/posts/{postId}/replies": {
+      "post": {
+        "operationId": "Replies_post_api_v1_posts_postId_replies",
+        "summary": "Replies",
+        "responses": {
+          "201": {
+            "description": "Success"
+          }
+        },
+        "x-error-semantics": [
+          {
+            "status": 400,
+            "semantic": "validation_error"
+          },
+          {
+            "status": 401,
+            "semantic": "authentication_required"
+          },
+          {
+            "status": 403,
+            "semantic": "forbidden"
+          },
+          {
+            "status": 404,
+            "semantic": "not_found_or_hidden"
+          },
+          {
+            "status": 409,
+            "semantic": "conflict"
+          },
+          {
+            "status": 500,
+            "semantic": "server_error"
+          }
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/posts/{postId}/likes": {
+      "post": {
+        "operationId": "Likes_post_api_v1_posts_postId_likes",
+        "summary": "Likes",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "x-error-semantics": [
+          {
+            "status": 400,
+            "semantic": "validation_error"
+          },
+          {
+            "status": 401,
+            "semantic": "authentication_required"
+          },
+          {
+            "status": 403,
+            "semantic": "forbidden"
+          },
+          {
+            "status": 404,
+            "semantic": "not_found_or_hidden"
+          },
+          {
+            "status": 409,
+            "semantic": "conflict"
+          },
+          {
+            "status": 500,
+            "semantic": "server_error"
+          }
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "Likes_delete_api_v1_posts_postId_likes",
+        "summary": "Likes",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "x-error-semantics": [
+          {
+            "status": 400,
+            "semantic": "validation_error"
+          },
+          {
+            "status": 401,
+            "semantic": "authentication_required"
+          },
+          {
+            "status": 403,
+            "semantic": "forbidden"
+          },
+          {
+            "status": 404,
+            "semantic": "not_found_or_hidden"
+          },
+          {
+            "status": 409,
+            "semantic": "conflict"
+          },
+          {
+            "status": 500,
+            "semantic": "server_error"
+          }
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/profiles/{username}/block": {
+      "post": {
+        "operationId": "Blocks_post_api_v1_profiles_username_block",
+        "summary": "Blocks",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "x-error-semantics": [
+          {
+            "status": 400,
+            "semantic": "validation_error"
+          },
+          {
+            "status": 401,
+            "semantic": "authentication_required"
+          },
+          {
+            "status": 403,
+            "semantic": "forbidden"
+          },
+          {
+            "status": 404,
+            "semantic": "not_found_or_hidden"
+          },
+          {
+            "status": 409,
+            "semantic": "conflict"
+          },
+          {
+            "status": 500,
+            "semantic": "server_error"
+          }
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "Blocks_delete_api_v1_profiles_username_block",
+        "summary": "Blocks",
+        "responses": {
+          "204": {
+            "description": "Success"
+          }
+        },
+        "x-error-semantics": [
+          {
+            "status": 400,
+            "semantic": "validation_error"
+          },
+          {
+            "status": 401,
+            "semantic": "authentication_required"
+          },
+          {
+            "status": 403,
+            "semantic": "forbidden"
+          },
+          {
+            "status": 404,
+            "semantic": "not_found_or_hidden"
+          },
+          {
+            "status": 409,
+            "semantic": "conflict"
+          },
+          {
+            "status": 500,
+            "semantic": "server_error"
+          }
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/blocks": {
+      "get": {
+        "operationId": "Blocks_get_api_v1_blocks",
+        "summary": "Blocks",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "x-error-semantics": [
+          {
+            "status": 400,
+            "semantic": "validation_error"
+          },
+          {
+            "status": 401,
+            "semantic": "authentication_required"
+          },
+          {
+            "status": 403,
+            "semantic": "forbidden"
+          },
+          {
+            "status": 404,
+            "semantic": "not_found_or_hidden"
+          },
+          {
+            "status": 409,
+            "semantic": "conflict"
+          },
+          {
+            "status": 500,
+            "semantic": "server_error"
+          }
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/reports": {
+      "post": {
+        "operationId": "Reports_post_api_v1_reports",
+        "summary": "Reports",
+        "responses": {
+          "201": {
+            "description": "Success"
+          }
+        },
+        "x-error-semantics": [
+          {
+            "status": 400,
+            "semantic": "validation_error"
+          },
+          {
+            "status": 401,
+            "semantic": "authentication_required"
+          },
+          {
+            "status": 403,
+            "semantic": "forbidden"
+          },
+          {
+            "status": 404,
+            "semantic": "not_found_or_hidden"
+          },
+          {
+            "status": 409,
+            "semantic": "conflict"
+          },
+          {
+            "status": 500,
+            "semantic": "server_error"
+          }
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/moderation/reports": {
+      "get": {
+        "operationId": "Moderation_get_api_v1_moderation_reports",
+        "summary": "Moderation",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "x-error-semantics": [
+          {
+            "status": 400,
+            "semantic": "validation_error"
+          },
+          {
+            "status": 401,
+            "semantic": "authentication_required"
+          },
+          {
+            "status": 403,
+            "semantic": "forbidden"
+          },
+          {
+            "status": 404,
+            "semantic": "not_found_or_hidden"
+          },
+          {
+            "status": 409,
+            "semantic": "conflict"
+          },
+          {
+            "status": 500,
+            "semantic": "server_error"
+          }
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "Moderator"
+        ]
+      }
+    },
+    "/api/v1/moderation/reports/{reportId}": {
+      "get": {
+        "operationId": "Moderation_get_api_v1_moderation_reports_reportId",
+        "summary": "Moderation",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "x-error-semantics": [
+          {
+            "status": 400,
+            "semantic": "validation_error"
+          },
+          {
+            "status": 401,
+            "semantic": "authentication_required"
+          },
+          {
+            "status": 403,
+            "semantic": "forbidden"
+          },
+          {
+            "status": 404,
+            "semantic": "not_found_or_hidden"
+          },
+          {
+            "status": 409,
+            "semantic": "conflict"
+          },
+          {
+            "status": 500,
+            "semantic": "server_error"
+          }
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "Moderator"
+        ]
+      }
+    },
+    "/api/v1/moderation/reports/{reportId}/resolve": {
+      "post": {
+        "operationId": "Moderation_post_api_v1_moderation_reports_reportId_resolve",
+        "summary": "Moderation",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "x-error-semantics": [
+          {
+            "status": 400,
+            "semantic": "validation_error"
+          },
+          {
+            "status": 401,
+            "semantic": "authentication_required"
+          },
+          {
+            "status": 403,
+            "semantic": "forbidden"
+          },
+          {
+            "status": 404,
+            "semantic": "not_found_or_hidden"
+          },
+          {
+            "status": 409,
+            "semantic": "conflict"
+          },
+          {
+            "status": 500,
+            "semantic": "server_error"
+          }
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "Moderator"
+        ]
+      }
+    },
+    "/api/v1/moderation/reports/{reportId}/dismiss": {
+      "post": {
+        "operationId": "Moderation_post_api_v1_moderation_reports_reportId_dismiss",
+        "summary": "Moderation",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "x-error-semantics": [
+          {
+            "status": 400,
+            "semantic": "validation_error"
+          },
+          {
+            "status": 401,
+            "semantic": "authentication_required"
+          },
+          {
+            "status": 403,
+            "semantic": "forbidden"
+          },
+          {
+            "status": 404,
+            "semantic": "not_found_or_hidden"
+          },
+          {
+            "status": 409,
+            "semantic": "conflict"
+          },
+          {
+            "status": 500,
+            "semantic": "server_error"
+          }
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "Moderator"
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "Bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "architect_task_id": "",
+  "architect_task_run_id": "",
+  "artifact_type": "CANONICAL_API_CONTRACT",
+  "canonical_hash": "284a536bfd1ea11d0e9346e97b7dd084f41848b6016c9181eaee312d680ba852",
+  "owner": "architect",
+  "project_revision": 0,
+  "protocol_version": 3,
+  "requirement_set_revision": "v16-test",
+  "source_document_hashes": {
+    "docs/ARCHITECTURE.md": "1400e460d43184373c057ea58083dc6fac1d96801054c15737e8afd282b3e7f6",
+    "docs/api-contract.md": "c83fc01a4bdd8180f322f8aa20eb4b0a47800d6d8b0f899924270a48b1439efc",
+    "docs/architecture.md": "1400e460d43184373c057ea58083dc6fac1d96801054c15737e8afd282b3e7f6"
+  },
+  "verifier_version": "2.2.0"
+}
