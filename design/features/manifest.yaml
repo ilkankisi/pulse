@@ -20,11 +20,13 @@ features:
   file: social-graph.md
   title: Takipçiler ve takip edilenler
   api_contract_refs: []
-- id: safety
   file: safety.md
   title: Engelleme ve şikâyet
   api_contract_refs: []
 - id: moderation
   file: moderation.md
   title: Moderasyon kuyruğu
+  api_contract_refs: []
+  file: priority-1-product-completion.md
+  title: Öncelik 1 ürün tamamlama deneyimi
   api_contract_refs: []

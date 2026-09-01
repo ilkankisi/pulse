@@ -114,6 +114,7 @@ SearchPage
                     ├── empty
                     ├── error
                     └── result list
+```
 
 Kurallar:
 
