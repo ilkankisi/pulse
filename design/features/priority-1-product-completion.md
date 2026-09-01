@@ -5,17 +5,21 @@
 Bu feature ürünün Öncelik 1 tamamlama yüzeylerini kapsar:
 
 - Kullanıcı ve gönderi arama
-- Gönderi metnindeki mention etkileşimleri
-- Profilde sabitlenmiş gönderi
+- Kullanıcı adına göre arama
+- Gönderi metninde arama
+- Gönderi ve yanıtlarda @mention
+- Mention üzerinden profile geçiş
+- Profil geliştirmeleri ve sabitlenmiş gönderi
 - Kullanıcıyı sessize alma ve sessizden çıkarma
-- Gönderi taslağını koruma
+- Yerel gönderi ve yanıt taslağı
 - Kullanıcının kendi gönderisini düzenlemesi
+- Düzenlenen gönderinin "Düzenlendi" durumunun gösterimi
 
-UI canonical `docs/api-contract.md` sözleşmesinde bulunmayan endpoint, request alanı, response alanı, role, status veya action değeri üretmez.
+UI canonical `docs/api-contract.md` sözleşmesinde bulunmayan endpoint, query parametresi, request/response alanı, role, status veya action değeri üretmez.
 
-Canonical kontratta desteklenmeyen bir davranış UI tarafından varsayılmaz veya local-only kalıcı ürün davranışına dönüştürülmez.
+Canonical kontratın henüz desteklemediği mutation veya veri davranışı UI tarafından mevcut API özelliği gibi sunulmaz.
 
-Mevcut Material 3 token'ları, navigation kuralları, post component'i, loading/empty/error state ilkeleri ve minimum 44x44px dokunma alanı kuralları bu feature için de geçerlidir.
+Mevcut Material 3 semantik token'ları, minimum 44x44px dokunma alanı, merkezi 401 yönlendirmesi ve empty/error ayrımı bu feature için de geçerlidir.
 
 ---
 
@@ -23,11 +27,9 @@ Mevcut Material 3 token'ları, navigation kuralları, post component'i, loading/
 
 ## Scope
 
-Canonical sözleşmenin desteklediği arama yüzeylerini tek bir arama deneyiminde sunar.
+Canonical sözleşmenin desteklediği kullanıcı ve gönderi arama sonuçlarını tek arama deneyiminde sunar.
 
-Aranabilen result türleri yalnız backend/canonical contract tarafından döndürülen türlerdir.
-
-UI yeni search scope, filtre, cursor, offset veya query parametresi üretmez.
+UI yeni search scope, cursor, offset, filtre veya pagination query parametresi üretmez.
 
 ## Components
 
@@ -65,21 +67,19 @@ Boş veya yalnız whitespace sorgusu ağ isteği üretmez.
 
 Yeni sorgu başladığında önceki sorgunun geç sonucu aktif sorgunun sonucunu ezmez.
 
-Arama sırasında önceki kullanıcıya ait veya başka sorguya ait stale sonuçlar yeni sonuç gibi gösterilmez.
+Önceki kullanıcıya veya başka sorguya ait stale sonuç yeni sonuç gibi gösterilmez.
 
-Result item türü backend sonucundan gelir; UI yeni result type üretmez.
+Result type backend sonucundan gelir; UI yeni result türü üretmez.
 
-Kullanıcı sonucu profile, gönderi sonucu gönderi detayına navigasyon yapar.
+Kullanıcı sonucuna dokunulduğunda result içindeki username ile profil açılır.
 
-Kullanıcı sonucuna giderken result içindeki username kullanılır.
+Gönderi sonucuna dokunulduğunda result içindeki canonical post kimliği ile gönderi detayı açılır.
 
-Gönderi sonucuna giderken result içindeki canonical post kimliği kullanılır.
-
-Arama sonucu listesine mute, block veya report için duplicate inline aksiyon eklenmez; ilgili profil/gönderi güvenlik yüzeyi kullanılır.
+Arama satırına duplicate block, mute veya report aksiyonu eklenmez.
 
 401 merkezi login akışına gider.
 
-404 canonical olarak kayıt-yok anlamına geliyorsa empty state'tir.
+Canonical kayıt-yok 404 sonucu empty state'tir.
 
 Ağ/5xx empty state değildir.
 
@@ -89,13 +89,13 @@ Başlangıç
 
 Başlık: "Ara"
 
-Arama yapılmadan API empty/error state gösterilmez.
+Arama yapılmadan API empty veya error state gösterilmez.
 
 Loading
 
-Aktif sorgu için progress/skeleton gösterilir.
+Aktif sorgu için progress veya skeleton gösterilir.
 
-Input erişilebilir kalır.
+Arama input'u kullanılabilir kalır.
 
 Empty state
 
@@ -103,7 +103,7 @@ Başlık: "Sonuç bulunamadı"
 
 Açıklama: "Farklı bir arama terimi deneyebilirsin."
 
-Zorunlu primary CTA yoktur.
+Birincil CTA yoktur.
 
 Error state
 
@@ -115,29 +115,29 @@ CTA: "Tekrar Dene"
 
 Success
 
-Sonuçların başarıyla yüklenmesi snackbar üretmez.
+Sonuçların yalnız başarılı yüklenmesi snackbar üretmez.
 
 Navigation
 
-Arama sonucu kullanıcı → ProfilePage(result.username).
+Kullanıcı sonucu → ProfilePage(result.username).
 
-Arama sonucu gönderi → canonical gönderi detay route'u.
+Gönderi sonucu → canonical Gönderi Detayı route'u.
 
-Geri navigasyonunda mümkünse arama metni ve scroll konumu korunur.
+Geri navigasyonda mümkünse sorgu ve scroll konumu korunur.
 
 Feature: Mention
 
 Scope
 
-Canonical backend sonucunda gönderi içeriğinde tanımlanmış mention'ların okunabilir ve etkileşimli gösterimidir.
+Gönderi ve yanıt içeriğindeki canonical mention bilgisini etkileşimli olarak sunar.
 
-Mention oluşturma ve parsing kuralının doğruluk kaynağı backend/canonical contract'tır.
+Mention parsing ve hedef eşlemesinin doğruluk kaynağı backend/canonical contract'tır.
 
 Components
 
 Mention içeren gönderi metni
 
-Mevcut post-card ve post-detail metin bileşeni yeniden kullanılır.
+Mevcut post-card ve post-detail içerik component'i yeniden kullanılır.
 
 Widget hierarchy:
 
@@ -150,41 +150,87 @@ PostContent
 
 Kurallar:
 
-Mention görünümü normal metinden ayırt edilebilir ancak okunabilirlik yalnız renge bağlı bırakılmaz.
+Mention normal içerikten görsel olarak ayırt edilir.
 
-Mention dokunma alanı erişilebilir olmalıdır.
+Anlam yalnız renge bağlı bırakılmaz.
 
-Mention tap → mention'ın kendi username değeriyle profil açılır.
+Mention dokunulduğunda mention'ın kendi username değeri kullanılır.
 
-Parent post author username'i veya current-user username'i mention hedefi yerine kullanılmaz.
+Post author username'i, parent route username'i veya current-user username'i mention hedefi yerine kullanılmaz.
 
-UI canonical sonucunda bulunmayan mention üretmez.
+UI metindeki her @ parçasını kendiliğinden canonical mention kabul etmez.
 
-UI metin içinde @ gördüğü her parçayı canonical mention kabul ederek yeni backend semantiği üretmez.
+Mention edilen hesap bulunamadığında kaynak gönderi içeriği kaybolmaz.
 
-Mention edilen kullanıcı bulunamadığında mevcut gönderi içeriği kaybolmaz.
-
-401 gerekiyorsa merkezi login akışına gider.
+Mention oluşturma sırasında kullanıcı seçimi gerekiyorsa yalnız canonical arama sonucundaki hesap kullanılır.
 
 Screen states
 
-Mention için bağımsız loading veya empty ekranı yoktur.
+Mention için bağımsız API empty ekranı yoktur.
 
-Mention profile navigasyonunun hedefi bulunamazsa hedef profil ekranının mevcut "Kullanıcı bulunamadı" durumu kullanılır.
+Hedef profil bulunamıyorsa mevcut "Kullanıcı bulunamadı" profil durumu kullanılır.
 
 Navigation
 
-Mention tap → ProfilePage(mention.username).
+Mention → ProfilePage(mention.username).
 
-Geri → kaynak feed/post-detail konumu mümkün olduğunca korunur.
+Geri navigasyonunda kaynak feed veya post-detail bağlamı mümkün olduğunca korunur.
 
-Feature: Profil ve sabitlenmiş gönderi
+Feature: Profil geliştirmeleri ve sabitlenmiş gönderi
 
 Scope
 
-Mevcut profil header ve profil gönderileri deneyimine canonical pinned-post bilgisini ekler.
+Profil yüzeyinde canonical olarak sunulan:
+
+Profil fotoğrafı
+
+Görünen ad
+
+Bio
+
+Kullanıcı adı
+
+Katılma tarihi
+
+Takip/takipçi sayaçları
+
+Sabitlenmiş gönderi
+
+bilgilerini gösterir.
 
 Components
+
+Geliştirilmiş profil özeti
+
+Token: {components.profile-summary}, {components.profile-stats}
+
+Widget hierarchy:
+
+Column
+├── Row
+│   ├── CircleAvatar
+│   │   └── canonical profile image | fallback
+│   └── profile actions
+├── Text(displayName)
+├── Text(@username)
+├── optional Text(bio)
+├── optional Text(joinedAt)
+├── profile stats
+└── Divider
+
+Kurallar:
+
+Profil fotoğrafı mevcutsa canonical URL/veri kullanılır.
+
+Fotoğraf yokluğu kırık image state olarak gösterilmez; nötr fallback avatar kullanılır.
+
+Görünen ad ve bio uzun metinde layout taşmasına neden olmaz.
+
+Katılma tarihi backend/canonical değerinden okunur; UI tahmini tarih üretmez.
+
+Kendi profil güncelleme alanları yalnız canonical update sözleşmesinin desteklediği alanları sunar.
+
+Başka kullanıcının profil bilgileri düzenlenemez.
 
 Sabitlenmiş gönderi alanı
 
@@ -196,54 +242,55 @@ ProfilePage(username)
 └── CustomScrollView
     ├── profile header
     ├── optional pinned section
-    │   ├── section metadata
-    │   │   └── Icon(push_pin) + Text("Sabitlendi")
+    │   ├── Row
+    │   │   ├── Icon(push_pin)
+    │   │   └── Text("Sabitlendi")
     │   └── PostCard(pinnedPost)
     └── chronological profile posts
 
 Kurallar:
 
-Pinned-post yalnız canonical profil/backend sonucunda mevcutsa gösterilir.
+Sabitlenmiş gönderi yalnız canonical profil/backend sonucunda varsa gösterilir.
 
-UI local olarak ilk gönderiyi pinned kabul etmez.
+UI ilk gönderiyi veya en yeni gönderiyi kendiliğinden pinned kabul etmez.
 
-Pinned gönderi mevcut post-card component'ini yeniden kullanır.
+Sabitlenmiş gönderi mevcut post-card component'ini yeniden kullanır.
 
-Pinned gönderi tap → canonical gönderi detayı.
+Pinned post tap → canonical Gönderi Detayı.
 
-Pinned gönderi profilin normal kronolojik gönderi listesinin sıralamasını UI tarafında yeniden tanımlamaz.
+Kullanıcının aynı anda en fazla bir pinned-post görünümü vardır.
 
-Backend aynı gönderiyi hem pinned alanında hem normal listede döndürüyorsa duplicate gösterim davranışı canonical response semantics'e göre ele alınır; UI yeni veri sözleşmesi üretmez.
+Pin/unpin mutation aksiyonu yalnız canonical contract destekliyorsa gösterilir.
 
-Pinned gönderi silinmiş veya bulunamıyor sonucu dönerse profil tamamı error'a çevrilmez.
+Canonical contract aksiyon sağlamıyorsa UI pin/unpin endpoint veya butonu üretmez.
 
-Kendi profilinde pin/unpin mutation aksiyonu yalnız canonical contract destekliyorsa gösterilir.
+Başka profil için yönetim aksiyonu gösterilmez.
 
-Canonical contract aksiyon sağlamıyorsa UI pin/unpin butonu üretmez.
-
-Başka kullanıcı profilinde yönetim aksiyonu gösterilmez.
+Pinned-post bulunamaması tüm profil ekranını error'a çevirmek zorunda değildir.
 
 Screen states
 
-Pinned gönderinin olmaması profil empty state'i değildir.
+Pinned-post olmaması profil empty state değildir.
 
-Profilin gönderisi yoksa mevcut profil empty state kuralları geçerlidir.
+Profil gönderileri boşsa mevcut "Henüz gönderi yok" state'i uygulanır.
 
-Pinned alanı ayrı endpoint üzerinden yükleniyorsa hata halinde mevcut profil içeriği korunur.
+Ağ/5xx profil empty state'e dönüştürülmez.
+
+401 login akışına gider.
 
 Navigation
 
-Pinned gönderi → Gönderi Detayı.
+Pinned post → Gönderi Detayı.
 
-Pinned gönderideki author ve mention navigasyonları mevcut post component davranışını kullanır.
+Profil sayaçları ve diğer profil navigasyonları mevcut kuralları kullanır.
 
 Feature: Sessize alma ve sessizden çıkarma
 
 Scope
 
-Başka kullanıcı profili güvenlik/ilişki yüzeyinden canonical mute/unmute davranışına erişim sağlar.
+Başka kullanıcıyı engellemeden, canonical mute davranışına göre içeriklerinin akış görünürlüğünü değiştiren kullanıcı aksiyonunu sunar.
 
-Mute block değildir; UI bu iki state'i aynı davranış gibi sunmaz.
+Mute ve block farklı güvenlik/ilişki state'leridir.
 
 Components
 
@@ -255,62 +302,60 @@ Widget hierarchy:
 
 PopupMenuButton | MenuAnchor
 └── menuChildren
-    ├── canonical report action
-    ├── canonical block/unblock action
-    └── canonical mute state destekleniyorsa
+    ├── report action
+    ├── block/unblock action
+    └── canonical mute destekleniyorsa
         └── MenuItemButton
             ├── Icon(volume_off | volume_up)
             └── Text("Sessize Al" | "Sessizden Çıkar")
 
 Kurallar:
 
-Mute/unmute yalnız başka kullanıcı için gösterilir.
+Mute/unmute yalnız başka kullanıcı profili için gösterilir.
 
-Kullanıcının kendi profilinde mute/unmute gösterilmez.
+Kullanıcı kendi profilini sessize alamaz.
 
-Gösterilen state canonical backend sonucundan gelir.
+Muted state backend sonucundan gelir.
 
-Muted değilse yalnız "Sessize Al" gösterilir.
+Muted değilse "Sessize Al", muted ise "Sessizden Çıkar" gösterilir.
 
-Muted ise yalnız "Sessizden Çıkar" gösterilir.
+Mutation sırasında yalnız ilgili aksiyon loading/disabled olur.
 
-Mutation loading sırasında aynı aksiyon tekrar tetiklenemez.
+Mutation tekrar tetiklenemez.
 
-Optimistic state uygulanırsa failure halinde önceki state geri alınır.
+Optimistic update uygulanırsa hata durumunda eski state geri alınır.
 
-Mutation sonrasında state backend sonucuyla senkronize edilir.
+Başarılı mutation sonrası backend sonucu authoritative state'tir.
 
-UI mute nedeniyle feed görünürlük algoritmasını yeniden tanımlamaz.
+UI mute nedeniyle uygulanacak feed filtreleme algoritmasını yeniden tanımlamaz.
 
-Mute ile block aynı confirmation, renk veya açıklama zorunluluğuna sahip kabul edilmez.
+Mute, block confirmation dialog'unu zorunlu olarak tekrar kullanmaz.
 
-Canonical contract confirmation gerektirmiyorsa destructive block confirmation dialog'u mute için kopyalanmaz.
+Başarı mesajları:
 
-Başarı mesajı:
+"Kullanıcı sessize alındı."
 
-Mute: "Kullanıcı sessize alındı."
-
-Unmute: "Kullanıcı sessizden çıkarıldı."
-
-Ağ hatasında profil mevcut haliyle korunur.
+"Kullanıcı sessizden çıkarıldı."
 
 401 login akışına gider.
 
 403 normal empty state değildir.
 
+Ağ hatasında açık profil korunur.
+
 Navigation
 
-Başka kullanıcı profili → güvenlik menüsü → mute/unmute.
+Başka profil → güvenlik menüsü → mute/unmute.
 
-Mutation sonrası kullanıcı aynı profil yüzeyinde kalır.
+İşlem sonrası kullanıcı aynı profil yüzeyinde kalır.
 
-Feature: Gönderi taslağı
+Feature: Taslak gönderi ve yanıt
 
 Scope
 
-Yeni gönderi ve yanıt composer'ında kullanıcının henüz göndermediği metnin istemsiz kaybolmasını önler.
+Yeni gönderi veya yanıt yazılırken kullanıcı composer'dan çıkarsa metnin yerel olarak korunmasını sağlar.
 
-Taslak davranışı canonical API gerektirmiyorsa local UI state olabilir; ancak backend'de olmayan cross-device draft sync özelliği gibi sunulmaz.
+Bu özellik local UI state olabilir; backend cross-device draft sync özelliği varmış gibi sunulmaz.
 
 Components
 
@@ -329,64 +374,78 @@ ComposerPage
 
 Kurallar:
 
-Network loading draft metnini temizlemez.
+Yeni gönderi draft'ı yerel olarak saklanabilir.
 
-Validation failure draft metnini temizlemez.
+Yanıt draft'ları parent post bağlamına göre birbirinden ayrılır.
 
-Network/5xx failure draft metnini temizlemez.
+Yeni gönderi draft'ı reply draft'ını ezmez.
 
-Başarılı gönderimden sonra ilgili composer draft'ı temizlenir.
+Farklı gönderilere ait reply draft'ları birbirini ezmez.
 
-Yeni gönderi draft'ı ile farklı postlara ait reply draft'ları birbirinin metnini ezmez.
+Network loading draft'ı temizlemez.
 
-Bir reply draft'ı varsa hangi parent gönderiye ait olduğu route/context ile ayrıştırılır.
+Validation hatası draft'ı temizlemez.
 
-Kullanıcı composer'dan metin varken çıkmak istediğinde uygulanacak discard confirmation davranışı proje genelindeki mevcut navigation politikasına uygun olur.
+Ağ/5xx hatası draft'ı temizlemez.
 
-Discard confirmation kullanılıyorsa:
+Başarılı gönderim ilgili draft'ı temizler.
+
+Boş veya yalnız whitespace draft saklama/confirmation için anlamlı içerik sayılmaz.
+
+Logout veya kullanıcı değişiminde önceki kullanıcıya ait draft yeni oturumda görünmez.
+
+Taslak local saklanıyorsa kullanıcı/route bağlamı ile izole edilir.
+
+Composer'dan çıkış
+
+Metin varsa ürün politikasına göre otomatik yerel saklama yapılır.
+
+Kullanıcı yeniden aynı composer bağlamını açtığında saklanan metin geri yüklenir.
+
+Discard aksiyonu sunuluyorsa:
 
 AlertDialog
 ├── title: Text("Taslak silinsin mi?")
 ├── content: Text("Yazdığın içerik kaybolacak.")
 └── actions
-    ├── TextButton("Devam Et")
-    └── FilledButton | TextButton("Taslağı Sil")
+    ├── TextButton("Vazgeç")
+    └── TextButton("Taslağı Sil")
 
-Boş veya whitespace taslak için gereksiz confirmation gösterilmez.
+Kurallar:
 
-UI taslağı gönderilmiş içerik gibi feed'e eklemez.
-
-Draft state başka kullanıcı oturumu açıldığında önceki kullanıcıdan taşınmaz.
-
-Logout/session değişiminde önceki kullanıcıya ait draft görünür kalmaz.
+Kullanıcı açıkça "Taslağı Sil" seçmedikçe saklanmış metin istemsiz kaybolmaz.
 
 Screen states
 
-Draft'ın varlığı API empty state değildir.
+Taslak varlığı API empty state değildir.
 
-Error sonrası aynı composer ve mevcut draft korunur.
+Composer başlangıç hali error değildir.
 
-Success sonrası draft temizlenir ve ilgili feed/detail backend sonucu ile yenilenir.
+Başarısız submit sonrası mevcut metin korunur.
+
+Success sonrası ilgili draft temizlenir.
 
 Navigation
 
 FAB → yeni gönderi draft bağlamı.
 
-Post Detail → Yanıtla → parent post'a özel reply draft bağlamı.
+Gönderi Detayı → Yanıtla → parent post'a özel reply draft bağlamı.
 
-Back/close → gerekiyorsa discard confirmation.
+Geri/close → metin yerel olarak korunur.
 
 Feature: Gönderi düzenleme
 
 Scope
 
-Kullanıcının yalnız canonical contract tarafından düzenlenebilir kabul edilen kendi gönderisini düzenlemesini sağlar.
+Canonical contract'ın düzenlenebilir kabul ettiği kullanıcının kendi gönderisini düzenleme deneyimini sunar.
+
+Ürün kuralı örneğin ilk beş dakikada düzenlemeye izin veriyorsa kullanılabilir süre backend/canonical state'ten belirlenir; UI istemci saatine güvenerek tek başına authorization kararı vermez.
 
 Components
 
 Gönderi overflow düzenleme aksiyonu
 
-Mevcut post-card/post-detail overflow menüsü kullanılır.
+Mevcut post-card ve post-detail overflow menüsü kullanılır.
 
 Widget hierarchy:
 
@@ -397,11 +456,13 @@ PopupMenuButton | MenuAnchor
 
 Kurallar:
 
-"Düzenle" yalnız kullanıcının kendi ve canonical olarak editlenebilir gönderisinde gösterilir.
+"Düzenle" yalnız kullanıcının kendi ve canonical olarak editlenebilir gönderisinde görünür.
 
-Başka kullanıcının gönderisinde edit aksiyonu gösterilmez.
+Başka kullanıcı gönderisinde edit aksiyonu gösterilmez.
 
-UI ownership bilgisini username metin karşılaştırmasıyla güvenlik sınırı olarak kabul etmez; canonical session/backend state kullanılır.
+Edit süresi dolmuşsa aksiyon canonical state'e göre gizlenir veya disabled açıklamayla sunulur.
+
+UI yalnız görünen username karşılaştırmasını authorization kaynağı kabul etmez.
 
 Gönderi düzenleme formu
 
@@ -426,45 +487,63 @@ Scaffold
 
 Kurallar:
 
-Form mevcut canonical content ile açılır.
+Form canonical mevcut içerikle açılır.
 
 Boş veya yalnız whitespace içerik kaydedilmez.
 
-Maksimum uzunluk mevcut gönderi composer sınırı/canonical contract ile aynıdır; UI yeni limit üretmez.
+Maksimum karakter sınırı composer/canonical contract ile aynıdır.
 
-Kaydet sırasında CTA disabled/loading olur.
+Kaydet sırasında CTA loading/disabled olur.
 
-Mutation tekrar tetiklenemez.
+Mutation tekrar gönderilemez.
 
-Ağ/5xx hatasında kullanıcının düzenlediği metin korunur.
+Ağ/5xx hatasında düzenlenen metin korunur.
 
 401 login akışına gider.
 
-403/404 başarı gibi gösterilmez.
+403 normal empty state değildir.
 
-Başarılı edit sonrası post/detail/profile/feed görünümü backend'in güncel sonucu ile senkronize edilir.
+404 başarı gibi gösterilmez.
 
-Başarılı edit mesajı: "Gönderi güncellendi."
+Başarılı edit sonrası feed, detail ve profil backend'in güncel post sonucuyla senkronize edilir.
 
-Kullanıcı değişiklik yaptıktan sonra çıkmak isterse draft/discard davranışı yeni gönderi composer'ıyla tutarlı olur.
+Başarı mesajı: "Gönderi güncellendi."
 
-Edit formu, reply/create composer ile aynı temel input ve validation bileşenlerini yeniden kullanır.
+Düzenlendi etiketi
+
+Canonical post sonucu gönderinin düzenlendiğini bildiriyorsa post component metadata satırında:
+
+metadata row
+├── createdAt
+└── optional Text("Düzenlendi")
+
+gösterilir.
+
+Kurallar:
+
+"Düzenlendi" etiketi yalnız backend/canonical state gönderinin gerçekten düzenlendiğini gösteriyorsa render edilir.
+
+UI content farkını local karşılaştırarak kalıcı edited state üretmez.
+
+Etiket post-card ve post-detail yüzeylerinde tutarlı gösterilir.
+
+Etiket primary CTA gibi görünmez; metadata stilini kullanır.
 
 Screen states
 
 Loading
 
-Mevcut içerik okunmadan boş form authoritative content gibi gösterilmez.
+Mevcut içerik yüklenmeden boş form authoritative içerik gibi gösterilmez.
 
 Error
 
 Gönderi bulunamazsa: "Gönderi bulunamadı"
 
-Düzenleme yüklenemezse: "Gönderi yüklenemedi"
+Yükleme hatasında: "Gönderi yüklenemedi"
 
-Kaydetme başarısızsa form ve düzenlenmiş metin korunur.
+Kaydetme hatasında düzenlenen metin korunur.
 
-CTA gerekiyorsa: "Tekrar Dene"
+Gerekirse CTA: "Tekrar Dene"
 
 Success
 
@@ -474,41 +553,41 @@ Navigation
 
 Own post overflow → Düzenle.
 
-Başarı → kaynak ekran veya gönderi detayı backend'in güncel gönderisiyle yenilenir.
+Başarı → kaynak ekran veya Gönderi Detayı backend'in güncel sonucu ile yenilenir.
 
-Geri/close → değişiklik varsa mevcut discard-draft davranışı uygulanır.
+Geri/close → değişiklik varsa draft koruma davranışı uygulanır.
 
 Shared screen-state rules
 
 401
 
-401 hiçbir Öncelik 1 yüzeyinde normal retry/empty panel değildir.
+401 hiçbir Öncelik 1 yüzeyinde normal retry veya empty panel değildir.
 
 Merkezi login/session akışına yönlendirilir.
 
 403
 
-403 normal empty state olarak gösterilmez.
+403 normal empty state değildir.
 
-Yetkisiz aksiyon UI'da başarıya çevrilmez.
+Yetkisiz mutation başarı gibi gösterilmez.
 
 404
 
-Canonical bağlamda kayıt-yok anlamı taşıyan liste aramalarında empty state olabilir.
+Canonical kayıt-yok semantiği taşıyan liste/aramanın 404 sonucu empty state olabilir.
 
-Tekil profil/gönderi hedefinin bulunamaması ilgili "bulunamadı" durumudur.
+Tekil profil veya gönderinin bulunamaması ilgili "bulunamadı" state'idir.
 
 Network / 5xx
 
 Empty state değildir.
 
-Retry sunulabilir.
+"Tekrar Dene" aksiyonu sunulabilir.
 
-Composer/edit draft metni korunur.
+Composer ve edit metni korunur.
 
 Mutation loading
 
-Yalnız mutation ile ilgili CTA disabled/loading olur.
+Yalnız ilgili mutation CTA'sı disabled/loading olur.
 
 Bütün ekran gereksiz şekilde initial loading state'e dönmez.
 
@@ -516,68 +595,76 @@ Success
 
 Liste yalnız başarılı yüklendi diye snackbar göstermez.
 
-Kullanıcı mutation'larında kısa, işleme özgü Türkçe success mesajı kullanılabilir.
+Kullanıcı mutation'larında kısa ve işleme özgü Türkçe success mesajı kullanılabilir.
 
-Backend sonucu UI state'in kalıcı doğruluk kaynağıdır.
+Backend sonucu remote state için kalıcı doğruluk kaynağıdır.
 
 Do's and Don'ts
 
 Do
 
-Mevcut Material 3 semantik token'larını kullan.
+Material 3 semantik token'larını kullan.
 
-Arama sonucundan profile giderken result.username kullan.
+Minimum 44x44px dokunma alanını koru.
+
+Arama sonucu kullanıcıdan profile geçerken result.username kullan.
 
 Mention tap'te mention.username kullan.
 
-Pinned post için mevcut post-card bileşenini kullan.
+Profil fotoğrafı yoksa nötr fallback göster.
 
-Mute ve block state'lerini ayrı anlamlar olarak koru.
+Bio, görünen ad ve katılma tarihini canonical profil alanlarından göster.
 
-Mute/unmute state'ini backend sonucuyla senkronize et.
+Pinned-post için mevcut post-card component'ini kullan.
 
-Create/reply/edit sırasında kullanıcı metnini ağ hatasında koru.
+Mute ve block anlamlarını ayrı tut.
 
-Edit ekranını mevcut composer görsel diliyle hizala.
+Mute/unmute state'ini backend ile senkronize et.
 
-Mutation sırasında yalnız ilgili aksiyonu loading/disabled yap.
+Gönderi ve reply taslağını yerel route/kullanıcı bağlamıyla izole et.
+
+Composer'dan çıkışta yazılmış metni koru.
+
+Edit ekranını mevcut composer görsel diliyle tutarlı yap.
+
+Edit süresi ve edit yetkisini canonical/backend state'e göre belirle.
+
+Canonical edited state varsa "Düzenlendi" metadata etiketini göster.
 
 401'i merkezi login akışına yönlendir.
 
 403'ü empty state'e dönüştürme.
 
-Canonical kayıt-yok 404 semantiğini uygun liste ekranında empty state olarak göster.
+Canonical kayıt-yok 404'ü uygun liste/arama ekranında empty state olarak göster.
 
-Backend'in döndürdüğü güncel sonucu mutation sonrası render et.
-
-Minimum 44x44px dokunma alanını koru.
+Mutation sonrası backend'in güncel sonucunu render et.
 
 Don'ts
 
-API kontratında olmayan search scope üretme.
-
-API kontratında olmayan query parametresi, cursor veya pagination alanı üretme.
+API kontratında olmayan search endpoint, scope veya query parametresi üretme.
 
 Metindeki her @ token'ını canonical mention kabul etme.
 
-Mention tap'te post author veya current-user username kullanma.
+Mention hedefinde author veya current-user username kullanma.
 
-İlk profil gönderisini local olarak pinned kabul etme.
+İlk veya en yeni profil gönderisini local olarak pinned kabul etme.
 
-Canonical contract desteklemiyorsa pin/unpin aksiyonu ekleme.
+Canonical contract desteklemiyorsa pin/unpin endpoint veya aksiyonu üretme.
 
-Mute ile block'u aynı state veya aynı backend davranışı gibi gösterme.
+Mute ile block'u aynı state gibi gösterme.
 
 Kullanıcının kendi profilinde mute aksiyonu gösterme.
 
+Mute görünürlüğünü UI içinde yeni bir feed algoritmasıyla tanımlama.
+
+Taslağı ağ/validation hatasında temizleme.
+
+Önceki kullanıcının draft'ını yeni oturumda gösterme.
+
 Başka kullanıcının gönderisinde edit aksiyonu gösterme.
 
-Edit ownership kontrolünü yalnız görünen username karşılaştırmasına bırakma.
+Edit authorization kararını yalnız client username veya client saatine bırakma.
 
-Ağ hatasında create/reply/edit draft'ını temizleme.
-
-Başarısız optimistic mutation state'ini kalıcı bırakma.
-
-Önceki oturumun draft veya arama sonucunu yeni kullanıcıya gösterme.
+Backend belirtmeden local content farkından kalıcı "Düzenlendi" state'i üretme.
 
 Kapsam dışı DM, medya, bookmark, repost, quote veya trend özelliği ekleme.
