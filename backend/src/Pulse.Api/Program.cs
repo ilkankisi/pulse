@@ -7,10 +7,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 using Pulse.Api.Auth;
+
 using Pulse.Api.Data;
 
 using Pulse.Api.Endpoints;
+
 using Pulse.Api.OpenApi;
+
 using Pulse.Api.RateLimiting;
 
 const string flutterWebCorsPolicy = "FlutterWeb";
@@ -18,30 +21,49 @@ const string flutterWebCorsPolicy = "FlutterWeb";
 var builder = WebApplication.CreateBuilder(args);
 
 var openapiMode = Environment.GetEnvironmentVariable("ORCHESTRATOR_OPENAPI_GENERATION") == "1"
-    || builder.Environment.IsEnvironment("OpenApiGeneration");
+
+|| builder.Environment.IsEnvironment("OpenApiGeneration");
 
 if (openapiMode)
+
 {
-    builder.Configuration.AddInMemoryCollection(
-        new Dictionary<string, string?>
-        {
-            ["RateLimiting:Register:PermitLimit"] = "1000",
-            ["RateLimiting:Register:WindowSeconds"] = "60",
-            ["RateLimiting:Login:PermitLimit"] = "1000",
-            ["RateLimiting:Login:WindowSeconds"] = "60",
-        });
+
+builder.Configuration.AddInMemoryCollection(
+
+new Dictionary<string, string?>
+
+{
+
+["RateLimiting:Register:PermitLimit"] = "1000",
+
+["RateLimiting:Register:WindowSeconds"] = "60",
+
+["RateLimiting:Login:PermitLimit"] = "1000",
+
+["RateLimiting:Login:WindowSeconds"] = "60",
+
+});
+
 }
 
 builder.Services.AddControllers();
 
 if (openapiMode || builder.Environment.IsEnvironment("Testing"))
+
 {
-    builder.Services.AddDbContext<PulseDbContext>(
-        options => options.UseInMemoryDatabase("PulseOpenApiGeneration"));
+
+builder.Services.AddDbContext<PulseDbContext>(
+
+options => options.UseInMemoryDatabase("PulseOpenApiGeneration"));
+
 }
+
 else
+
 {
-    builder.Services.AddDbContext<PulseDbContext>();
+
+builder.Services.AddDbContext<PulseDbContext>();
+
 }
 
 var jwtKey = builder.Configuration["Jwt:Key"];
@@ -139,12 +161,18 @@ ClockSkew = TimeSpan.Zero
 builder.Services.AddAuthorization();
 
 builder.Services.Configure<JwtOptions>(
-    options =>
-    {
-        options.Key = jwtKey;
-        options.Issuer = jwtIssuer;
-        options.Audience = jwtAudience;
-    });
+
+options =>
+
+{
+
+options.Key = jwtKey;
+
+options.Issuer = jwtIssuer;
+
+options.Audience = jwtAudience;
+
+});
 
 builder.Services.AddSingleton<PasswordService>();
 
@@ -173,16 +201,26 @@ Version = "v1",
 });
 
 options.AddSecurityDefinition(
-    "Bearer",
-    new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-    {
-        Description = "JWT Authorization header using the Bearer scheme.",
-        Name = "Authorization",
-        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
-        Scheme = "Bearer",
-        BearerFormat = "JWT",
-    });
+
+"Bearer",
+
+new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+
+{
+
+Description = "JWT Authorization header using the Bearer scheme.",
+
+Name = "Authorization",
+
+In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+
+Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+
+Scheme = "Bearer",
+
+BearerFormat = "JWT",
+
+});
 
 options.OperationFilter<AuthorizeOperationFilter>();
 
@@ -227,7 +265,8 @@ if (!app.Environment.IsEnvironment("Testing") &&
 using var scope = app.Services.CreateScope();
 
 var db = scope.ServiceProvider
-    .GetRequiredService<PulseDbContext>();
+
+.GetRequiredService<PulseDbContext>();
 
 db.Database.Migrate();
 
@@ -271,7 +310,9 @@ app.MapMeEndpoints();
 
 app.MapProfileEndpoints();
 
-app.MapFollowEndpoints();
+app.MapSocialGraphEndpoints();
+
+app.MapFollowEndpoints(); // POST /api/v1/profiles/{username}/follow
 
 app.MapSecurityModerationEndpoints();
 

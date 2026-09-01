@@ -10,10 +10,11 @@ public static class SocialGraphEndpoints
         this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapDelete(
-                "/api/v1/profiles/{username}/followers/{followerId:int}",
-                RemoveFollowerAsync)
-            .RequireAuthorization()
-            .WithTags("Profiles");
+        "/api/v1/profiles/{username}/followers/{followerId:int}",
+        RemoveFollowerAsync)
+        .RequireAuthorization()
+        .WithTags("Profiles");
+        // Removing followers is not part of the canonical API contract.
 
         return endpoints;
     }
