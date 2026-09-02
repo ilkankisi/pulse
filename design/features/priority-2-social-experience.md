@@ -201,20 +201,13 @@ Token: {components.profile-stats}
 Widget hierarchy:
 
 ProfileStats
-
 └── Row
-
-├── StatButton
-
-│   ├── Text(followerCount)
-
-│   └── Text("Takipçi")
-
-└── StatButton
-
-├── Text(followingCount)
-
-└── Text("Takip")
+    ├── StatButton
+    │   ├── Text(followerCount)
+    │   └── Text("Takipçi")
+    └── StatButton
+        ├── Text(followingCount)
+        └── Text("Takip")
 
 Kurallar:
 
@@ -235,22 +228,14 @@ Token: {components.social-graph-list-item}
 Widget hierarchy:
 
 InkWell
-
 └── Padding
-
-└── Row
-
-├── CircleAvatar
-
-├── Expanded
-
-│   └── Column
-
-│       ├── Text(displayName)
-
-│       └── Text("@username")
-
-└── optional relationship action
+    └── Row
+        ├── CircleAvatar
+        ├── Expanded
+        │   └── Column
+        │       ├── Text(displayName)
+        │       └── Text("@username")
+        └── optional relationship action
 
 Kurallar:
 
@@ -301,14 +286,10 @@ Token: {typography.label-md}, {colors.primary-container}
 Widget hierarchy:
 
 FeedScopeControl
-
 └── contract supports following feed ise
-
-└── SegmentedButton | single-select FilterChip group
-
-├── Text("Tümü")
-
-└── Text("Takip Ettiklerim")
+    └── SegmentedButton | single-select FilterChip group
+        ├── Text("Tümü")
+        └── Text("Takip Ettiklerim")
 
 Kurallar:
 
@@ -331,12 +312,9 @@ Token: {typography.body-sm}, {colors.text-secondary}
 Widget hierarchy:
 
 ProfileRelationshipContext
-
 └── Wrap
-
-├── canonical state varsa Text | AssistChip("Seni takip ediyor")
-
-└── canonical state varsa Text | AssistChip("Karşılıklı takip")
+    ├── canonical state varsa Text | AssistChip("Seni takip ediyor")
+    └── canonical state varsa Text | AssistChip("Karşılıklı takip")
 
 Kurallar:
 
