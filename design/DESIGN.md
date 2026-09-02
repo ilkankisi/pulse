@@ -1352,8 +1352,8 @@ UI:
 
 - Başka kullanıcı profili → güvenlik/overflow menüsü.
 - Backend relationship state'e göre:
-  - `Sessize Al`
-  - `Sessizden Çıkar`
+  - Sessize Al
+  - Sessizden Çıkar
 - Kendi profilinde mute/unmute gösterilmez.
 - Mutation sırasında yalnız ilgili aksiyon loading/disabled olur.
 - Başarı sonrası state backend sonucuyla senkronize edilir.
@@ -1412,685 +1412,16 @@ SearchPage
 
 Kurallar:
 
-Sorgu canonical arama parametresine map edilir.
-
-Contract dışında filter, sort, cursor veya pagination parametresi üretilmez.
-
-Sorgu temizlendiğinde önceki sonuçlar yeni sorguya aitmiş gibi gösterilmez.
-
-Stale request güncel sorgu sonucunu overwrite etmez.
-
-Sonuç satırları minimum 44x44px dokunma alanına sahiptir.
-
-Kullanıcı sonucuna giderken result.username kullanılır.
-
-Arama sonucu kullanıcı satırı
-
-Token: {components.social-graph-list-item}
-
-Widget hierarchy:
-
-InkWell
-
-└── Padding
-
-└── Row
-
-├── CircleAvatar
-
-├── Expanded
-
-│   └── Column(crossAxis: start)
-
-│       ├── Text(displayName)
-
-│       └── Text("@username")
-
-└── optional relationship action
-
-Kurallar:
-
-Mevcut kullanıcı satırı pattern'i reuse edilir.
-
-Satıra dokunma → ProfilePage(result.username).
-
-Duplicate block/report aksiyonları eklenmez.
-
-Mention suggestion overlay
-
-Token: {components.input}, {components.social-graph-list-item}
-
-Widget hierarchy:
-
-Composer
-
-└── Stack
-
-├── TextFormField
-
-└── mention active ise
-
-└── suggestion surface
-
-└── ConstrainedBox
-
-└── ListView
-
-└── suggestion row
-
-├── CircleAvatar
-
-└── Column
-
-├── Text(displayName)
-
-└── Text("@username")
-
-Kurallar:
-
-Suggestion yüzeyi composer'ı kullanılmaz hale getirmez.
-
-Klavye açıkken erişilebilir kalır.
-
-Seçimde canonical username kullanılır.
-
-Suggestion error full-screen composer error'a dönüşmez.
-
-Empty suggestion taslağı etkilemez.
-
-Contract dışı mention endpoint'i üretilmez.
-
-Pinned post alanı
-
-Token: {components.post-card}
-
-Widget hierarchy:
-
-ProfilePage
-
-└── profile content
-
-├── ProfileSummary
-
-├── pinned post varsa
-
-│   └── Column
-
-│       ├── Row
-
-│       │   ├── Icon(push_pin_outlined)
-
-│       │   └── Text("Sabitlenmiş")
-
-│       └── PostCard(pinnedPost)
-
-└── profile posts
-
-Kurallar:
-
-Yalnız backend state varsa gösterilir.
-
-Yeni post-card varyantı üretilmez.
-
-Mevcut post navigation ve güvenlik davranışları korunur.
-
-Pinned metadata görsel olarak ikincildir.
-
-Pinned state yokluğu empty state değildir.
-
-Mute aksiyonu
-
-Token: {components.safety-action-menu}
-
-Widget hierarchy:
-
-MenuAnchor | PopupMenuButton
-
-└── other profile actions
-
-└── MenuItemButton
-
-├── Icon(volume_off_outlined | volume_up_outlined)
-
-└── Text("Sessize Al" | "Sessizden Çıkar")
-
-Kurallar:
-
-Yalnız başka kullanıcı profillerinde gösterilir.
-
-Backend relationship state uygun aksiyonu belirler.
-
-Mutation sırasında tekrar tetiklenemez.
-
-Block/report ile mevcut security menu pattern'i reuse edilir.
-
-Mute, block davranışı gibi yorumlanmaz.
-
-Draft discard dialog
-
-Token: {colors.error}
-
-Widget hierarchy:
-
-AlertDialog
-
-├── title: Text("Taslak silinsin mi?")
-
-├── content: Text("Yazdığın değişiklikler kaybolacak.")
-
-└── actions
-
-├── TextButton("Vazgeç")
-
-└── TextButton | FilledButton("Taslağı Sil")
-
-Kurallar:
-
-Boş composer kapanırken gösterilmez.
-
-Başarılı gönderim sonrası gösterilmez.
-
-Ağ hatası discard sayılmaz.
-
-Destructive aksiyon açık biçimde etiketlenir.
-
-Gönderi düzenleme ekranı
-
-Token: {components.composer}, {components.primary-button}
-
-Widget hierarchy:
-
-EditPostPage
-
-└── Scaffold
-
-├── AppBar
-
-│   ├── leading: back
-
-│   └── action: FilledButton("Kaydet")
-
-└── SafeArea
-
-└── Padding
-
-└── Form
-
-└── Column
-
-├── TextFormField
-
-│   ├── current content
-
-│   ├── multiline
-
-│   └── canonical maxLength
-
-├── character counter
-
-└── validation message
-
-Kurallar:
-
-Edit alanı yalnız canonical editable content alanına map edilir.
-
-Composer validation kuralları reuse edilir.
-
-İçerik değişmemişse gereksiz mutation gönderilmez.
-
-Loading sırasında Kaydet tekrar tetiklenemez.
-
-Ağ hatasında düzenlenmiş local metin korunur.
-
-Başarılı backend response güncel post state'inin kaynağıdır.
-
-Başkasının gönderisine edit UI gösterilmez.
-
-Screen states
-
-Arama
-
-Initial state
-
-Başlık: "Ara"
-
-Açıklama: "Kullanıcıları veya içerikleri bulmak için arama yap."
-
-Bu durum API empty state değildir.
-
-Loading state
-
-Arama input'u kullanılabilir kalır.
-
-Loading son aktif sorguya aittir.
-
-Önceki sorgunun sonuçları yeni sorguya ait gibi gösterilmez.
-
-Empty state
-
-Başlık: "Sonuç bulunamadı"
-
-Açıklama: "Aramana uygun bir sonuç bulunamadı."
-
-CTA yoktur.
-
-Error state
-
-Başlık: "Arama yapılamadı"
-
-Açıklama: "Sonuçlar alınırken bir sorun oluştu."
-
-CTA: "Tekrar Dene"
-
-401 login akışına gider.
-
-Mention suggestions
-
-Initial state
-
-Mention aktif değilse suggestion yüzeyi gösterilmez.
-
-Empty state
-
-Eşleşme bulunamazsa inline durum gösterilebilir.
-
-Composer taslağı korunur.
-
-Full-screen empty state kullanılmaz.
-
-Error state
-
-Suggestion yüzeyinde non-blocking hata gösterilebilir.
-
-Composer içeriği korunur.
-
-Pinned post
-
-Empty state
-
-Pinned gönderi yoksa state panel gösterilmez.
-
-Profil normal şekilde devam eder.
-
-Error state
-
-Pinned veri profil response'unun parçasıysa profil error semantiği canonical response'a göre uygulanır.
-
-Sahte pinned veri üretilmez.
-
-Mute / unmute
-
-Success
-
-"Kullanıcı sessize alındı."
-
-"Kullanıcı sessizden çıkarıldı."
-
-Error
-
-Profil state'i korunur.
-
-İlgili aksiyon tekrar kullanılabilir hale gelir.
-
-401 login akışına gider.
-
-Draft
-
-Success
-
-Başarılı gönderim sonrası composer taslağı temizlenir.
-
-Başarılı edit sonrası edit taslağı temizlenir.
-
-Error
-
-Ağ/5xx taslağı temizlemez.
-
-Validation taslağı temizlemez.
-
-Mention lookup hatası taslağı temizlemez.
-
-Gönderi düzenleme
-
-Error state
-
-Validation:
-
-İlgili input altında gösterilir.
-
-Ağ/5xx:
-
-Düzenlenmiş metin korunur.
-
-Kullanıcı tekrar deneyebilir.
-
-401:
-
-Merkezi login akışına gider.
-
-403:
-
-Empty veya validation state gibi gösterilmez.
-
-404:
-
-Canonical semantiğe göre gönderinin artık bulunamadığı durum gösterilir.
-
-Form sahte local post ile devam etmez.
-
-Success
-
-"Gönderi güncellendi."
-
-Backend'in döndürdüğü güncel post render edilir.
-
-Navigation
-
-Arama giriş noktası → SearchPage.
-
-Arama kullanıcı sonucu → ProfilePage(result.username).
-
-Arama gönderi sonucu → ilgili Gönderi Detayı.
-
-Composer mention seçimi → composer içinde kalır.
-
-Render edilmiş mention → destekleniyorsa ProfilePage(username).
-
-Profil pinned post → Gönderi Detayı.
-
-Başka profil güvenlik menüsü → mute/unmute; route değişmez.
-
-Kendi gönderisi overflow → EditPostPage.
-
-Edit başarı → önceki ekrana backend'in güncel post state'iyle dönülür.
-
-Draft discard → önceki route'a dönülür.
-
-Do's and Don'ts
-
-Do
-
-Arama sonucunda backend'den gelen gerçek kullanıcı/post kimliğini kullan.
-
-Mention seçiminde canonical username kullan.
-
-Pinned post için mevcut post-card bileşenini reuse et.
-
-Mute/unmute state'ini backend sonucuyla senkronize et.
-
-Composer ve edit taslaklarını ağ hatasında koru.
-
-Edit validation için composer kurallarını reuse et.
-
-Mutation sonrası backend response'u kaynak kabul et.
-
-401'i merkezi login akışına gönder.
-
-403'ü normal empty state gibi gösterme.
-
-Minimum 44x44px dokunma alanını koru.
-
-Dinamik metin ölçeklendirmeyi destekle.
-
-Don'ts
-
-API kontratında olmayan search, mention, mute, pin, draft veya edit endpoint'i varsayma.
-
-API kontratında olmayan query parametresi, cursor, filter veya sort üretme.
-
-Mention için backend'de bulunmayan kullanıcıyı local string üzerinden gerçek entity kabul etme.
-
-Pinned state'i yalnız local state ile kalıcılaştırma.
-
-Mute state'ini yalnız optimistic state ile kalıcı kaynak kabul etme.
-
-Backend desteği yokken cross-device draft sync sunma.
-
-Başkasının gönderisinde Gönderiyi Düzenle gösterme.
-
-Arama sonucu yokluğunu network error'a dönüştürme.
-
-Mention suggestion hatasında composer taslağını temizleme.
-
-Kullanıcının kendi profilinde mute aksiyonu gösterme.
-
-Yeni role, permission, moderation status veya sosyal davranış üretme.
-
----
-
-# Feature: Öncelik 2 sosyal deneyim akışları
-
-## Scope
-
-Bu feature mevcut canonical sosyal graf sözleşmesini daha tutarlı bir ürün deneyimine dönüştürür:
-
-- Profil ile Takipçiler/Takip Edilenler ekranları arasında ilişki state sürekliliği
-- Sosyal graf satırından takip etme ve takibi bırakma
-- Kendi takipçi listesindeki bağlamsal ilişki bilgisinin gösterimi
-- Follow/unfollow sonrasında profil sayaçları ve açık listelerin backend state ile yeniden senkronize edilmesi
-- Feed'in canonical sözleşmede tanımlanan tek kronolojik akış olarak korunması
-- Block nedeniyle görünmeyen kaynaklarda canonical 404 semantiğinin bilgi sızdırmadan gösterilmesi
-
-Tüm API, response, permission ve mutation davranışları canonical `docs/api-contract.md` sözleşmesinden map edilir.
-
-Canonical veri kaynakları:
-
-- Profil: `GET /api/v1/profiles/{username}`
-- Profil gönderileri: `GET /api/v1/profiles/{username}/posts`
-- Takipçiler: `GET /api/v1/profiles/{username}/followers`
-- Takip Edilenler: `GET /api/v1/profiles/{username}/following`
-- Takip Et: `POST /api/v1/profiles/{username}/follow`
-- Takibi Bırak: `DELETE /api/v1/profiles/{username}/follow`
-- Ana Akış: `GET /api/v1/feed`
-
-UI:
-
-- API kontratında olmayan endpoint üretmez.
-- Feed için API kontratında olmayan query, filter, mode veya cursor üretmez.
-- Profil response'unda bulunmayan ters yönlü follow state'i varmış gibi davranmaz.
-- `isFollowedByCurrentUser` alanını yalnız canonical anlamıyla kullanır.
-- Follow/unfollow mutation response'undaki `isFollowing` alanını `SocialGraphUserResponse.isFollowedByCurrentUser` için yeni alias olarak modellemez.
-- Sayaçları mutation sonrası yalnız local `+1/-1` hesabıyla kalıcı gerçek kabul etmez.
-- 404 sonucundan block ilişkisinin varlığını çıkarmaya veya kullanıcıya açıklamaya çalışmaz.
-
-## Contract-gated yüzeyler
-
-### “Takip Ettiklerim” feed filtresi
-
-Canonical sözleşmede yalnız:
-
-`GET /api/v1/feed`
-
-bulunur.
-
-Bu endpoint için feed mode, following-only query veya ikinci feed endpoint'i tanımlı değildir.
-
-Bu nedenle mevcut tasarım:
-
-- “Takip Ettiklerim” tab/chip/filter göstermez.
-- Global feed response'unu istemci tarafında following collection ile filtreleyip canonical feed gibi sunmaz.
-- `/feed?filter=following`, `/following/feed` veya benzeri route üretmez.
-- Boş “Takip Ettiklerim” placeholder'ı göstermez.
-
-Canonical kontrata following-only feed semantiği eklenirse bu yüzey ayrı bir contract-aligned revizyonda açılır.
-
-### Profilde “Seni takip ediyor / Karşılıklı takip”
-
-Canonical profile response yalnız:
-
-`isFollowedByCurrentUser`
-
-alanını sağlar.
-
-Bu alan oturum sahibinin görüntülenen kullanıcıyı takip edip etmediğini belirtir.
-
-Başka profil header'ında hedef kullanıcının oturum sahibini takip edip etmediğini kanıtlayan ikinci bir alan yoktur.
-
-Bu nedenle başka profil header'ında:
-
-- “Seni takip ediyor”
-- “Karşılıklı takip”
-
-etiketleri gösterilmez.
-
-UI ters yönlü ilişkiyi `followerCount`, `followingCount`, username eşleşmesi veya local cache üzerinden tahmin etmez.
-
-## User flows
-
-### Profil → sosyal graf
-
-- Profil yüklenir.
-- `followerCount` ve `followingCount` canonical profile response'tan gösterilir.
-- “Takipçi” → `FollowersPage(profile.username)`.
-- “Takip” → `FollowingPage(profile.username)`.
-- Açılan sayfa kendi route `username` bağlamını taşır.
-- Başka profil görüntülenirken current-user username ile endpoint değiştirilmez.
-- Sosyal graf satırına dokunma → `ProfilePage(row.username)`.
-
-### Profilde follow / unfollow
-
-Başka profil:
-
-- `isFollowedByCurrentUser=false` → “Takip Et”.
-- `isFollowedByCurrentUser=true` → “Takibi Bırak”.
-
-Takip Et:
-
-- `POST /api/v1/profiles/{profile.username}/follow`
-- Başarı response'u `isFollowing=true` olmalıdır.
-- İlgili relationship CTA mutation süresince disabled/loading olur.
-- Başarı sonrası profil ve ilgili açık sosyal graf read state'i invalidate/refetch edilir.
-
-Takibi Bırak:
-
-- `DELETE /api/v1/profiles/{profile.username}/follow`
-- Başarı response'u `isFollowing=false` olmalıdır.
-- İlgili relationship CTA mutation süresince disabled/loading olur.
-- Başarı sonrası profil ve ilgili açık sosyal graf read state'i invalidate/refetch edilir.
-
-Kendi profilinde follow/unfollow CTA gösterilmez.
-
-### Sosyal graf satırında follow / unfollow
-
-Her `SocialGraphUserResponse` satırında:
-
-- `row.id`
-- `row.username`
-- `row.displayName`
-- `row.avatarUrl`
-- `row.isFollowedByCurrentUser`
-
-canonical alanları kullanılır.
-
-Başka kullanıcı satırı:
-
-- `isFollowedByCurrentUser=false` → “Takip Et”.
-- `isFollowedByCurrentUser=true` → “Takibi Bırak”.
-
-Oturum sahibinin kendi satırında relationship CTA gösterilmez.
-
-Mutation path her zaman:
-
-`row.username`
-
-ile oluşturulur.
-
-Satırdaki ilişki aksiyonu loading iken yalnız o satırın CTA'sı disabled olur; listenin geri kalanı kullanılabilir kalır.
-
-Başarı sonrası mutation response geçici etkileşim sonucunu doğrular, ardından kaynak liste canonical GET endpoint'inden yeniden senkronize edilir.
-
-### Kendi takipçilerimde ilişki bağlamı
-
-Yalnız:
-
-`FollowersPage(myUsername)`
-
-bağlamında listedeki her öğenin oturum sahibini takip ettiği collection üyeliğinin kendisinden bellidir.
-
-Bu nedenle ek backend field üretmeden bağlamsal metadata gösterilebilir:
-
-- `row.isFollowedByCurrentUser=false`
-  - ikincil metin: “Seni takip ediyor”
-  - CTA: “Takip Et”
-- `row.isFollowedByCurrentUser=true`
-  - ikincil metin: “Karşılıklı takip”
-  - CTA: “Takibi Bırak”
-
-“Karşılıklı takip” burada iki canonical gerçeğin birleşimidir:
-
-1. Satır kullanıcısı `FollowersPage(myUsername)` collection'ında bulunduğu için oturum sahibini takip eder.
-2. `isFollowedByCurrentUser=true` olduğu için oturum sahibi de satır kullanıcısını takip eder.
-
-Bu türetme yalnız kendi takipçilerim ekranında yapılır.
-
-Aşağıdaki bağlamlarda aynı etiketler gösterilmez:
-
-- Başka kullanıcının Followers ekranı
-- Başka kullanıcının Following ekranı
-- Kendi Following ekranı
-- Profil header'ı
-- Feed post kartı
-
-### Başka profilin sosyal grafı
-
-`FollowersPage(profile.username)` ve `FollowingPage(profile.username)` aynı liste component'ini kullanır.
-
-Burada `isFollowedByCurrentUser` yalnız oturum sahibinin satırdaki kullanıcıyı takip edip etmediğini belirler.
-
-Collection üyeliği hedef profile göre olduğundan:
-
-- “Seni takip ediyor”
-- “Karşılıklı takip”
-
-etiketleri üretilmez.
-
-Satır aksiyonu yine “Takip Et / Takibi Bırak” olarak kullanılabilir.
-
-### Follow mutation sonrası sayaç senkronizasyonu
-
-Follow/unfollow response'u follower/following count döndürmez.
-
-Bu nedenle UI:
-
-- `followerCount` veya `followingCount` için local artış/azalışı kalıcı kaynak kabul etmez.
-- İlgili profil read state'ini yeniden yükler.
-- Açık Followers/Following collection'ını gerektiğinde canonical endpoint'ten yeniden yükler.
-- Refetch tamamlandığında backend'in döndürdüğü count ve collection sonucu kaynak kabul edilir.
-
-Optimistic animasyon kullanılırsa yalnız geçici görsel feedback'tir; hata halinde geri alınır.
-
-### Feed
-
-Ana Akış:
-
-- yalnız `GET /api/v1/feed` sonucunu gösterir,
-- `createdAt DESC`, eşitlikte `id DESC` canonical sırasını bozmaz,
-- istemci tarafında “takip edilenler” alt kümesi üretmez,
-- block görünürlüğünü yeniden hesaplamaz,
-- moderasyon görünürlüğünü yeniden hesaplamaz.
-
-Follow/unfollow sonrasında kullanıcı Ana Akış'a döndüğünde istenirse canonical feed yeniden yüklenebilir; istemci hangi postların görünmesi gerektiğini ayrıca hesaplamaz.
-
-### Block nedeniyle görünmeyen sosyal kaynak
-
-Profile veya profile bağlı collection isteği `404` dönerse UI:
-
-- gerçek kullanıcı yokluğu ile block nedeniyle görünmezliği ayırt etmeye çalışmaz,
-- “Bu kullanıcı seni engelledi” benzeri açıklama göstermez,
-- canonical “Kullanıcı bulunamadı / içerik kullanılamıyor” deneyimini kullanır.
-
-Sosyal graf satırındaki follow mutation `404` dönerse:
-
-- “engellendin” sonucu çıkarılmaz,
-- mutation loading kapanır,
-- kaynak liste canonical endpoint'ten yenilenebilir,
-- kullanıcıya genel olarak ilişkinin güncellenemediği belirtilir.
-
-## Components
-
-### Sosyal graf ilişki satırı
-
-Token: `{components.social-graph-list-item}`, `{components.relationship-button}`
+- Sorgu canonical arama parametresine map edilir.
+- Contract dışında filter, sort, cursor veya pagination parametresi üretilmez.
+- Sorgu temizlendiğinde önceki sonuçlar yeni sorguya aitmiş gibi gösterilmez.
+- Stale request güncel sorgu sonucunu overwrite etmez.
+- Sonuç satırları minimum 44x44px dokunma alanına sahiptir.
+- Kullanıcı sonucuna giderken `result.username` kullanılır.
+
+### Arama sonucu kullanıcı satırı
+
+Token: `{components.social-graph-list-item}`
 
 Widget hierarchy:
 
@@ -2102,261 +1433,772 @@ InkWell
         ├── Expanded
         │   └── Column(crossAxis: start)
         │       ├── Text(displayName)
-        │       ├── Text("@username")
-        │       └── own FollowersPage ise optional relationship context
-        │           └── Text(
-        │               "Seni takip ediyor" |
-        │               "Karşılıklı takip"
-        │           )
-        └── row.id currentUser.id değilse relationship action
-            └── FilledButton | OutlinedButton
-                └── loading |
-                    "Takip Et" |
-                    "Takibi Bırak"
+        │       └── Text("@username")
+        └── optional relationship action
 
 Kurallar:
 
-Tüm satır minimum 72px yüksekliği korur.
+- Mevcut kullanıcı satırı pattern'i reuse edilir.
+- Satıra dokunma → `ProfilePage(result.username)`.
+- Duplicate block/report aksiyonları eklenmez.
 
-Satır ve CTA minimum 44x44px dokunma alanına sahiptir.
+### Mention suggestion overlay
 
-CTA ile satır navigation gesture'ı çakışmaz.
-
-CTA tap profile navigation başlatmaz.
-
-Avatar, görünen ad ve username uzun metinde CTA'yı ekran dışına itmez.
-
-İlişki metadata'sı {typography.body-sm} ve {colors.text-secondary} kullanır.
-
-“Karşılıklı takip” primary CTA değildir.
-
-Relationship action state yalnız isFollowedByCurrentUser ile belirlenir.
-
-Profil relationship alanı
-
-Token: {components.relationship-button}
+Token: `{components.input}`, `{components.social-graph-list-item}`
 
 Widget hierarchy:
 
-ProfileSummary
+```text
+Composer
+└── Stack
+    ├── TextFormField
+    └── mention active ise
+        └── suggestion surface
+            └── ConstrainedBox
+                └── ListView
+                    └── suggestion row
+                        ├── CircleAvatar
+                        └── Column
+                            ├── Text(displayName)
+                            └── Text("@username")
+
+Kurallar:
+
+- Suggestion yüzeyi composer'ı kullanılmaz hale getirmez.
+- Klavye açıkken erişilebilir kalır.
+- Seçimde canonical username kullanılır.
+- Suggestion error full-screen composer error'a dönüşmez.
+- Empty suggestion taslağı etkilemez.
+- Contract dışı mention endpoint'i üretilmez.
+
+### Pinned post alanı
+
+Token: `{components.post-card}`
+
+Widget hierarchy:
+
+```text
+ProfilePage
+└── profile content
+    ├── ProfileSummary
+    ├── pinned post varsa
+    │   └── Column
+    │       ├── Row
+    │       │   ├── Icon(push_pin_outlined)
+    │       │   └── Text("Sabitlenmiş")
+    │       └── PostCard(pinnedPost)
+    └── profile posts
+
+Kurallar:
+
+- Yalnız backend state varsa gösterilir.
+- Yeni post-card varyantı üretilmez.
+- Mevcut post navigation ve güvenlik davranışları korunur.
+- Pinned metadata görsel olarak ikincildir.
+- Pinned state yokluğu empty state değildir.
+
+### Mute aksiyonu
+
+Token: `{components.safety-action-menu}`
+
+Widget hierarchy:
+
+```text
+MenuAnchor | PopupMenuButton
+└── other profile actions
+    └── MenuItemButton
+        ├── Icon(volume_off_outlined | volume_up_outlined)
+        └── Text("Sessize Al" | "Sessizden Çıkar")
+
+Kurallar:
+
+- Yalnız başka kullanıcı profillerinde gösterilir.
+- Backend relationship state uygun aksiyonu belirler.
+- Mutation sırasında tekrar tetiklenemez.
+- Block/report ile mevcut security menu pattern'i reuse edilir.
+- Mute, block davranışı gibi yorumlanmaz.
+
+### Draft discard dialog
+
+Token: `{colors.error}`
+
+Widget hierarchy:
+
+```text
+AlertDialog
+├── title: Text("Taslak silinsin mi?")
+├── content: Text("Yazdığın değişiklikler kaybolacak.")
 └── actions
-    ├── own profile
-    │   └── OutlinedButton("Profili Düzenle")
-    └── other profile
-        └── FilledButton | OutlinedButton
-            └── loading |
-                "Takip Et" |
-                "Takibi Bırak"
+    ├── TextButton("Vazgeç")
+    └── TextButton | FilledButton("Taslağı Sil")
 
 Kurallar:
 
-Profil header ters yönlü follow etiketi üretmez.
+- Boş composer kapanırken gösterilmez.
+- Başarılı gönderim sonrası gösterilmez.
+- Ağ hatası discard sayılmaz.
+- Destructive aksiyon açık biçimde etiketlenir.
 
-isFollowedByCurrentUser yalnız CTA state'ini belirler.
+### Gönderi düzenleme ekranı
 
-Follow mutation sırasında CTA tekrar tetiklenemez.
-
-Başarı sonrası profile read state canonical endpoint'ten yenilenir.
-
-Canonical feed header
+Token: `{components.composer}`, `{components.primary-button}`
 
 Widget hierarchy:
 
-FeedPage
+```text
+EditPostPage
 └── Scaffold
     ├── AppBar
-    │   └── Text("Ana Akış")
-    └── body
-        └── canonical feed states
+    │   ├── leading: back
+    │   └── action: FilledButton("Kaydet")
+    └── SafeArea
+        └── Padding
+            └── Form
+                └── Column
+                    ├── TextFormField
+                    │   ├── current content
+                    │   ├── multiline
+                    │   └── canonical maxLength
+                    ├── character counter
+                    └── validation message
 
 Kurallar:
 
-AppBar altında “Takip Ettiklerim” filter chip/tab gösterilmez.
+- Edit alanı yalnız canonical editable content alanına map edilir.
+- Composer validation kuralları reuse edilir.
+- İçerik değişmemişse gereksiz mutation gönderilmez.
+- Loading sırasında `Kaydet` tekrar tetiklenemez.
+- Ağ hatasında düzenlenmiş local metin korunur.
+- Başarılı backend response güncel post state'inin kaynağıdır.
+- Başkasının gönderisine edit UI gösterilmez.
 
-UI ikinci feed mode'u varmış gibi segmented control üretmez.
+## Screen states
 
-Feed empty state tüm canonical feed sonucunun empty state'idir.
+### Arama
 
-Screen states
+#### Initial state
 
-Takipçiler
+Başlık: "Ara"
 
-Loading state:
+Açıklama: "Kullanıcıları veya içerikleri bulmak için arama yap."
 
-Liste skeleton'ı kullanılır.
+Bu durum API empty state değildir.
 
-Önceki başka profile ait satırlar yeni route bağlamında gösterilmez.
+#### Loading state
 
-Empty state:
+- Arama input'u kullanılabilir kalır.
+- Loading son aktif sorguya aittir.
+- Önceki sorgunun sonuçları yeni sorguya ait gibi gösterilmez.
 
-Başlık: “Henüz takipçi yok”
+#### Empty state
 
-Açıklama: “Bu kullanıcıyı henüz kimse takip etmiyor.”
+Başlık: "Sonuç bulunamadı"
 
-CTA zorunlu değildir.
+Açıklama: "Aramana uygun bir sonuç bulunamadı."
 
-items=[] empty state'tir; 404 değildir.
+CTA yoktur.
 
-Error state:
+#### Error state
 
-Ağ/5xx:
+Başlık: "Arama yapılamadı"
 
-Başlık: “Takipçiler yüklenemedi”
+Açıklama: "Sonuçlar alınırken bir sorun oluştu."
 
-CTA: “Tekrar Dene”
-
-404:
-
-Başlık: “Kullanıcı bulunamadı”
-
-Block nedeniyle mi yoksa gerçekten bulunamadığı mı açıklanmaz.
-
-401 merkezi login akışına gider.
-
-Takip Edilenler
-
-Loading state:
-
-Liste skeleton'ı kullanılır.
-
-Route username bağlamı korunur.
-
-Empty state:
-
-Başlık: “Henüz kimseyi takip etmiyor”
-
-Açıklama: “Bu kullanıcının takip ettiği hesap bulunmuyor.”
-
-CTA zorunlu değildir.
-
-items=[] empty state'tir; 404 değildir.
-
-Error state:
-
-Ağ/5xx:
-
-Başlık: “Takip edilenler yüklenemedi”
-
-CTA: “Tekrar Dene”
-
-404:
-
-Başlık: “Kullanıcı bulunamadı”
-
-401 merkezi login akışına gider.
-
-Follow / unfollow
-
-Loading:
-
-Yalnız ilgili relationship CTA loading/disabled olur.
-
-Aynı mutation tekrar tetiklenmez.
-
-Success:
-
-Profil aksiyonu:
-
-Follow: “Takip edildi.”
-
-Unfollow: “Takip bırakıldı.”
-
-Liste satırında hızlı mutationlarda snackbar zorunlu değildir; ilişki CTA'sının backend sonucuna göre güncellenmesi yeterlidir.
-
-Error:
-
-Mevcut canonical state korunur.
-
-Optimistic state varsa geri alınır.
-
-CTA yeniden kullanılabilir hale gelir.
+CTA: "Tekrar Dene"
 
 401 login akışına gider.
 
-404 block bilgisi olarak açıklanmaz.
+### Mention suggestions
 
-Ana Akış
+#### Initial state
 
-Empty state:
+Mention aktif değilse suggestion yüzeyi gösterilmez.
 
-Başlık: “Akış henüz boş”
+#### Empty state
 
-Açıklama: “İlk gönderini paylaşarak konuşmayı başlat.”
+- Eşleşme bulunamazsa inline durum gösterilebilir.
+- Composer taslağı korunur.
+- Full-screen empty state kullanılmaz.
 
-CTA: “Gönderi Oluştur”
+#### Error state
 
-Bu state “Takip Ettiklerim boş” anlamında kullanılmaz.
+- Suggestion yüzeyinde non-blocking hata gösterilebilir.
+- Composer içeriği korunur.
 
-Navigation
+### Pinned post
 
-Profil “Takipçi” → FollowersPage(profile.username).
+#### Empty state
 
-Profil “Takip” → FollowingPage(profile.username).
+- Pinned gönderi yoksa state panel gösterilmez.
+- Profil normal şekilde devam eder.
 
-Followers satırı → ProfilePage(row.username).
+#### Error state
 
-Following satırı → ProfilePage(row.username).
+- Pinned veri profil response'unun parçasıysa profil error semantiği canonical response'a göre uygulanır.
+- Sahte pinned veri üretilmez.
 
-Relationship CTA → route değiştirmez.
+### Mute / unmute
 
-Sosyal graf listesinden profile gidip geri dönüldüğünde kaynak route username'i korunur.
+#### Success
 
-Mümkün olduğunda scroll konumu korunur.
+- "Kullanıcı sessize alındı."
+- "Kullanıcı sessizden çıkarıldı."
 
-Profil B üzerinden yeni sosyal graf ekranına geçildiğinde yeni route B'nin username'ini taşır.
+#### Error
 
-Ana Akış tek canonical feed route'u olarak kalır.
+- Profil state'i korunur.
+- İlgili aksiyon tekrar kullanılabilir hale gelir.
+- 401 login akışına gider.
 
-Do's and Don'ts
+### Draft
 
-Do
+#### Success
 
-Profile ve sosyal graf endpoint'lerinde ekranda görüntülenen profilin gerçek username değerini kullan.
+- Başarılı gönderim sonrası composer taslağı temizlenir.
+- Başarılı edit sonrası edit taslağı temizlenir.
 
-Liste satırlarında canonical SocialGraphUserResponse alanlarını kullan.
+#### Error
 
-Follow/unfollow path'inde row.username veya profile.username kullan.
+- Ağ/5xx taslağı temizlemez.
+- Validation taslağı temizlemez.
+- Mention lookup hatası taslağı temizlemez.
 
-isFollowedByCurrentUser alanını oturum sahibinin hedef kullanıcıyı takip etmesi olarak yorumla.
+### Gönderi düzenleme
 
-Kendi Followers ekranındaki collection membership bilgisini yalnız o bağlamda inbound relationship kanıtı olarak kullan.
+#### Error state
 
-Kendi Followers ekranında iki yön de kanıtlandığında “Karşılıklı takip” gösterebilirsin.
+Validation:
 
-Mutation sonrası profil sayaçlarını canonical profile GET ile yeniden senkronize et.
+- İlgili input altında gösterilir.
 
-Mutation sonrası açık sosyal graf listesini gerektiğinde canonical collection GET ile yeniden senkronize et.
+Ağ/5xx:
 
-items=[] ile 404 semantiğini ayır.
+- Düzenlenmiş metin korunur.
+- Kullanıcı tekrar deneyebilir.
 
-401'i merkezi login akışına gönder.
+401:
 
-404 sonucunda block varlığını açıklama.
+- Merkezi login akışına gider.
 
-Minimum 44x44px dokunma alanını koru.
+403:
 
-Dinamik metin ölçeklendirmeyi destekle.
+- Empty veya validation state gibi gösterilmez.
 
-Don'ts
+404:
 
-/api/v1/feed için following, forYou, mode, filter, tab veya benzeri query parametresi üretme.
+- Canonical semantiğe göre gönderinin artık bulunamadığı durum gösterilir.
+- Form sahte local post ile devam etmez.
 
-“Takip Ettiklerim” feed'ini global feed'i local following listesiyle filtreleyerek canonical özellik gibi gösterme.
+#### Success
 
-Başka profil header'ında “Seni takip ediyor” veya “Karşılıklı takip” bilgisini tahmin etme.
+- "Gönderi güncellendi."
+- Backend'in döndürdüğü güncel post render edilir.
 
-followerCount > 0 değerini current-user relationship kanıtı olarak kullanma.
+## Navigation
 
-Başka kullanıcının Followers collection üyeliğini “beni takip ediyor” şeklinde yorumlama.
+- Arama giriş noktası → Arama ekranı.
+- Arama kullanıcı sonucu → `ProfilePage(result.username)`.
+- Arama gönderi sonucu → ilgili Gönderi Detayı.
+- Composer mention seçimi → composer içinde kalır.
+- Render edilmiş mention → destekleniyorsa `ProfilePage(username)`.
+- Profil pinned post → Gönderi Detayı.
+- Başka profil güvenlik menüsü → mute/unmute; route değişmez.
+- Kendi gönderisi overflow → `EditPostPage`.
+- Edit başarı → önceki ekrana backend'in güncel post state'iyle dönülür.
+- Draft discard → önceki route'a dönülür.
 
-isFollowing mutation response alanını profile/social-graph response şemasına yeni canonical alan olarak ekleme.
+## Do's and Don'ts
 
-Sayaçları yalnız local +1/-1 ile kalıcılaştırma.
+### Do
 
-Follow/unfollow sırasında tüm listeyi gereksiz yere bloke etme.
+- Arama sonucunda backend'den gelen gerçek kullanıcı/post kimliğini kullan.
+- Mention seçiminde canonical username kullan.
+- Pinned post için mevcut post-card bileşenini reuse et.
+- Mute/unmute state'ini backend sonucuyla senkronize et.
+- Composer ve edit taslaklarını ağ hatasında koru.
+- Edit validation için composer kurallarını reuse et.
+- Mutation sonrası backend response'u kaynak kabul et.
+- 401'i merkezi login akışına gönder.
+- 403'ü normal empty state gibi gösterme.
+- Minimum 44x44px dokunma alanını koru.
+- Dinamik metin ölçeklendirmeyi destekle.
 
-404'ü “Seni engelledi” mesajına dönüştürme.
+### Don'ts
 
-Sosyal graf ekranlarını global bottom navigation veya drawer destination yapma.
+- API kontratında olmayan search, mention, mute, pin, draft veya edit endpoint'i varsayma.
+- API kontratında olmayan query parametresi, cursor, filter veya sort üretme.
+- Mention için backend'de bulunmayan kullanıcıyı local string üzerinden gerçek entity kabul etme.
+- Pinned state'i yalnız local state ile kalıcılaştırma.
+- Mute state'ini yalnız optimistic state ile kalıcı kaynak kabul etme.
+- Backend desteği yokken cross-device draft sync sunma.
+- Başkasının gönderisinde `Gönderiyi Düzenle` gösterme.
+- Arama sonucu yokluğunu network error'a dönüştürme.
+- Mention suggestion hatasında composer taslağını temizleme.
+- Kullanıcının kendi profilinde mute aksiyonu gösterme.
+- Yeni role, permission, moderation status veya sosyal davranış üretme.
 
-Contract dışında yeni social role, relationship status veya endpoint üretme.
+---
+
+# Feature: Öncelik 2 sosyal deneyim akışları
+
+## Scope
+
+Bu feature profil merkezli sosyal graf deneyimini tamamlar:
+
+- Profilde takipçi ve takip edilen sayılarını görüntüleme.
+
+- Takipçi listesini açma.
+
+- Takip edilenler listesini açma.
+
+- Sosyal graf listesinden kullanıcı profiline geçme.
+
+- Başka kullanıcıyı takip etme.
+
+- Başka kullanıcıyı takipten çıkarma.
+
+- Başka kullanıcı profillerinde ilişki durumuna göre doğru CTA'yı gösterme.
+
+- Loading, empty, error ve mutation durumlarını tutarlı biçimde ele alma.
+
+Tüm endpoint, response alanı ve permission davranışları canonical `docs/api-contract.md` sözleşmesinden map edilir.
+
+UI:
+
+- API kontratında olmayan sosyal ilişki durumu üretmez.
+
+- API kontratında olmayan feed filtresi üretmez.
+
+- API kontratında tanımlı değilse “Seni takip ediyor” veya “Karşılıklı takip” etiketi göstermez.
+
+- Başka profil görüntülenirken current-user username kullanarak route bağlamını değiştirmez.
+
+- Takipçi ve takip edilen sayılarının kaynağı canonical profile response'tur.
+
+## User flows
+
+### Profil → sosyal graf
+
+- Profil yüklenir.
+
+- `followerCount` ve `followingCount` canonical profile response'tan gösterilir.
+
+- “Takipçi” sayacına dokunma → `FollowersPage(profile.username)`.
+
+- “Takip” sayacına dokunma → `FollowingPage(profile.username)`.
+
+- Açılan sosyal graf ekranı kendi route `username` bağlamını korur.
+
+- Başka profil görüntülenirken endpoint current-user username ile değiştirilmez.
+
+- Sosyal graf listesindeki kullanıcı satırına dokunma → `ProfilePage(row.username)`.
+
+### Takipçiler
+
+- `FollowersPage(username)` route parametresindeki profile ait takipçileri yükler.
+
+- Başlık kullanıcıya anlaşılır şekilde “Takipçiler” olarak gösterilir.
+
+- Liste canonical followers endpoint response'una göre render edilir.
+
+- Her satır canonical kullanıcı kimliği ve username değerini kullanır.
+
+- Satıra dokunulduğunda ilgili profil açılır.
+
+- Liste boşsa empty state gösterilir.
+
+- Network veya 5xx hatası empty state gibi gösterilmez.
+
+- 401 merkezi login akışına gider.
+
+- 403 normal empty state değildir.
+
+- Yeniden deneme mevcut route username bağlamını korur.
+
+### Takip edilenler
+
+- `FollowingPage(username)` route parametresindeki profile ait takip edilen hesapları yükler.
+
+- Başlık kullanıcıya anlaşılır şekilde “Takip Edilenler” olarak gösterilir.
+
+- Liste canonical following endpoint response'una göre render edilir.
+
+- Her satır canonical kullanıcı kimliği ve username değerini kullanır.
+
+- Satıra dokunulduğunda ilgili profil açılır.
+
+- Liste boşsa empty state gösterilir.
+
+- Network veya 5xx hatası empty state gibi gösterilmez.
+
+- 401 merkezi login akışına gider.
+
+- 403 normal empty state değildir.
+
+- Yeniden deneme mevcut route username bağlamını korur.
+
+### Profilde follow / unfollow
+
+Başka profil:
+
+- `isFollowedByCurrentUser=false` → “Takip Et”.
+
+- `isFollowedByCurrentUser=true` → “Takibi Bırak”.
+
+- Kendi profilinde follow/unfollow CTA gösterilmez; mevcut profil düzenleme davranışı korunur.
+
+Takip Et:
+
+- Canonical follow endpoint'i `profile.username` ile çağrılır.
+
+- Mutation süresince yalnız ilgili relationship CTA loading/disabled olur.
+
+- Aynı mutation tekrar tetiklenemez.
+
+- Başarı response'u canonical relationship state ile eşleşmelidir.
+
+- Başarı sonrası profil state'i backend sonucuyla senkronize edilir.
+
+- İlgili açık sosyal graf read state'i invalidate/refetch edilir.
+
+- Başarısız mutation'da önceki doğrulanmış relationship state korunur.
+
+Takibi Bırak:
+
+- Canonical unfollow endpoint'i `profile.username` ile çağrılır.
+
+- Mutation süresince yalnız ilgili relationship CTA loading/disabled olur.
+
+- Aynı mutation tekrar tetiklenemez.
+
+- Başarı sonrası profil state'i backend sonucuyla senkronize edilir.
+
+- İlgili açık sosyal graf read state'i invalidate/refetch edilir.
+
+- Başarısız mutation'da önceki doğrulanmış relationship state korunur.
+
+### Sosyal graf satırında relationship aksiyonu
+
+- Canonical response satır bazında ilişki aksiyonunu güvenilir biçimde destekliyorsa mevcut relationship CTA pattern'i reuse edilebilir.
+
+- Canonical response gerekli ilişki bilgisini vermiyorsa liste satırında tahmini follow/unfollow butonu üretilmez.
+
+- Satırın ana navigasyon davranışı her durumda `ProfilePage(row.username)` olur.
+
+- Mutation aksiyonu ile satır navigasyonu birbirine karıştırılmaz.
+
+## Components
+
+### Profil sosyal istatistikleri
+
+Token: `{components.profile-stats}`
+
+Widget hierarchy:
+
+ProfileStats
+
+Row
+
+StatButton
+
+Text(followerCount)
+
+Text("Takipçi")
+
+StatButton
+
+Text(followingCount)
+
+Text("Takip")
+
+Kurallar:
+
+- Değerler canonical profile response'tan gelir.
+
+- Sayaçlar local liste uzunluğundan türetilerek kalıcı kaynak kabul edilmez.
+
+- Her sayaç minimum 44x44px dokunma alanına sahiptir.
+
+- Dinamik metin ölçeklendirmede değer ve etiket okunabilir kalır.
+
+- Profil sahibi değiştiğinde sayaçların route bağlamı da yeni `profile.username` olur.
+
+### Sosyal graf liste öğesi
+
+Token: `{components.social-graph-list-item}`
+
+Widget hierarchy:
+
+InkWell
+
+Padding
+
+Row
+
+CircleAvatar
+
+Expanded
+
+Column
+
+Text(displayName)
+
+Text("@username")
+
+optional relationship action
+
+Kurallar:
+
+- Avatar yoksa mevcut avatar fallback pattern'i reuse edilir.
+
+- Display name ve username canonical response'tan gelir.
+
+- Satıra dokunma → `ProfilePage(row.username)`.
+
+- Tüm satırın minimum dokunma yüksekliği 44px'tir.
+
+- Uzun display name tek satırda uygun ellipsis davranışı kullanabilir.
+
+- Username görünür ve profile navigasyonunda canonical değer olarak kullanılır.
+
+- Block/report gibi farklı amaçlı aksiyonlar bu satıra duplicate edilmez.
+
+### Relationship CTA
+
+Token: `{components.relationship-button}`
+
+Durumlar:
+
+- Follow ediliyor değil → FilledButton veya mevcut primary relationship button: “Takip Et”.
+
+- Follow ediliyor → OutlinedButton veya mevcut secondary relationship button: “Takibi Bırak”.
+
+- Mutation → spinner/progress indicator + disabled state.
+
+- Kendi profilinde → relationship CTA yok.
+
+Kurallar:
+
+- Buton etiketi backend relationship state'e göre belirlenir.
+
+- Optimistic görsel değişiklik kalıcı doğruluk kaynağı değildir.
+
+- Başarılı response sonrası canonical state kullanılır.
+
+- Hata durumunda kullanıcı tekrar deneyebilir.
+
+- Layout buton etiketinin iki durumu arasında gereksiz sıçrama üretmemelidir.
+
+## Screen states
+
+### FollowersPage
+
+Initial/loading:
+
+- AppBar ve route bağlamı korunur.
+
+- Liste alanında mevcut list skeleton/loading pattern'i kullanılır.
+
+- Sahte kullanıcı satırı gösterilmez.
+
+Empty:
+
+Başlık: “Henüz takipçi yok”
+
+Açıklama: “Bu hesabı henüz kimse takip etmiyor.”
+
+- Empty state yalnız başarılı fakat boş canonical response için gösterilir.
+
+- CTA zorunlu değildir.
+
+Error:
+
+Başlık: “Takipçiler yüklenemedi”
+
+Açıklama: “Takipçiler alınırken bir sorun oluştu.”
+
+CTA: “Tekrar Dene”
+
+- 401 merkezi login akışına gider.
+
+- 403 empty state gibi gösterilmez.
+
+- Yeniden deneme aynı `username` route bağlamını kullanır.
+
+### FollowingPage
+
+Initial/loading:
+
+- AppBar ve route bağlamı korunur.
+
+- Liste alanında mevcut list skeleton/loading pattern'i kullanılır.
+
+- Sahte kullanıcı satırı gösterilmez.
+
+Empty:
+
+Başlık: “Henüz kimseyi takip etmiyor”
+
+Açıklama: “Bu hesabın takip ettiği kullanıcı bulunmuyor.”
+
+- Empty state yalnız başarılı fakat boş canonical response için gösterilir.
+
+- CTA zorunlu değildir.
+
+Error:
+
+Başlık: “Takip edilenler yüklenemedi”
+
+Açıklama: “Takip edilen hesaplar alınırken bir sorun oluştu.”
+
+CTA: “Tekrar Dene”
+
+- 401 merkezi login akışına gider.
+
+- 403 empty state gibi gösterilmez.
+
+- Yeniden deneme aynı `username` route bağlamını kullanır.
+
+### Follow mutation
+
+Loading:
+
+- Relationship CTA disabled olur.
+
+- Sayfanın geri kalanı kullanılabilir kalır.
+
+- Full-screen loading kullanılmaz.
+
+Success:
+
+- Backend'in canonical relationship state'i render edilir.
+
+- Profile relationship state güncellenir.
+
+- Follower/following count gerekiyorsa canonical refetch sonucuyla güncellenir.
+
+- İlgili açık sosyal graf verisi invalidate/refetch edilir.
+
+Error:
+
+- Mutation öncesindeki doğrulanmış relationship state korunur.
+
+- CTA tekrar kullanılabilir hale gelir.
+
+- Network/5xx profil ekranını empty state'e dönüştürmez.
+
+- 401 merkezi login akışına gider.
+
+- 403 permission/error davranışı olarak gösterilir.
+
+### Unfollow mutation
+
+Loading:
+
+- Relationship CTA disabled olur.
+
+- Sayfanın geri kalanı kullanılabilir kalır.
+
+- Full-screen loading kullanılmaz.
+
+Success:
+
+- Backend'in canonical relationship state'i render edilir.
+
+- Profile relationship state güncellenir.
+
+- Follower/following count gerekiyorsa canonical refetch sonucuyla güncellenir.
+
+- İlgili açık sosyal graf verisi invalidate/refetch edilir.
+
+Error:
+
+- Mutation öncesindeki doğrulanmış relationship state korunur.
+
+- CTA tekrar kullanılabilir hale gelir.
+
+- Network/5xx profil ekranını empty state'e dönüştürmez.
+
+- 401 merkezi login akışına gider.
+
+- 403 permission/error davranışı olarak gösterilir.
+
+## Navigation
+
+- `ProfilePage(username)` → “Takipçi” → `FollowersPage(username)`.
+
+- `ProfilePage(username)` → “Takip” → `FollowingPage(username)`.
+
+- `FollowersPage(username)` → kullanıcı satırı → `ProfilePage(row.username)`.
+
+- `FollowingPage(username)` → kullanıcı satırı → `ProfilePage(row.username)`.
+
+- Follow/unfollow mutation route değiştirmez.
+
+- Başka profil görüntülenirken sosyal graf endpoint'i current user adına çevrilmez.
+
+- Back navigation önceki profil/list bağlamını korur.
+
+## Contract boundaries
+
+Bu feature canonical API'de bulunmayan davranışları tasarım gereksinimi gibi tanımlamaz.
+
+Özellikle:
+
+- “Takip Ettiklerim” feed filtresi canonical feed contract'ında açıkça tanımlı değilse gösterilmez.
+
+- “Seni takip ediyor” etiketi canonical profile veya relationship response'unda alan olarak tanımlı değilse gösterilmez.
+
+- “Karşılıklı takip” durumu canonical response'tan güvenilir biçimde türetilemiyorsa gösterilmez.
+
+- Yeni relationship endpoint'i veya query parametresi üretilmez.
+
+- Sosyal graf için client-side kalıcı ilişki kaynağı oluşturulmaz.
+
+- Profile count değerleri liste uzunluğundan canonical alan yerine türetilmez.
+
+## Do's and Don'ts
+
+Do:
+
+- Profil sayaçlarında canonical `followerCount` ve `followingCount` değerlerini kullan.
+
+- Sosyal graf ekranlarında route `username` bağlamını koru.
+
+- Satır navigasyonunda `row.username` kullan.
+
+- Follow/unfollow CTA'yı backend relationship state'e göre göster.
+
+- Mutation sırasında yalnız ilgili CTA'yı loading/disabled yap.
+
+- Başarı sonrası backend sonucunu doğruluk kaynağı kabul et.
+
+- Profil ve açık sosyal graf read state'ini gerektiğinde invalidate/refetch et.
+
+- 401'i merkezi login akışına gönder.
+
+- 403'ü empty state olarak gösterme.
+
+- Minimum 44x44px dokunma alanını koru.
+
+- Dinamik metin ölçeklendirmeyi destekle.
+
+Don't:
+
+- Başka profilin followers/following route'unda current-user username kullanma.
+
+- API kontratında olmayan “Takip Ettiklerim” feed filtresi ekleme.
+
+- Contract tanımlamıyorsa “Seni takip ediyor” etiketi üretme.
+
+- Contract tanımlamıyorsa “Karşılıklı takip” etiketi üretme.
+
+- Liste uzunluğunu canonical follower/following count yerine kalıcı kaynak kabul etme.
+
+- Başarısız follow/unfollow mutation sonrası local optimistic state'i kalıcılaştırma.
+
+- Sosyal graf satırlarına gereksiz block/report aksiyonları ekleme.
+
+- Network hatasını başarılı boş liste gibi gösterme.
+
+- Yeni role, permission, relationship status veya endpoint üretme.

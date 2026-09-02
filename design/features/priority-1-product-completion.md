@@ -57,8 +57,8 @@ UI:
 
 - Başka kullanıcı profili → güvenlik/overflow menüsü.
 - Backend relationship state'e göre:
-  - `Sessize Al`
-  - `Sessizden Çıkar`
+  - Sessize Al
+  - Sessizden Çıkar
 - Kendi profilinde mute/unmute gösterilmez.
 - Mutation sırasında yalnız ilgili aksiyon loading/disabled olur.
 - Başarı sonrası state backend sonucuyla senkronize edilir.
@@ -117,245 +117,171 @@ SearchPage
 
 Kurallar:
 
-Sorgu canonical arama parametresine map edilir.
+- Sorgu canonical arama parametresine map edilir.
+- Contract dışında filter, sort, cursor veya pagination parametresi üretilmez.
+- Sorgu temizlendiğinde önceki sonuçlar yeni sorguya aitmiş gibi gösterilmez.
+- Stale request güncel sorgu sonucunu overwrite etmez.
+- Sonuç satırları minimum 44x44px dokunma alanına sahiptir.
+- Kullanıcı sonucuna giderken `result.username` kullanılır.
 
-Contract dışında filter, sort, cursor veya pagination parametresi üretilmez.
+### Arama sonucu kullanıcı satırı
 
-Sorgu temizlendiğinde önceki sonuçlar yeni sorguya aitmiş gibi gösterilmez.
-
-Stale request güncel sorgu sonucunu overwrite etmez.
-
-Sonuç satırları minimum 44x44px dokunma alanına sahiptir.
-
-Kullanıcı sonucuna giderken result.username kullanılır.
-
-Arama sonucu kullanıcı satırı
-
-Token: {components.social-graph-list-item}
+Token: `{components.social-graph-list-item}`
 
 Widget hierarchy:
 
+```text
 InkWell
-
 └── Padding
-
-└── Row
-
-├── CircleAvatar
-
-├── Expanded
-
-│   └── Column(crossAxis: start)
-
-│       ├── Text(displayName)
-
-│       └── Text("@username")
-
-└── optional relationship action
+    └── Row
+        ├── CircleAvatar
+        ├── Expanded
+        │   └── Column(crossAxis: start)
+        │       ├── Text(displayName)
+        │       └── Text("@username")
+        └── optional relationship action
 
 Kurallar:
 
-Mevcut kullanıcı satırı pattern'i reuse edilir.
+- Mevcut kullanıcı satırı pattern'i reuse edilir.
+- Satıra dokunma → `ProfilePage(result.username)`.
+- Duplicate block/report aksiyonları eklenmez.
 
-Satıra dokunma → ProfilePage(result.username).
+### Mention suggestion overlay
 
-Duplicate block/report aksiyonları eklenmez.
-
-Mention suggestion overlay
-
-Token: {components.input}, {components.social-graph-list-item}
+Token: `{components.input}`, `{components.social-graph-list-item}`
 
 Widget hierarchy:
 
+```text
 Composer
-
 └── Stack
-
-├── TextFormField
-
-└── mention active ise
-
-└── suggestion surface
-
-└── ConstrainedBox
-
-└── ListView
-
-└── suggestion row
-
-├── CircleAvatar
-
-└── Column
-
-├── Text(displayName)
-
-└── Text("@username")
+    ├── TextFormField
+    └── mention active ise
+        └── suggestion surface
+            └── ConstrainedBox
+                └── ListView
+                    └── suggestion row
+                        ├── CircleAvatar
+                        └── Column
+                            ├── Text(displayName)
+                            └── Text("@username")
 
 Kurallar:
 
-Suggestion yüzeyi composer'ı kullanılmaz hale getirmez.
+- Suggestion yüzeyi composer'ı kullanılmaz hale getirmez.
+- Klavye açıkken erişilebilir kalır.
+- Seçimde canonical username kullanılır.
+- Suggestion error full-screen composer error'a dönüşmez.
+- Empty suggestion taslağı etkilemez.
+- Contract dışı mention endpoint'i üretilmez.
 
-Klavye açıkken erişilebilir kalır.
+### Pinned post alanı
 
-Seçimde canonical username kullanılır.
-
-Suggestion error full-screen composer error'a dönüşmez.
-
-Empty suggestion taslağı etkilemez.
-
-Contract dışı mention endpoint'i üretilmez.
-
-Pinned post alanı
-
-Token: {components.post-card}
+Token: `{components.post-card}`
 
 Widget hierarchy:
 
+```text
 ProfilePage
-
 └── profile content
-
-├── ProfileSummary
-
-├── pinned post varsa
-
-│   └── Column
-
-│       ├── Row
-
-│       │   ├── Icon(push_pin_outlined)
-
-│       │   └── Text("Sabitlenmiş")
-
-│       └── PostCard(pinnedPost)
-
-└── profile posts
+    ├── ProfileSummary
+    ├── pinned post varsa
+    │   └── Column
+    │       ├── Row
+    │       │   ├── Icon(push_pin_outlined)
+    │       │   └── Text("Sabitlenmiş")
+    │       └── PostCard(pinnedPost)
+    └── profile posts
 
 Kurallar:
 
-Yalnız backend state varsa gösterilir.
+- Yalnız backend state varsa gösterilir.
+- Yeni post-card varyantı üretilmez.
+- Mevcut post navigation ve güvenlik davranışları korunur.
+- Pinned metadata görsel olarak ikincildir.
+- Pinned state yokluğu empty state değildir.
 
-Yeni post-card varyantı üretilmez.
+### Mute aksiyonu
 
-Mevcut post navigation ve güvenlik davranışları korunur.
-
-Pinned metadata görsel olarak ikincildir.
-
-Pinned state yokluğu empty state değildir.
-
-Mute aksiyonu
-
-Token: {components.safety-action-menu}
+Token: `{components.safety-action-menu}`
 
 Widget hierarchy:
 
+```text
 MenuAnchor | PopupMenuButton
-
 └── other profile actions
-
-└── MenuItemButton
-
-├── Icon(volume_off_outlined | volume_up_outlined)
-
-└── Text("Sessize Al" | "Sessizden Çıkar")
+    └── MenuItemButton
+        ├── Icon(volume_off_outlined | volume_up_outlined)
+        └── Text("Sessize Al" | "Sessizden Çıkar")
 
 Kurallar:
 
-Yalnız başka kullanıcı profillerinde gösterilir.
+- Yalnız başka kullanıcı profillerinde gösterilir.
+- Backend relationship state uygun aksiyonu belirler.
+- Mutation sırasında tekrar tetiklenemez.
+- Block/report ile mevcut security menu pattern'i reuse edilir.
+- Mute, block davranışı gibi yorumlanmaz.
 
-Backend relationship state uygun aksiyonu belirler.
+### Draft discard dialog
 
-Mutation sırasında tekrar tetiklenemez.
-
-Block/report ile mevcut security menu pattern'i reuse edilir.
-
-Mute, block davranışı gibi yorumlanmaz.
-
-Draft discard dialog
-
-Token: {colors.error}
+Token: `{colors.error}`
 
 Widget hierarchy:
 
+```text
 AlertDialog
-
 ├── title: Text("Taslak silinsin mi?")
-
 ├── content: Text("Yazdığın değişiklikler kaybolacak.")
-
 └── actions
-
-├── TextButton("Vazgeç")
-
-└── TextButton | FilledButton("Taslağı Sil")
+    ├── TextButton("Vazgeç")
+    └── TextButton | FilledButton("Taslağı Sil")
 
 Kurallar:
 
-Boş composer kapanırken gösterilmez.
+- Boş composer kapanırken gösterilmez.
+- Başarılı gönderim sonrası gösterilmez.
+- Ağ hatası discard sayılmaz.
+- Destructive aksiyon açık biçimde etiketlenir.
 
-Başarılı gönderim sonrası gösterilmez.
+### Gönderi düzenleme ekranı
 
-Ağ hatası discard sayılmaz.
-
-Destructive aksiyon açık biçimde etiketlenir.
-
-Gönderi düzenleme ekranı
-
-Token: {components.composer}, {components.primary-button}
+Token: `{components.composer}`, `{components.primary-button}`
 
 Widget hierarchy:
 
+```text
 EditPostPage
-
 └── Scaffold
-
-├── AppBar
-
-│   ├── leading: back
-
-│   └── action: FilledButton("Kaydet")
-
-└── SafeArea
-
-└── Padding
-
-└── Form
-
-└── Column
-
-├── TextFormField
-
-│   ├── current content
-
-│   ├── multiline
-
-│   └── canonical maxLength
-
-├── character counter
-
-└── validation message
+    ├── AppBar
+    │   ├── leading: back
+    │   └── action: FilledButton("Kaydet")
+    └── SafeArea
+        └── Padding
+            └── Form
+                └── Column
+                    ├── TextFormField
+                    │   ├── current content
+                    │   ├── multiline
+                    │   └── canonical maxLength
+                    ├── character counter
+                    └── validation message
 
 Kurallar:
 
-Edit alanı yalnız canonical editable content alanına map edilir.
+- Edit alanı yalnız canonical editable content alanına map edilir.
+- Composer validation kuralları reuse edilir.
+- İçerik değişmemişse gereksiz mutation gönderilmez.
+- Loading sırasında `Kaydet` tekrar tetiklenemez.
+- Ağ hatasında düzenlenmiş local metin korunur.
+- Başarılı backend response güncel post state'inin kaynağıdır.
+- Başkasının gönderisine edit UI gösterilmez.
 
-Composer validation kuralları reuse edilir.
+## Screen states
 
-İçerik değişmemişse gereksiz mutation gönderilmez.
+### Arama
 
-Loading sırasında Kaydet tekrar tetiklenemez.
-
-Ağ hatasında düzenlenmiş local metin korunur.
-
-Başarılı backend response güncel post state'inin kaynağıdır.
-
-Başkasının gönderisine edit UI gösterilmez.
-
-Screen states
-
-Arama
-
-Initial state
+#### Initial state
 
 Başlık: "Ara"
 
@@ -363,15 +289,13 @@ Açıklama: "Kullanıcıları veya içerikleri bulmak için arama yap."
 
 Bu durum API empty state değildir.
 
-Loading state
+#### Loading state
 
-Arama input'u kullanılabilir kalır.
+- Arama input'u kullanılabilir kalır.
+- Loading son aktif sorguya aittir.
+- Önceki sorgunun sonuçları yeni sorguya ait gibi gösterilmez.
 
-Loading son aktif sorguya aittir.
-
-Önceki sorgunun sonuçları yeni sorguya ait gibi gösterilmez.
-
-Empty state
+#### Empty state
 
 Başlık: "Sonuç bulunamadı"
 
@@ -379,7 +303,7 @@ Açıklama: "Aramana uygun bir sonuç bulunamadı."
 
 CTA yoktur.
 
-Error state
+#### Error state
 
 Başlık: "Arama yapılamadı"
 
@@ -389,174 +313,131 @@ CTA: "Tekrar Dene"
 
 401 login akışına gider.
 
-Mention suggestions
+### Mention suggestions
 
-Initial state
+#### Initial state
 
 Mention aktif değilse suggestion yüzeyi gösterilmez.
 
-Empty state
+#### Empty state
 
-Eşleşme bulunamazsa inline durum gösterilebilir.
+- Eşleşme bulunamazsa inline durum gösterilebilir.
+- Composer taslağı korunur.
+- Full-screen empty state kullanılmaz.
 
-Composer taslağı korunur.
+#### Error state
 
-Full-screen empty state kullanılmaz.
+- Suggestion yüzeyinde non-blocking hata gösterilebilir.
+- Composer içeriği korunur.
 
-Error state
+### Pinned post
 
-Suggestion yüzeyinde non-blocking hata gösterilebilir.
+#### Empty state
 
-Composer içeriği korunur.
+- Pinned gönderi yoksa state panel gösterilmez.
+- Profil normal şekilde devam eder.
 
-Pinned post
+#### Error state
 
-Empty state
+- Pinned veri profil response'unun parçasıysa profil error semantiği canonical response'a göre uygulanır.
+- Sahte pinned veri üretilmez.
 
-Pinned gönderi yoksa state panel gösterilmez.
+### Mute / unmute
 
-Profil normal şekilde devam eder.
+#### Success
 
-Error state
+- "Kullanıcı sessize alındı."
+- "Kullanıcı sessizden çıkarıldı."
 
-Pinned veri profil response'unun parçasıysa profil error semantiği canonical response'a göre uygulanır.
+#### Error
 
-Sahte pinned veri üretilmez.
+- Profil state'i korunur.
+- İlgili aksiyon tekrar kullanılabilir hale gelir.
+- 401 login akışına gider.
 
-Mute / unmute
+### Draft
 
-Success
+#### Success
 
-"Kullanıcı sessize alındı."
+- Başarılı gönderim sonrası composer taslağı temizlenir.
+- Başarılı edit sonrası edit taslağı temizlenir.
 
-"Kullanıcı sessizden çıkarıldı."
+#### Error
 
-Error
+- Ağ/5xx taslağı temizlemez.
+- Validation taslağı temizlemez.
+- Mention lookup hatası taslağı temizlemez.
 
-Profil state'i korunur.
+### Gönderi düzenleme
 
-İlgili aksiyon tekrar kullanılabilir hale gelir.
-
-401 login akışına gider.
-
-Draft
-
-Success
-
-Başarılı gönderim sonrası composer taslağı temizlenir.
-
-Başarılı edit sonrası edit taslağı temizlenir.
-
-Error
-
-Ağ/5xx taslağı temizlemez.
-
-Validation taslağı temizlemez.
-
-Mention lookup hatası taslağı temizlemez.
-
-Gönderi düzenleme
-
-Error state
+#### Error state
 
 Validation:
 
-İlgili input altında gösterilir.
+- İlgili input altında gösterilir.
 
 Ağ/5xx:
 
-Düzenlenmiş metin korunur.
-
-Kullanıcı tekrar deneyebilir.
+- Düzenlenmiş metin korunur.
+- Kullanıcı tekrar deneyebilir.
 
 401:
 
-Merkezi login akışına gider.
+- Merkezi login akışına gider.
 
 403:
 
-Empty veya validation state gibi gösterilmez.
+- Empty veya validation state gibi gösterilmez.
 
 404:
 
-Canonical semantiğe göre gönderinin artık bulunamadığı durum gösterilir.
+- Canonical semantiğe göre gönderinin artık bulunamadığı durum gösterilir.
+- Form sahte local post ile devam etmez.
 
-Form sahte local post ile devam etmez.
+#### Success
 
-Success
+- "Gönderi güncellendi."
+- Backend'in döndürdüğü güncel post render edilir.
 
-"Gönderi güncellendi."
+## Navigation
 
-Backend'in döndürdüğü güncel post render edilir.
+- Arama giriş noktası → Arama ekranı.
+- Arama kullanıcı sonucu → `ProfilePage(result.username)`.
+- Arama gönderi sonucu → ilgili Gönderi Detayı.
+- Composer mention seçimi → composer içinde kalır.
+- Render edilmiş mention → destekleniyorsa `ProfilePage(username)`.
+- Profil pinned post → Gönderi Detayı.
+- Başka profil güvenlik menüsü → mute/unmute; route değişmez.
+- Kendi gönderisi overflow → `EditPostPage`.
+- Edit başarı → önceki ekrana backend'in güncel post state'iyle dönülür.
+- Draft discard → önceki route'a dönülür.
 
-Navigation
+## Do's and Don'ts
 
-Arama giriş noktası → SearchPage.
+### Do
 
-Arama kullanıcı sonucu → ProfilePage(result.username).
+- Arama sonucunda backend'den gelen gerçek kullanıcı/post kimliğini kullan.
+- Mention seçiminde canonical username kullan.
+- Pinned post için mevcut post-card bileşenini reuse et.
+- Mute/unmute state'ini backend sonucuyla senkronize et.
+- Composer ve edit taslaklarını ağ hatasında koru.
+- Edit validation için composer kurallarını reuse et.
+- Mutation sonrası backend response'u kaynak kabul et.
+- 401'i merkezi login akışına gönder.
+- 403'ü normal empty state gibi gösterme.
+- Minimum 44x44px dokunma alanını koru.
+- Dinamik metin ölçeklendirmeyi destekle.
 
-Arama gönderi sonucu → ilgili Gönderi Detayı.
+### Don'ts
 
-Composer mention seçimi → composer içinde kalır.
-
-Render edilmiş mention → destekleniyorsa ProfilePage(username).
-
-Profil pinned post → Gönderi Detayı.
-
-Başka profil güvenlik menüsü → mute/unmute; route değişmez.
-
-Kendi gönderisi overflow → EditPostPage.
-
-Edit başarı → önceki ekrana backend'in güncel post state'iyle dönülür.
-
-Draft discard → önceki route'a dönülür.
-
-Do's and Don'ts
-
-Do
-
-Arama sonucunda backend'den gelen gerçek kullanıcı/post kimliğini kullan.
-
-Mention seçiminde canonical username kullan.
-
-Pinned post için mevcut post-card bileşenini reuse et.
-
-Mute/unmute state'ini backend sonucuyla senkronize et.
-
-Composer ve edit taslaklarını ağ hatasında koru.
-
-Edit validation için composer kurallarını reuse et.
-
-Mutation sonrası backend response'u kaynak kabul et.
-
-401'i merkezi login akışına gönder.
-
-403'ü normal empty state gibi gösterme.
-
-Minimum 44x44px dokunma alanını koru.
-
-Dinamik metin ölçeklendirmeyi destekle.
-
-Don'ts
-
-API kontratında olmayan search, mention, mute, pin, draft veya edit endpoint'i varsayma.
-
-API kontratında olmayan query parametresi, cursor, filter veya sort üretme.
-
-Mention için backend'de bulunmayan kullanıcıyı local string üzerinden gerçek entity kabul etme.
-
-Pinned state'i yalnız local state ile kalıcılaştırma.
-
-Mute state'ini yalnız optimistic state ile kalıcı kaynak kabul etme.
-
-Backend desteği yokken cross-device draft sync sunma.
-
-Başkasının gönderisinde Gönderiyi Düzenle gösterme.
-
-Arama sonucu yokluğunu network error'a dönüştürme.
-
-Mention suggestion hatasında composer taslağını temizleme.
-
-Kullanıcının kendi profilinde mute aksiyonu gösterme.
-
-Yeni role, permission, moderation status veya sosyal davranış üretme.
+- API kontratında olmayan search, mention, mute, pin, draft veya edit endpoint'i varsayma.
+- API kontratında olmayan query parametresi, cursor, filter veya sort üretme.
+- Mention için backend'de bulunmayan kullanıcıyı local string üzerinden gerçek entity kabul etme.
+- Pinned state'i yalnız local state ile kalıcılaştırma.
+- Mute state'ini yalnız optimistic state ile kalıcı kaynak kabul etme.
+- Backend desteği yokken cross-device draft sync sunma.
+- Başkasının gönderisinde `Gönderiyi Düzenle` gösterme.
+- Arama sonucu yokluğunu network error'a dönüştürme.
+- Mention suggestion hatasında composer taslağını temizleme.
+- Kullanıcının kendi profilinde mute aksiyonu gösterme.
+- Yeni role, permission, moderation status veya sosyal davranış üretme.
