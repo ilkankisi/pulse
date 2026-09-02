@@ -1,16 +1,17 @@
-# Feature: Uygulama navigasyonu
+Feature: Uygulama navigasyonu
 
-## Scope
-Ana akış ve profil destination'ları; sosyal graf global nav değildir.
+Scope
 
-## Components
-### Uygulama navigasyonu
+Ana akış ve profil destination'ları; sosyal graf ve güvenlik yönetimi global nav değildir.
 
-**Token:** `{components.navigation-drawer}`, `{components.bottom-navigation}`
+Components
 
-**Widget hierarchy:**
+Uygulama navigasyonu
 
-```text
+Token: {components.navigation-drawer}, {components.bottom-navigation}
+
+Widget hierarchy:
+
 Scaffold
 ├── drawer: NavigationDrawer
 │   ├── header: DrawerHeader
@@ -27,7 +28,6 @@ Scaffold
 ├── floatingActionButton: FloatingActionButton.extended
 │   └── icon: edit + label: "Gönder"
 └── body: aktif ekran
-```
 
 fluttertemplates kaynağı: Navigation Drawer — https://fluttertemplates.dev/widgets/navigation
 
@@ -45,10 +45,18 @@ Takipçiler ve Takip Edilenler global destination değildir.
 
 Takipçiler ve Takip Edilenler yalnız profil sosyal graf sayaçlarından açılır.
 
+Engellenen Hesaplar global destination değildir; profil/hesap güvenliği alt akışından açılır.
+
 401 genel error state olarak render edilmez; merkezi login akışına yönlendirilir.
 
-## Screen states
+Screen states
+
 Oturum kontrolü loading; 401 login akışına gider.
 
-## Navigation
+Navigation
+
 Drawer, bottom nav ve FAB ile ana ekranlar arası geçiş.
+
+Moderator kullanıcı: Drawer Moderasyon → Moderasyon Kuyruğu → Şikâyet Detayı.
+
+Profil / hesap güvenliği → Engellenen Hesaplar alt ekranı.

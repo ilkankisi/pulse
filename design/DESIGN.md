@@ -255,19 +255,20 @@ Response yapısı ve varsa pagination davranışı yalnız `docs/api-contract.md
 
 ## Components
 
-# Feature: Uygulama navigasyonu
+Feature: Uygulama navigasyonu
 
-## Scope
-Ana akış ve profil destination'ları; sosyal graf global nav değildir.
+Scope
 
-## Components
-### Uygulama navigasyonu
+Ana akış ve profil destination'ları; sosyal graf ve güvenlik yönetimi global nav değildir.
 
-**Token:** `{components.navigation-drawer}`, `{components.bottom-navigation}`
+Components
 
-**Widget hierarchy:**
+Uygulama navigasyonu
 
-```text
+Token: {components.navigation-drawer}, {components.bottom-navigation}
+
+Widget hierarchy:
+
 Scaffold
 ├── drawer: NavigationDrawer
 │   ├── header: DrawerHeader
@@ -284,7 +285,6 @@ Scaffold
 ├── floatingActionButton: FloatingActionButton.extended
 │   └── icon: edit + label: "Gönder"
 └── body: aktif ekran
-```
 
 fluttertemplates kaynağı: Navigation Drawer — https://fluttertemplates.dev/widgets/navigation
 
@@ -302,13 +302,21 @@ Takipçiler ve Takip Edilenler global destination değildir.
 
 Takipçiler ve Takip Edilenler yalnız profil sosyal graf sayaçlarından açılır.
 
+Engellenen Hesaplar global destination değildir; profil/hesap güvenliği alt akışından açılır.
+
 401 genel error state olarak render edilmez; merkezi login akışına yönlendirilir.
 
-## Screen states
+Screen states
+
 Oturum kontrolü loading; 401 login akışına gider.
 
-## Navigation
+Navigation
+
 Drawer, bottom nav ve FAB ile ana ekranlar arası geçiş.
+
+Moderator kullanıcı: Drawer Moderasyon → Moderasyon Kuyruğu → Şikâyet Detayı.
+
+Profil / hesap güvenliği → Engellenen Hesaplar alt ekranı.
 
 ---
 
@@ -985,19 +993,20 @@ Profil Takip/Takipçi sayaçlarından; liste satırı → profil.
 
 ---
 
-# Feature: Engelleme ve şikâyet
+Feature: Engelleme ve şikâyet
 
-## Scope
-Güvenlik menüsü, şikâyet sheet ve engelleme dialogu.
+Scope
 
-## Components
+Güvenlik menüsü, şikâyet sheet, engelleme dialogu ve engellenen hesap yönetimi.
+
+Components
+
 Güvenlik aksiyon menüsü
 
 Token: {components.safety-action-menu}
 
 Widget hierarchy:
 
-```
 PopupMenuButton | MenuAnchor
 └── menuChildren
     ├── gönderi:
@@ -1011,7 +1020,6 @@ PopupMenuButton | MenuAnchor
         └── MenuItemButton
             ├── Icon(block)
             └── Text("Kullanıcıyı Engelle" | "Engeli Kaldır")
-```
 
 fluttertemplates kaynağı: Dialogs & Sheets / Menus — https://fluttertemplates.dev/widgets/dialogs
 
@@ -1021,9 +1029,15 @@ Minimum dokunma alanı 44x44px'tir.
 
 Kullanıcı kendi hesabını engelleyemez.
 
+Kullanıcı kendi hesabı veya kendi gönderisi için şikâyet aksiyonu görmez.
+
 Engelleme destructive/security aksiyonudur.
 
 UI block/report endpoint veya enum üretmez.
+
+Report target yalnız canonical Post veya User değerine map edilir.
+
+Report reason yalnız canonical Spam, Harassment, HateSpeech, Violence, SexualContent, Impersonation veya Other değerlerinden biridir.
 
 Şikâyet bottom sheet
 
@@ -1031,7 +1045,6 @@ Token: {components.report-sheet}, {components.input}, {components.primary-button
 
 Widget hierarchy:
 
-```
 showModalBottomSheet
 └── SafeArea
     └── Padding
@@ -1047,7 +1060,6 @@ showModalBottomSheet
                 │   ├── multiline
                 │   └── maxLength: 500
                 └── FilledButton("Şikâyet Et")
-```
 
 fluttertemplates kaynağı: Dialogs & Sheets / Modal Bottom Sheet — https://fluttertemplates.dev/widgets/dialogs
 
@@ -1063,6 +1075,12 @@ Açıklama en fazla 500 karakterdir.
 
 Ağ hatasında reason ve açıklama korunur.
 
+400 validation hatasında sheet açık kalır ve backend field bilgisi ilgili input'a map edilir.
+
+404 hedefin artık bulunamadığı veya görünmediği durumdur; UI block sebebini tahmin etmez.
+
+409 duplicate pending report başarı gibi gösterilmez.
+
 Başarı snackbar'ı: “Şikâyetiniz alındı”.
 
 Engelleme onay dialogu
@@ -1071,7 +1089,6 @@ Token: {components.safety-action-menu}, {colors.error}
 
 Widget hierarchy:
 
-```
 showDialog
 └── AlertDialog
     ├── title: Text("Kullanıcı engellensin mi?")
@@ -1081,7 +1098,6 @@ showDialog
     └── actions
         ├── TextButton("İptal")
         └── FilledButton("Engelle")
-```
 
 fluttertemplates kaynağı: Dialogs & Sheets / Alert Dialog — https://fluttertemplates.dev/widgets/dialogs
 
@@ -1097,7 +1113,56 @@ Engeli kaldırma: “Engel kaldırıldı.”
 
 Backend görünürlük kuralları UI'da yeniden tanımlanmaz.
 
-## Screen states
+Block sonrasında backend tarafından kaldırılan follow ilişkileri local state ile geri üretilmez.
+
+Unblock eski follow ilişkilerini otomatik geri getirmez.
+
+Engellenen kullanıcılar listesi
+
+Token: {components.social-graph-list-item}, {components.state-panel}
+
+Widget hierarchy:
+
+BlockedUsersPage
+└── Scaffold
+    ├── AppBar
+    │   └── Text("Engellenen Hesaplar")
+    └── SafeArea
+        └── blocked users state
+            ├── loading
+            ├── empty
+            ├── error
+            └── CustomScrollView
+                └── SliverList
+                    └── Padding
+                        └── Row
+                            ├── CircleAvatar
+                            ├── Expanded
+                            │   └── Column(crossAxis: start)
+                            │       ├── Text(displayName)
+                            │       └── Text("@username")
+                            └── OutlinedButton("Engeli Kaldır")
+
+Kurallar:
+
+Veri yalnız GET /api/v1/blocks response'undan gelir.
+
+Liste canonical id, username, displayName, avatarUrl ve blockedAt alanlarını kullanır.
+
+UI ek filter, sort, cursor veya pagination parametresi üretmez.
+
+“Engeli Kaldır” canonical DELETE /api/v1/profiles/{username}/block işlemine map edilir.
+
+Mutation sırasında yalnız ilgili satır CTA'sı loading/disabled olur.
+
+204 başarıdan sonra ilgili satır listeden kaldırılır.
+
+Unblock eski follow ilişkisini geri getirmez.
+
+Minimum dokunma alanı 44x44px korunur.
+
+Screen states
+
 Şikâyet Formu
 
 Empty state
@@ -1107,6 +1172,12 @@ Reason seçilmemiş başlangıç hali API empty state değildir.
 Error state
 
 "Şikâyet gönderilemedi. Tekrar deneyin."
+
+400 canonical validation mesajı ilgili alanda gösterilir.
+
+404 hedefin artık kullanılamadığı belirtilir; block ilişkisi ifşa edilmez.
+
+409: "Bu içerik veya hesap için zaten bekleyen bir şikâyetin var."
 
 401 login akışına gider.
 
@@ -1142,24 +1213,66 @@ App bar vs body CTA
 
 Güvenlik menüsünden başlatılır.
 
-## Navigation
+Engellenen Hesaplar
+
+Loading state
+
+Liste yüklenirken sayfa bağlamı korunur.
+
+Empty state
+
+Başlık: "Engellenen hesap yok"
+
+Açıklama: "Engellediğin hesaplar burada görünür."
+
+CTA yoktur.
+
+Error state
+
+Başlık: "Engellenen hesaplar yüklenemedi"
+
+Açıklama: "Liste alınırken bir sorun oluştu."
+
+CTA: "Tekrar Dene"
+
+401 login akışına gider.
+
+Success
+
+Canonical items listesi render edilir.
+
+Unblock başarıyla tamamlandığında ilgili satır kaldırılır.
+
+App bar vs body CTA
+
+Sayfa seviyesinde destructive CTA yoktur.
+
+“Engeli Kaldır” yalnız ilgili liste satırındadır.
+
+Navigation
+
 Gönderi overflow veya profil güvenlik menüsünden.
+
+Profil / hesap güvenliği → "Engellenen Hesaplar" → BlockedUsersPage.
+
+BlockedUsersPage global NavigationBar veya NavigationDrawer destination değildir.
 
 ---
 
-# Feature: Moderasyon kuyruğu
+Feature: Moderasyon kuyruğu
 
-## Scope
-Moderator-only şikâyet inceleme ve aksiyonlar.
+Scope
 
-## Components
+Moderator-only şikâyet kuyruğu, detay inceleme ve canonical karar aksiyonları.
+
+Components
+
 Moderasyon kuyruğu kartı
 
 Token: {components.moderation-card}
 
 Widget hierarchy:
 
-```
 CustomScrollView
 └── SliverList
     └── Card
@@ -1173,7 +1286,6 @@ CustomScrollView
                 ├── Text(metadata)
                 └── action area
                     └── canonical moderator actions
-```
 
 fluttertemplates kaynağı: Core / Cards — https://fluttertemplates.dev/widgets
 
@@ -1187,7 +1299,74 @@ UI yeni role/status/action üretmez.
 
 İşlenen kayıt backend sonucuna göre yenilenir veya listeden çıkarılır.
 
-## Screen states
+Kuyruk query verilmediğinde canonical Pending durumunu kullanır.
+
+Durum filtresi sunulursa yalnız Pending, Resolved ve Dismissed değerleri kullanılır.
+
+Liste satırı canonical report.id ile ModerationDetailPage açar.
+
+Moderasyon detay ve karar yüzeyi
+
+Token: {components.moderation-card}, {components.input}, {components.primary-button}
+
+Widget hierarchy:
+
+ModerationDetailPage
+└── Scaffold
+    ├── AppBar
+    │   └── Text("Şikâyet Detayı")
+    └── SafeArea
+        └── CustomScrollView
+            └── SliverToBoxAdapter
+                └── Column
+                    ├── report metadata
+                    │   ├── targetType + targetId
+                    │   ├── reporterUserId
+                    │   ├── reason
+                    │   ├── details, optional
+                    │   ├── status
+                    │   ├── createdAt
+                    │   ├── resolvedAt, optional
+                    │   └── resolvedByUserId, optional
+                    └── status == Pending ise action area
+                        ├── moderation action selector
+                        │   ├── NoAction
+                        │   └── targetType == Post ise RemovePost
+                        ├── TextFormField
+                        │   ├── label: "Moderatör notu (isteğe bağlı)"
+                        │   ├── multiline
+                        │   └── maxLength: 500
+                        ├── FilledButton("Çözümle")
+                        └── OutlinedButton("Reddet")
+
+Kurallar:
+
+Detay yalnız GET /api/v1/moderation/reports/{reportId} sonucundan render edilir.
+
+Resolve yalnız POST /api/v1/moderation/reports/{reportId}/resolve işlemine map edilir.
+
+Dismiss yalnız POST /api/v1/moderation/reports/{reportId}/dismiss işlemine map edilir.
+
+Resolve action yalnız canonical NoAction veya RemovePost olabilir.
+
+RemovePost yalnız targetType=Post için gösterilir.
+
+User report için RemovePost gösterilmez veya request'e yazılmaz.
+
+note en fazla 500 karakterdir.
+
+Mutation sırasında resolve/dismiss CTA'ları tekrar tetiklenemez.
+
+Resolved veya Dismissed kayıtta yeni karar CTA'sı gösterilmez.
+
+Başarılı işlem sonrası status/action backend response'undan alınır.
+
+Moderasyon kaldırması standart DELETE /api/v1/posts/{postId} endpoint'ine map edilmez.
+
+Dismiss target kaynağını değiştirmez.
+
+Screen states
+
 Moderasyon Kuyruğu
 
 Empty state
@@ -1217,6 +1396,48 @@ Backend'in güncel moderation sonucu render edilir.
 App bar vs body CTA
 
 Moderasyon aksiyonları ilgili kayıt body alanındadır.
+
+Şikâyet Detayı
+
+Loading state
+
+Canonical report kaydı yüklenene kadar loading gösterilir.
+
+Empty state
+
+Tekil report detayında empty state kullanılmaz.
+
+Error state
+
+400 canonical action/note validation hatası form üzerinde gösterilir.
+
+401 login akışına gider.
+
+403 yetkisiz durumudur; empty state değildir ve moderation CTA'ları gösterilmez.
+
+404:
+
+Başlık: "Şikâyet bulunamadı"
+
+Açıklama: "Bu şikâyet artık mevcut değil veya erişilemiyor."
+
+409:
+
+Başlık: "Şikâyet daha önce işlendi"
+
+Açıklama: "Güncel durumu görmek için kaydı yenile."
+
+CTA: "Yenile"
+
+Success
+
+Resolve sonucu Resolved, dismiss sonucu Dismissed olarak backend response'undan render edilir.
+
+RemovePost sonucunda istemci post görünürlüğünü local olarak taklit etmez; sonraki canonical read sonucu kaynak kabul edilir.
+
+App bar vs body CTA
+
+Karar CTA'ları yalnız Pending kaydın body alanındadır.
 
 Do's and Don'ts
 
@@ -1254,6 +1475,14 @@ Follow/unfollow durumlarını backend ile senkronize et.
 
 Moderator-only UI'ı role sonucuna göre gizle.
 
+Pending kayıtta yalnız canonical moderation aksiyonlarını göster.
+
+User report'unda RemovePost aksiyonunu gösterme.
+
+Resolve/dismiss sonrasında backend response'unu kaynak kabul et.
+
+409 durumunda kaydın güncel durumunu yeniden yükle.
+
 Minimum dokunma alanını 44x44px koru.
 
 Don'ts
@@ -1286,10 +1515,21 @@ Moderator olmayan kullanıcıya moderation action gösterme.
 
 API kontratında olmayan role, status veya moderation action üretme.
 
+User report için RemovePost request'i üretme.
+
+Resolved veya Dismissed report üzerinde tekrar resolve/dismiss gösterme.
+
+Moderasyon kaldırması için standart post DELETE endpoint'ini kullanma.
+
 Çok seviyeli thread, DM veya kapsam dışı yeni özellik ekleme.
 
-## Navigation
+Navigation
+
 Drawer Moderasyon destination (moderator rolü).
+
+Moderasyon Kuyruğu → ModerationDetailPage(report.id).
+
+Detay işlendiğinde geri dönülen kuyruk backend'in güncel sonucu ile yenilenir.
 
 ---
 
