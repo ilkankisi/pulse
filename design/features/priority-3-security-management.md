@@ -2,73 +2,229 @@ Feature: Öncelik 3 güvenlik ve yönetim deneyimi
 
 Scope
 
-Bu feature mevcut güvenlik ve moderasyon sözleşmesini tamamlanmış bir ürün deneyimine dönüştürür:
+Bu feature güvenlik ve yetkili moderasyon deneyimini tamamlar:
 
-Kullanıcının engellediği hesapları görüntülemesi
+Başka kullanıcıyı engelleme.
 
-Engellenen kullanıcı listesinden engeli kaldırması
+Engeli kaldırma.
 
-Profil üzerinden block/unblock akışının sosyal state ile güvenli biçimde senkronize edilmesi
+Oturum sahibinin engellediği hesapları görüntüleme.
 
-Gönderi ve kullanıcı şikâyetlerinde canonical validation ve duplicate pending-report durumlarının gösterilmesi
+Engellenen hesaplar listesinden engeli kaldırma.
 
-Moderator kullanıcının Pending, Resolved ve Dismissed raporları canonical status filtresiyle incelemesi
+Gönderiyi şikâyet etme.
 
-Moderasyon rapor detayının açılması
+Başka kullanıcı hesabını şikâyet etme.
 
-Pending raporun canonical NoAction veya RemovePost aksiyonuyla resolve edilmesi
+Canonical report reason seçeneklerini kullanma.
 
-Pending raporun dismiss edilmesi
+Moderator kullanıcının şikâyet kuyruğunu görüntülemesi.
 
-Moderasyon mutation'larında stale/çakışan state'in 409 sonrası canonical backend state ile yeniden yüklenmesi
+Moderasyon kuyruğunu canonical ReportStatus ile filtreleme.
 
-Tüm endpoint, response, enum, permission ve mutation davranışları canonical docs/api-contract.md sözleşmesinden map edilir.
+Şikâyet detayını görüntüleme.
 
-Canonical veri kaynakları:
+Pending şikâyeti NoAction veya uygun olduğunda RemovePost ile resolve etme.
 
-Engellenen kullanıcılar: GET /api/v1/blocks
+Pending şikâyeti dismiss etme.
 
-Kullanıcı engelleme: POST /api/v1/profiles/{username}/block
+Moderasyon mutation sonuçlarını backend response ile senkronize etme.
 
-Engel kaldırma: DELETE /api/v1/profiles/{username}/block
+Tüm endpoint, request alanı, enum, permission ve HTTP davranışları canonical docs/api-contract.md sözleşmesinden map edilir.
 
-Şikâyet gönderme: POST /api/v1/reports
+UI:
 
-Moderasyon kuyruğu: GET /api/v1/moderation/reports
+API kontratında olmayan güvenlik veya moderasyon endpoint'i üretmez.
 
-Status filtreli moderasyon kuyruğu: GET /api/v1/moderation/reports?status={ReportStatus}
+ReportTargetType, ReportReason, ReportStatus ve ModerationAction değerlerini yeniden adlandırmaz.
 
-Moderasyon rapor detayı: GET /api/v1/moderation/reports/{reportId}
+Block ilişkisinin server-side görünürlük semantiğini client-side ikinci kez modellemez.
 
-Raporu sonuçlandırma: POST /api/v1/moderation/reports/{reportId}/resolve
+404 sonucundan block varlığını tahmin edip kullanıcıya açıklamaz.
 
-Raporu reddetme: POST /api/v1/moderation/reports/{reportId}/dismiss
+Moderator olmayan kullanıcıya moderator navigation veya action göstermez.
 
-Canonical enum değerleri:
+Standart post silme endpoint'ini moderasyon kaldırması için kullanmaz.
 
-ReportTargetType
+Mutation sonrasında yalnız local optimistic state'i kalıcı doğruluk kaynağı kabul etmez.
 
-Post
+User flows
 
-User
+Kullanıcı engelleme
 
-ReportReason
+Başka kullanıcı profili → güvenlik/overflow menüsü → “Kullanıcıyı Engelle”.
 
-Spam
+Kendi profilinde engelleme aksiyonu gösterilmez.
 
-Harassment
+Kullanıcı aksiyonu seçtiğinde confirmation dialog açılır.
 
-HateSpeech
+“İptal” → dialog kapanır, mutation yapılmaz.
 
-Violence
+“Engelle” → canonical POST /api/v1/profiles/{username}/block çağrılır.
 
-SexualContent
+Mutation sırasında destructive CTA loading/disabled olur ve tekrar tetiklenemez.
 
-Impersonation
+Başarı response'undaki canonical:
 
-Other
+username
 
-ReportStatus
+isBlocked=true
+
+state'in doğruluk kaynağıdır.
+
+Başarı sonrası:
+
+“Kullanıcı engellendi.” geri bildirimi gösterilir.
+
+Artık görünür olmaması gereken profil/feed/sosyal graf verisi invalidate/refetch edilir.
+
+UI block nedeniyle kaldırılması gereken follow ilişkilerini client-side yeniden üretmez.
+
+400 self-block UI tarafından normal akışta oluşturulmaz.
+
+404 hedefin bulunamadığı veya görünmez olduğu canonical semantikle ele alınır; UI bunun block kaynaklı olduğunu tahmin etmez.
+
+401 merkezi login akışına gider.
+
+Network/5xx profil ekranını başarılı bir blocked state'e dönüştürmez.
+
+Engeli kaldırma
+
+Engellenen hesaplar ekranı veya doğrulanmış blocked-state yüzeyi → “Engeli Kaldır”.
+
+Canonical DELETE /api/v1/profiles/{username}/block çağrılır.
+
+Mutation sırasında yalnız ilgili satır/aksiyon loading/disabled olur.
+
+Başarılı 204 No Content sonrası:
+
+“Engel kaldırıldı.” geri bildirimi gösterilir.
+
+İlgili blocked-users read state invalidate/refetch edilir.
+
+Profil/feed/sosyal graf verisi gerektiğinde yeniden yüklenir.
+
+Eski follow ilişkisi otomatik geri oluşturulmaz.
+
+UI local olarak follow durumunu eski haline döndürmez.
+
+Block kaydı zaten yoksa canonical idempotent 204 başarı olarak ele alınır.
+
+401 merkezi login akışına gider.
+
+Network/5xx durumunda önceki doğrulanmış blocked state korunur.
+
+Engellenen hesapları görüntüleme
+
+Ayarlar/güvenlik erişim noktası → Engellenen Hesaplar.
+
+Canonical GET /api/v1/blocks çağrılır.
+
+Başarı response'undaki items render edilir.
+
+Her satır yalnız canonical alanları kullanır:
+
+id
+
+username
+
+displayName
+
+avatarUrl
+
+blockedAt
+
+items=[] başarılı empty state'tir.
+
+Kayıt yokluğu 404 olarak yorumlanmaz.
+
+Satırdaki “Engeli Kaldır” aksiyonu ilgili username için canonical unblock endpoint'ini kullanır.
+
+Block nedeniyle normal profil görünürlüğünün 404 olabilmesi nedeniyle blocked-users satırında profile navigation zorunlu kabul edilmez.
+
+UI blocked-users listesine follow CTA eklemez.
+
+Gönderi şikâyeti
+
+Başkasına ait görünür gönderi → overflow → “Şikâyet Et”.
+
+Kullanıcının kendi gönderisinde report aksiyonu gösterilmez.
+
+Şikâyet bottom sheet açılır.
+
+Gönderi için request mapping:
+
+targetType = "Post"
+
+targetId = post.id
+
+reason = seçilen canonical ReportReason
+
+details = kullanıcı açıklaması veya null
+
+targetId integer'dır.
+
+Reason seçilmeden submit aktif olmaz.
+
+details en fazla 500 karakterdir.
+
+Submit → canonical POST /api/v1/reports.
+
+Başarı 201 Created sonrası backend report response kabul edilir ve:
+
+“Şikâyetiniz alındı” geri bildirimi gösterilir.
+
+sheet kapanır.
+
+Rapor oluşturulması hedef gönderiyi otomatik olarak UI'dan kaldırılmış kabul ettirmez.
+
+409 duplicate pending report:
+
+form state korunur,
+
+başarılı report olarak gösterilmez,
+
+kullanıcıya bu hedef için bekleyen bir şikâyet bulunduğunu anlatan non-destructive hata gösterilir.
+
+404 hedefin artık bulunamadığı/görünmediği durumdur.
+
+400 validation/enum hatası canonical error semantiğiyle gösterilir.
+
+401 merkezi login akışına gider.
+
+Network/5xx reason ve details alanlarını temizlemez.
+
+Kullanıcı hesabını şikâyet etme
+
+Başka kullanıcı profili → güvenlik menüsü → “Şikâyet Et”.
+
+Kendi profilinde report aksiyonu gösterilmez.
+
+Kullanıcı için request mapping:
+
+targetType = "User"
+
+targetId = profile.id
+
+reason = seçilen canonical ReportReason
+
+details = kullanıcı açıklaması veya null
+
+Submit ve hata davranışı gönderi şikâyetiyle aynı report component'ini reuse eder.
+
+UI username değerini targetId yerine göndermez.
+
+UI postId, userId, reportType, categoryCode veya targetIdentifier request alanı üretmez.
+
+Moderasyon kuyruğu
+
+Moderator navigation → Moderasyon.
+
+İlk yüklemede canonical GET /api/v1/moderation/reports çağrılır.
+
+Query verilmediğinde backend varsayılan Pending semantiği kullanılır.
+
+Filtre kontrolü yalnız canonical ReportStatus değerlerini sunar:
 
 Pending
 
@@ -76,201 +232,15 @@ Resolved
 
 Dismissed
 
-ModerationAction
+Filtre seçildiğinde yalnız canonical status query parametresi ve exact enum string'i kullanılır.
 
-NoAction
+UI open, closed, all, reviewing veya benzeri yeni status üretmez.
 
-RemovePost
+Yeni filtre isteği başladığında eski filtrenin geciken cevabı güncel listeyi overwrite etmez.
 
-UI:
+Liste öğeleri canonical moderation report alanlarını kullanır:
 
-API kontratında olmayan endpoint üretmez.
-
-API kontratında olmayan role veya permission üretmez.
-
-Enum değerlerinin casing'ini değiştirmez.
-
-GET /api/v1/blocks için pagination, cursor, search veya sort parametresi üretmez.
-
-Moderasyon kuyruğunda canonical status dışında query parametresi üretmez.
-
-Block ve moderasyon görünürlük kurallarını client tarafında yeniden hesaplamaz.
-
-404 sonucundan block ilişkisinin yönünü veya nedenini çıkarmaya çalışmaz.
-
-Normal kullanıcıya moderator navigation veya moderator mutation aksiyonu göstermez.
-
-Moderatöre canonical olmayan kullanıcı yaptırımı, hesap kapatma veya kullanıcı silme aksiyonu üretmez.
-
-User flows
-
-Engellenen kullanıcıları görüntüleme
-
-Güvenlik/Ayarlar giriş noktası → BlockedUsersPage.
-
-Sayfa GET /api/v1/blocks çağrısını yapar.
-
-Response items sırası backend'in döndürdüğü biçimde korunur.
-
-Her satır canonical response içindeki id, username, displayName, avatarUrl ve blockedAt alanlarını kullanır.
-
-items=[] normal empty state'tir.
-
-Boş liste 404 gibi yorumlanmaz.
-
-401 merkezi login akışına gider.
-
-Ağ/5xx retry error state'tir.
-
-Engellenen kullanıcı listesinden engeli kaldırma
-
-Satırdaki “Engeli Kaldır” aksiyonu seçilir.
-
-Mutation path her zaman row.username ile oluşturulur.
-
-DELETE /api/v1/profiles/{row.username}/block çağrılır.
-
-Mutation sırasında yalnız ilgili satır aksiyonu disabled/loading olur.
-
-Başarılı 204 sonrasında:
-
-liste canonical GET /api/v1/blocks sonucuyla yeniden senkronize edilir,
-
-eski follow ilişkisi geri yüklenmiş gibi gösterilmez,
-
-başarı mesajı “Engel kaldırıldı.” olur.
-
-UI relationship state'i tahmin etmez.
-
-Profil üzerinden kullanıcı engelleme
-
-Başka profil → güvenlik menüsü → “Kullanıcıyı Engelle”.
-
-Confirmation dialog gösterilir.
-
-Onay sonrası POST /api/v1/profiles/{profile.username}/block çağrılır.
-
-Request body gönderilmez.
-
-Başarı response'undaki username ve isBlocked=true canonical kaynak kabul edilir.
-
-Block mevcut follow ilişkilerini backend tarafında kaldırdığından:
-
-cached relationship state kalıcı gerçek kabul edilmez,
-
-ilgili profil ve sosyal graf read state invalidate edilir,
-
-feed gerekiyorsa canonical endpoint'ten yeniden yüklenir.
-
-Block sonrası hedef profil erişilemez duruma gelirse stale profil detayı gösterilmeye devam etmez.
-
-Güvenli önceki route'a dönülür.
-
-Başarı mesajı “Kullanıcı engellendi.” olur.
-
-UI hangi postların veya kullanıcıların gizleneceğini ayrıca hesaplamaz.
-
-Profil üzerinden engeli kaldırma
-
-Canonical state kullanıcı için “Engeli Kaldır” aksiyonunu kanıtlı biçimde sağlayabiliyorsa:
-
-DELETE /api/v1/profiles/{username}/block
-
-Başarılı 204 → “Engel kaldırıldı.”
-
-Eski follow ilişkileri geri getirilmez.
-
-Follow state canonical profile/social-graph read sonucundan yeniden edinilir.
-
-Canonical state mevcut değilse UI yalnız local tahminle “Engeli Kaldır” görünürlüğü üretmez; unblock yönetimi GET /api/v1/blocks tabanlı BlockedUsersPage üzerinden sağlanır.
-
-Gönderi şikâyeti
-
-Başkasının gönderisi → overflow → “Şikâyet Et”.
-
-Bottom sheet:
-
-targetType="Post"
-
-targetId=post.id
-
-Reason yalnız canonical ReportReason listesinden seçilir.
-
-Opsiyonel details maksimum 500 karakterdir.
-
-Reason seçilmeden submit yapılamaz.
-
-Başarı 201:
-
-backend response canonical kaynak kabul edilir,
-
-sheet kapanır,
-
-“Şikâyetiniz alındı” gösterilir.
-
-400:
-
-canonical validation mesajı ilgili form bağlamında gösterilir.
-
-409:
-
-yeni report oluşturulmuş gibi success gösterilmez,
-
-“Bu içerik için zaten bekleyen bir şikâyetin var.” mesajı gösterilir.
-
-Ağ/5xx:
-
-seçilmiş reason ve details korunur.
-
-Kullanıcı şikâyeti
-
-Başka profil → güvenlik menüsü → “Şikâyet Et”.
-
-Bottom sheet:
-
-targetType="User"
-
-targetId=profile.id
-
-Gönderi şikâyetiyle aynı component ve serializer kullanılır.
-
-Kendi hesabını şikâyet etmeye yönelik UI gösterilmez.
-
-Başarı, validation, 409 ve network state davranışları gönderi şikâyetiyle aynıdır.
-
-Moderasyon kuyruğu
-
-Moderator → “Moderasyon”.
-
-İlk giriş canonical varsayılan Pending kuyruğu gösterir.
-
-Status filtreleri:
-
-“Bekleyen” → Pending
-
-“Sonuçlanan” → Resolved
-
-“Reddedilen” → Dismissed
-
-Filtre seçimi yalnız canonical status query parametresini üretir.
-
-Query verilmediğinde backend varsayılanı Pending olduğu için ilk yüklemede query zorunlu değildir.
-
-Status değişiminde eski isteğin geciken cevabı yeni status listesini overwrite etmez.
-
-items=[] seçili status için normal empty state'tir.
-
-403 empty state değildir.
-
-401 merkezi login akışına gider.
-
-Moderasyon rapor detayı
-
-Kuyruk kartı → ModerationReportDetailPage(report.id).
-
-GET /api/v1/moderation/reports/{reportId} çağrılır.
-
-Detay canonical response'taki:
+id
 
 reporterUserId
 
@@ -290,161 +260,235 @@ resolvedAt
 
 resolvedByUserId
 
-alanlarını gösterir.
+Satıra dokunma → ModerationDetailPage(report.id).
 
-Pending değilse resolve/dismiss mutation CTA'ları gösterilmez.
+items=[] başarılı empty state'tir.
 
-Resolved ve Dismissed kayıtlar read-only inceleme yüzeyidir.
+401 merkezi login akışına gider.
 
-404 → “Şikâyet bulunamadı”.
+403 moderator olmayan kullanıcı için yetki durumudur; empty state değildir.
 
-403 → yetki hatasıdır.
+Network/5xx retry state'tir; başarılı boş kuyruk gibi gösterilmez.
 
-401 → merkezi login akışıdır.
+Moderasyon şikâyet detayı
 
-Pending raporu resolve etme
+ModerationDetailPage(reportId) → canonical GET /api/v1/moderation/reports/{reportId}.
 
-Yalnız status="Pending" raporda kullanılabilir.
+Detay canonical response alanlarını render eder.
 
-targetType="Post" için:
+Pending report:
+
+resolve aksiyonları gösterilir,
+
+dismiss aksiyonu gösterilir.
+
+Resolved veya Dismissed report:
+
+geçmiş durum ve resolution metadata gösterilir,
+
+tekrar transition başlatan aksiyonlar gösterilmez.
+
+404 report artık bulunamadı durumudur.
+
+401 merkezi login akışına gider.
+
+403 moderator yetkisi hatasıdır.
+
+Report resolve
+
+Yalnız status="Pending" report için resolve aksiyonları gösterilir.
+
+Canonical ModerationAction seçenekleri:
 
 NoAction
 
 RemovePost
 
-canonical aksiyonları gösterilebilir.
+NoAction:
 
-targetType="User" için:
+Post veya User target için kullanılabilir.
 
-RemovePost sunulmaz.
+Target kaynağını değiştirmez.
 
-Canonical resolve aksiyonu NoAction olur.
+RemovePost:
 
-UI hesap kapatma, askıya alma veya kullanıcı silme gibi contract dışı aksiyon üretmez.
+yalnız targetType="Post" olduğunda gösterilir,
 
-Resolve form:
+targetType="User" report için render edilmez,
 
-action zorunludur.
+destructive/moderation confirmation sonrasında submit edilir,
 
-note opsiyoneldir.
+standart DELETE /api/v1/posts/{postId} çağrılmaz.
 
-note maksimum 500 karakterdir.
+Resolve request:
 
-Submit → POST /api/v1/moderation/reports/{reportId}/resolve
+action = seçilen exact canonical ModerationAction
 
-Request body path id'sini tekrar içermez.
+note = moderator notu veya null
 
-Başarı sonrası:
+note en fazla 500 karakterdir.
 
-canonical mutation response kaynak kabul edilir,
+Submit → POST /api/v1/moderation/reports/{reportId}/resolve.
 
-rapor detayı yeniden yüklenir,
+Mutation sırasında ilgili CTA'lar disabled olur ve ikinci transition gönderilemez.
 
-aktif moderasyon listesi yeniden yüklenir,
+Başarılı backend response:
 
-RemovePost seçildiyse standart owner DELETE endpoint'i ayrıca çağrılmaz,
+id
 
-post görünürlüğü client tarafında yeniden hesaplanmaz.
+status="Resolved"
 
-Pending raporu dismiss etme
+action
 
-Yalnız status="Pending" raporda kullanılabilir.
+resolvedAt
 
-Opsiyonel note maksimum 500 karakterdir.
+resolvedByUserId
 
-Submit → POST /api/v1/moderation/reports/{reportId}/dismiss
+detay ve kuyruk state'inin doğruluk kaynağıdır.
 
-Request body yalnız canonical note alanını içerir.
+Başarı sonrası detay state güncellenir ve ilgili moderation queue invalidate/refetch edilir.
 
-Başarı response canonical kaynak kabul edilir.
+409 report artık Pending değilse:
 
-Dismiss target kaynağını değiştirmez.
+başarılı mutation gibi gösterilmez,
 
-Detay ve aktif kuyruk canonical GET endpoint'lerinden yeniden yüklenir.
+form/not state korunur,
 
-Moderasyon mutation çakışması
+report canonical detay endpoint'inden yeniden yüklenir.
 
-Resolve veya dismiss sırasında 409 dönerse:
+400 geçersiz action veya RemovePost + User target kombinasyonu normal success'e dönüştürülmez.
 
-mutation loading kapanır,
+404 kayıp report state'idir.
 
-success state gösterilmez,
+401 merkezi login akışına gider.
 
-local olarak Resolved veya Dismissed state üretilmez,
+403 yetki hatasıdır.
 
-“Şikâyet başka bir işlemle güncellendi.” mesajı gösterilir,
+Network/5xx moderator notunu temizlemez.
 
-rapor detayı canonical GET ile yeniden yüklenir,
+Report dismiss
 
-aktif kuyruk yeniden yüklenir,
+Yalnız status="Pending" report için “Reddet” aksiyonu gösterilir.
 
-backend'in güncel status değeri kaynak kabul edilir.
+Dismiss request:
+
+note = moderator notu veya null
+
+note en fazla 500 karakterdir.
+
+Destructive/state-transition confirmation sonrasında canonical:
+
+POST /api/v1/moderation/reports/{reportId}/dismiss
+
+çağrılır.
+
+Başarılı backend response:
+
+id
+
+status="Dismissed"
+
+resolvedAt
+
+resolvedByUserId
+
+state'in doğruluk kaynağıdır.
+
+Dismiss target kaynağını kaldırmaz.
+
+409 report artık Pending değilse mevcut form state korunur ve canonical report yeniden yüklenir.
+
+401 merkezi login akışına gider.
+
+403 yetki hatasıdır.
+
+404 report bulunamadı durumudur.
+
+Network/5xx moderator notunu temizlemez.
 
 Components
 
-Engellenen kullanıcı satırı
+Engellenen hesap listesi öğesi
 
 Token: {components.social-graph-list-item}, {components.relationship-button}
 
 Widget hierarchy:
 
-BlockedUserListItem(user)
-└── ConstrainedBox(minHeight: 72)
-    └── Padding
-        └── Row
-            ├── CircleAvatar(size: 48)
-            ├── SizedBox(width: spacing.md)
-            ├── Expanded
-            │   └── Column(crossAxis: start)
-            │       ├── Text(user.displayName)
-            │       ├── Text("@${user.username}")
-            │       └── Text(blockedAt)
-            └── OutlinedButton("Engeli Kaldır")
-                └── loading | label
+BlockedUserListItem
+└── Padding
+    └── Row
+        ├── CircleAvatar
+        ├── Expanded
+        │   └── Column(crossAxis: start)
+        │       ├── Text(displayName)
+        │       ├── Text("@username")
+        │       └── Text(blockedAt, secondary metadata)
+        └── OutlinedButton("Engeli Kaldır")
 
 Kurallar:
+
+Canonical GET /api/v1/blocks alanlarını kullanır.
+
+Follow/unfollow CTA göstermez.
+
+Unblock mutation sırasında yalnız ilgili satır CTA'sı disabled/loading olur.
 
 Minimum dokunma alanı 44x44px'tir.
 
-Satır canonical kullanıcı alanlarını kullanır.
+Uzun display name uygun ellipsis davranışı kullanabilir.
 
-blockedAt {typography.body-sm} kullanır.
+blockedAt ikincil metadata'dır.
 
-Mutation sırasında yalnız ilgili CTA loading olur.
+Güvenlik aksiyon menüsü
 
-Satır üzerinde follow/unfollow gösterilmez.
-
-Block listesi local profile cache'inden türetilmez.
-
-Engellenen kullanıcılar ekranı
-
-Token: {components.state-panel}, {components.social-graph-list-item}
+Token: {components.safety-action-menu}
 
 Widget hierarchy:
 
-BlockedUsersPage
-└── Scaffold
-    ├── AppBar
-    │   ├── leading: BackButton
-    │   └── title: Text("Engellenen Hesaplar")
-    └── SafeArea
-        └── state
-            ├── loading-state
-            ├── empty-state
-            ├── error-state
-            └── CustomScrollView
-                └── SliverList
-                    └── BlockedUserListItem[]
+MenuAnchor | PopupMenuButton
+└── context actions
+    ├── başka kullanıcı postu:
+    │   └── MenuItemButton
+    │       ├── Icon(flag_outlined)
+    │       └── Text("Şikâyet Et")
+    └── başka kullanıcı profili:
+        ├── MenuItemButton
+        │   ├── Icon(flag_outlined)
+        │   └── Text("Şikâyet Et")
+        └── MenuItemButton
+            ├── Icon(block)
+            └── Text("Kullanıcıyı Engelle")
 
 Kurallar:
 
-Veri kaynağı yalnız GET /api/v1/blocks olur.
+Kendi profilinde block/report gösterilmez.
 
-Boş liste için primary CTA zorunlu değildir.
+Kendi postunda report gösterilmez.
 
-Search/filter UI eklenmez.
+Menü yalnız mevcut canonical aksiyonları başlatır.
 
-Pagination/cursor üretilmez.
+Menu item minimum 44x44px dokunma alanına sahiptir.
+
+Engelleme onay dialogu
+
+Token: {components.safety-action-menu}, {colors.error}
+
+Widget hierarchy:
+
+AlertDialog
+├── title: Text("Kullanıcı engellensin mi?")
+├── content: Text("Bu kullanıcıyla olan görünürlük ve takip ilişkileri değişebilir.")
+└── actions
+    ├── TextButton("İptal")
+    └── FilledButton("Engelle")
+
+Kurallar:
+
+Confirmation olmadan block mutation başlamaz.
+
+CTA loading sırasında tekrar tetiklenemez.
+
+UI follow ilişkilerinin kaldırılma ayrıntısını client-side mutation zinciri olarak uygulamaz; canonical block endpoint sonucu ve sonraki read state kullanılır.
 
 Şikâyet bottom sheet
 
@@ -452,153 +496,209 @@ Token: {components.report-sheet}, {components.input}, {components.primary-button
 
 Widget hierarchy:
 
-ReportSheet(targetType, targetId)
-└── showModalBottomSheet
-    └── SafeArea
-        └── Form
-            └── Column(mainAxisSize: min)
-                ├── drag handle
-                ├── Text("Şikâyet Et")
-                ├── canonical ReportReason options
-                ├── TextFormField
-                │   ├── label: "Açıklama (isteğe bağlı)"
-                │   ├── multiline
-                │   └── maxLength: 500
-                ├── inline validation/conflict message
-                └── FilledButton("Şikâyet Et")
+ReportSheet
+└── SafeArea
+    └── Form
+        └── Column(mainAxisSize: min)
+            ├── drag handle
+            ├── Text("Şikâyet Et")
+            ├── Text("Neden şikâyet ediyorsun?")
+            ├── RadioGroup | RadioListTile[]
+            │   ├── Spam
+            │   ├── Harassment
+            │   ├── HateSpeech
+            │   ├── Violence
+            │   ├── SexualContent
+            │   ├── Impersonation
+            │   └── Other
+            ├── TextFormField
+            │   ├── label: "Açıklama (isteğe bağlı)"
+            │   ├── multiline
+            │   └── maxLength: 500
+            └── FilledButton("Şikâyet Et")
 
 Kurallar:
 
-Gönderi ve kullanıcı aynı serializer'ı kullanır.
+Görsel etiketler lokalize edilebilir; serializer canonical enum string'ini birebir üretir.
 
-targetType, targetId, reason, details dışında request alanı üretilmez.
+Post ve User report aynı component'i reuse eder.
 
-Pending duplicate 409 success state değildir.
+Reason seçilmeden submit aktif olmaz.
 
-Moderasyon status filtresi
+Klavye açıkken submit erişilebilir kalır.
+
+Ağ/5xx ve 409 durumunda form içeriği korunur.
+
+targetType yalnız "Post" veya "User" olur.
+
+targetId integer canonical resource id'dir.
+
+Moderasyon durum filtresi
+
+Token: {typography.label-md}, {colors.primary-container}
 
 Widget hierarchy:
 
-ModerationPage
-└── Column
-    ├── SingleChildScrollView(horizontal)
-    │   └── Row
-    │       ├── FilterChip("Bekleyen")
-    │       ├── FilterChip("Sonuçlanan")
-    │       └── FilterChip("Reddedilen")
-    └── Expanded
-        └── selected status state
+ModerationStatusFilter
+└── SegmentedButton | single-select FilterChip group
+    ├── Text("Bekleyen")
+    ├── Text("Sonuçlandırılan")
+    └── Text("Reddedilen")
+
+Canonical mapping:
+
+“Bekleyen” → Pending
+
+“Sonuçlandırılan” → Resolved
+
+“Reddedilen” → Dismissed
 
 Kurallar:
 
-Chip label'ları görsel localization'dır.
+UI başka status üretmez.
 
-API'ye yalnız canonical Pending, Resolved, Dismissed değerleri gönderilir.
+Seçim yalnız canonical status query parametresine map edilir.
 
-Aynı anda tek status seçili olur.
+Her seçim minimum 44x44px dokunma alanına sahiptir.
 
-Moderator olmayan kullanıcıya filtre yüzeyi gösterilmez.
+Loading sırasında aktif filtre görünür kalır.
 
-Filtre değişimi stale request korumasına sahiptir.
-
-Moderasyon rapor kartı
+Moderasyon kuyruğu kartı
 
 Token: {components.moderation-card}
 
 Widget hierarchy:
 
-ModerationReportCard(report)
+ModerationReportCard
 └── Card
     └── InkWell
         └── Padding
             └── Column(crossAxis: start)
                 ├── Row
-                │   ├── Expanded
-                │   │   └── target summary
+                │   ├── Text(targetType)
                 │   └── status badge
-                ├── Text(report.reason)
-                ├── optional Text(report.details)
+                ├── Text(reason)
+                ├── optional Text(details)
+                ├── Text("Hedef #targetId")
                 ├── Text(createdAt)
-                └── pending ise Text("İncele")
+                └── optional resolution metadata
 
 Kurallar:
 
-Kart tap → ModerationReportDetailPage(report.id).
+Card navigation hedefi report.id kullanır.
 
-Status badge canonical ReportStatus değerinden map edilir.
+Target veya reporter için canonical response'ta bulunmayan displayName/username uydurulmaz.
 
-Contract dışı hedef preview datası varsayılmaz.
+reporterUserId, targetId ve tarih metadata'sı ikincil görsel ağırlıktadır.
 
-API yalnız target id sağlıyorsa UI kullanıcı/post içeriği üretmez.
+Status badge yalnız canonical ReportStatus değerine map edilir.
 
-Moderasyon rapor detayı
+Moderasyon detay paneli
 
 Token: {components.moderation-card}, {components.input}, {components.primary-button}
 
 Widget hierarchy:
 
-ModerationReportDetailPage(reportId)
+ModerationDetailPage
 └── Scaffold
     ├── AppBar
-    │   └── title: Text("Şikâyet Detayı")
+    │   └── Text("Şikâyet Detayı")
     └── SafeArea
-        └── state
-            ├── loading
-            ├── error
-            └── CustomScrollView
-                └── SliverToBoxAdapter
-                    └── Column
-                        ├── report metadata
-                        ├── Divider
-                        └── status == Pending ise action area
-                            ├── targetType == Post ise
-                            │   └── action selector
-                            │       ├── NoAction
-                            │       └── RemovePost
-                            ├── targetType == User ise
-                            │   └── NoAction resolve affordance
-                            ├── optional note field
-                            └── actions
-                                ├── FilledButton("Sonuçlandır")
-                                └── OutlinedButton("Reddet")
+        └── CustomScrollView
+            └── SliverToBoxAdapter
+                └── Column
+                    ├── report summary
+                    ├── target metadata
+                    ├── reporter metadata
+                    ├── reason
+                    ├── optional details
+                    ├── status
+                    ├── createdAt
+                    ├── optional resolvedAt / resolvedByUserId
+                    └── Pending ise moderation action area
 
 Kurallar:
 
-Resolved/Dismissed detayda mutation CTA'ları gösterilmez.
+Detay canonical report response'tan gelir.
 
-RemovePost yalnız targetType=Post iken seçilebilir.
+UI target içeriğinin contract'ta verilmeyen preview bilgisini uydurmaz.
 
-API serialization canonical enum casing'ini korur.
+Pending olmayan report'ta transition CTA gösterilmez.
 
-Note maksimum 500 karakterdir.
+Resolve formu
 
-Resolve ve dismiss aynı anda tetiklenemez.
+Token: {components.input}, {components.primary-button}, {colors.error}
 
-Mutation sırasında aksiyon alanı tekrar submit edilemez.
+Widget hierarchy:
 
-409 sonrasında detail canonical GET ile yenilenir.
+ResolveReportForm
+└── Form
+    └── Column
+        ├── action selector
+        │   ├── NoAction
+        │   └── targetType == Post ise RemovePost
+        ├── TextFormField
+        │   ├── label: "Moderasyon notu (isteğe bağlı)"
+        │   ├── multiline
+        │   └── maxLength: 500
+        └── FilledButton("Sonuçlandır")
+
+Kurallar:
+
+RemovePost User report için gösterilmez.
+
+Action exact canonical serializer değeriyle gönderilir.
+
+Note 500 karakteri aşamaz.
+
+Mutation failure note'u temizlemez.
+
+RemovePost seçildiğinde destructive confirmation gösterilir.
+
+Dismiss onay dialogu
+
+Token: {colors.error}, {components.primary-button}
+
+Widget hierarchy:
+
+AlertDialog
+├── title: Text("Şikâyet reddedilsin mi?")
+├── content: Text("Bu işlem şikâyeti Dismissed durumuna geçirir; hedef içeriği kaldırmaz.")
+└── actions
+    ├── TextButton("Vazgeç")
+    └── FilledButton("Reddet")
+
+Kurallar:
+
+Yalnız Pending report için kullanılabilir.
+
+Confirmation olmadan dismiss mutation başlamaz.
+
+Loading sırasında tekrar tetiklenemez.
 
 Screen states
 
 Engellenen Hesaplar
 
-Loading:
+Loading
 
-Skeleton kullanıcı satırları gösterilir.
+AppBar görünür kalır.
 
-Önceki auth session'a ait stale block listesi gösterilmez.
+Liste alanında mevcut skeleton/loading pattern'i kullanılır.
 
-Empty:
+Sahte blocked-user satırı gösterilmez.
 
-Başlık: “Engellediğin hesap yok”
+Empty
 
-Açıklama: “Engellediğin hesaplar burada görünür.”
+Başlık: “Engellenen hesap yok”
 
-CTA yoktur.
+Açıklama: “Engellediğin bir hesap bulunmuyor.”
 
-items=[] bu state'tir.
+Yalnız başarılı 200 + items=[] için gösterilir.
 
-Error:
+CTA zorunlu değildir.
+
+Error
 
 Başlık: “Engellenen hesaplar yüklenemedi”
 
@@ -608,89 +708,117 @@ CTA: “Tekrar Dene”
 
 401 merkezi login akışına gider.
 
-Success mutation:
+Network/5xx empty state değildir.
 
-“Engel kaldırıldı.”
+Block mutation
 
-Kullanıcı engelleme
+Loading
 
-Loading:
+Yalnız confirmation CTA loading/disabled olur.
 
-Yalnız block mutation aksiyonu loading olur.
+Profilin geri kalanı kullanılabilir kalır.
 
-Success:
+Success
 
 “Kullanıcı engellendi.”
 
-Stale profil/social relationship görünümü korunmaz.
+Backend sonucu ve sonraki canonical reads render edilir.
 
-Error:
+Error
 
-400 self-block canonical hata mesajıyla gösterilir.
+Önceki doğrulanmış profil state'i korunur.
 
-404 kaynak bulunamadı/kullanılamıyor deneyimidir.
+CTA tekrar kullanılabilir hale gelir.
 
-Block nedeni tahmin edilmez.
+401 login akışına gider.
 
-401 merkezi login akışına gider.
+404 block nedenini açıklayan özel mesaj üretmez.
+
+Unblock mutation
+
+Loading
+
+Yalnız ilgili aksiyon disabled/loading olur.
+
+Success
+
+“Engel kaldırıldı.”
+
+Eski follow ilişkisi geri getirilmez.
+
+Error
+
+Önceki doğrulanmış blocked state korunur.
 
 Şikâyet formu
 
-Initial:
+Initial
 
-Reason seçilmemiş form API empty state değildir.
+Reason seçilmemiş olması API empty state değildir.
 
 Submit disabled olur.
 
-Validation:
+Loading
 
-Canonical field error ilgili form alanında gösterilir.
+Form değerleri görünür kalır.
 
-409:
+Submit tekrar tetiklenemez.
 
-Post hedefi: “Bu içerik için zaten bekleyen bir şikâyetin var.”
-
-User hedefi: “Bu hesap için zaten bekleyen bir şikâyetin var.”
-
-Success snackbar gösterilmez.
-
-Error:
-
-“Şikâyet gönderilemedi. Tekrar deneyin.”
-
-Reason ve details korunur.
-
-Success:
+Success
 
 “Şikâyetiniz alındı”
 
+Backend report response kabul edilir.
+
+Conflict
+
+409 duplicate pending report:
+
+Başlık/mesaj: “Bu içerik için bekleyen bir şikâyetin zaten var.”
+
+Form state korunur.
+
+Success state gösterilmez.
+
+Error
+
+Başlık/mesaj: “Şikâyet gönderilemedi. Tekrar deneyin.”
+
+Reason ve details korunur.
+
+401 login akışına gider.
+
+404 hedef artık erişilebilir değil olarak ele alınır.
+
+400 field error ilgili alana bağlanabilir.
+
 Moderasyon Kuyruğu
 
-Loading:
+Loading
 
-Seçili status için skeleton kartlar gösterilir.
+AppBar ve seçili status filtresi görünür kalır.
 
-Empty Pending:
+Sahte report kartı gösterilmez.
+
+Empty
+
+Pending filtresi:
 
 Başlık: “Bekleyen şikâyet yok”
 
 Açıklama: “İncelenecek yeni şikâyet bulunmuyor.”
 
-Empty Resolved:
+Resolved filtresi:
 
-Başlık: “Sonuçlanan şikâyet yok”
+Başlık: “Sonuçlandırılmış şikâyet yok”
 
-Açıklama: “Sonuçlandırılmış şikâyet bulunmuyor.”
+Dismissed filtresi:
 
-Empty Dismissed:
+Başlık: “Reddedilmiş şikâyet yok”
 
-Başlık: “Reddedilen şikâyet yok”
+Empty state yalnız başarılı canonical items=[] response için gösterilir.
 
-Açıklama: “Reddedilmiş şikâyet bulunmuyor.”
-
-Empty state'lerde primary CTA yoktur.
-
-Error:
+Error
 
 Başlık: “Moderasyon kuyruğu yüklenemedi”
 
@@ -702,194 +830,236 @@ CTA: “Tekrar Dene”
 
 403:
 
-Başlık: “Bu alana erişim yetkin yok”
+empty state değildir,
 
-Retry ile yetki kazanılmış gibi davranılmaz.
+moderator UI yetkisinin artık geçerli olmadığı permission state olarak ele alınır,
+
+moderator navigation yeniden yetki state'iyle senkronize edilir.
 
 Moderasyon Detayı
 
-Loading:
+Loading
 
-Başka rapora ait stale metadata gösterilmez.
+AppBar görünür kalır.
+
+Detail skeleton/loading pattern'i kullanılır.
+
+Error
 
 404:
 
 Başlık: “Şikâyet bulunamadı”
 
-Açıklama: “Bu şikâyet artık kullanılamıyor.”
+Form sahte local report ile devam etmez.
 
-403:
+401 merkezi login akışına gider.
 
-Başlık: “Bu alana erişim yetkin yok”
+403 permission state'tir.
 
-401:
+Network/5xx:
 
-Merkezi login akışına gider.
+Başlık: “Şikâyet yüklenemedi”
 
-400:
+CTA: “Tekrar Dene”
 
-Canonical resolve/dismiss validation mesajı ilgili alan bağlamında gösterilir.
+Pending
+
+Resolve ve dismiss aksiyonları gösterilir.
+
+Resolved
+
+Canonical resolution metadata gösterilir.
+
+Transition CTA gösterilmez.
+
+Dismissed
+
+Canonical resolution metadata gösterilir.
+
+Transition CTA gösterilmez.
+
+Resolve mutation
+
+Loading
+
+Resolve/dismiss transition CTA'ları tekrar tetiklenemez.
+
+Note ve action görünür kalır.
+
+Success
+
+Backend'in canonical Resolved response'u render edilir.
+
+Kuyruk invalidate/refetch edilir.
+
+Conflict
 
 409:
 
-“Şikâyet başka bir işlemle güncellendi.”
+Başlık/mesaj: “Bu şikâyetin durumu değişti.”
 
-Detail ve aktif liste backend'den yeniden yüklenir.
+Kullanıcının note içeriği mutation sonucu kesinleşene kadar korunur.
 
-Success resolve:
+Canonical detail yeniden yüklenir.
 
-“Şikâyet sonuçlandırıldı.”
+Artık Pending değilse action formu kaldırılır.
 
-Success dismiss:
+Error
 
-“Şikâyet reddedildi.”
+400:
+
+Canonical action/target validation hatasıdır; success gibi gösterilmez.
+
+401 login akışına gider.
+
+403 permission state'tir.
+
+404 report bulunamadı state'idir.
+
+Network/5xx note'u temizlemez.
+
+Dismiss mutation
+
+Loading
+
+Yalnız transition CTA'ları disabled olur.
+
+Success
+
+Backend'in canonical Dismissed response'u render edilir.
+
+Kuyruk invalidate/refetch edilir.
+
+Conflict
+
+409 sonrası canonical detail yeniden yüklenir.
+
+Error
+
+401/403/404 ve network semantiği resolve ile aynı state pattern'ini reuse eder.
 
 Navigation
 
-Güvenlik/Ayarlar → BlockedUsersPage.
+Başka kullanıcı profili → güvenlik menüsü → “Kullanıcıyı Engelle”.
 
-BlockedUsersPage → “Engeli Kaldır”; route değişmez.
+Başka kullanıcı profili → güvenlik menüsü → “Şikâyet Et”.
 
-Başka profil → güvenlik menüsü → block/report.
+Başkasının gönderisi → overflow → “Şikâyet Et”.
 
-Başkasının postu → overflow → report.
+Ayarlar/Güvenlik → Engellenen Hesaplar.
 
-Moderator drawer destination → ModerationPage.
+Engellenen Hesaplar → satır aksiyonu → “Engeli Kaldır”; route değişmez.
 
-Status chip → aynı route içinde canonical status değişir.
+Moderator rolü → Drawer/uygun app-shell destination → Moderasyon.
 
-Moderasyon kartı → ModerationReportDetailPage(report.id).
+Moderasyon → report satırı → ModerationDetailPage(report.id).
 
-Resolve/dismiss başarı → detail güncellenir ve kaynak liste canonical GET ile yenilenir.
+Moderasyon detail resolve/dismiss mutation route değiştirmez.
 
-Moderator olmayan kullanıcıya ModerationPage destination gösterilmez.
+Moderator olmayan kullanıcıya Moderasyon destination render edilmez.
 
-401 tüm korumalı güvenlik/moderasyon yüzeylerinde merkezi login akışına gider.
+401 tüm korumalı güvenlik/moderasyon yüzeylerinden merkezi login akışına gider.
 
-Cross-feature synchronization
+Contract boundaries
 
-Block sonrası
+Bu feature canonical API'de bulunmayan davranışları tasarım gereksinimi gibi tanımlamaz.
 
-Başarılı block:
+Özellikle:
 
-target ile iki yönlü follow ilişkilerinin backend tarafından kaldırılabileceğini kabul eder,
+Block state'i profile response'a yeni isBlocked alanı eklenerek varsayılmaz.
 
-ilgili profile read state'ini invalidate eder,
+GET /api/v1/blocks dışındaki blocked-user collection route'u üretilmez.
 
-açık Followers/Following listelerini stale canonical gerçek olarak tutmaz,
+Block nedeniyle gelen 404 başka bir hata biçiminden client-side ayrıştırılmaz.
 
-feed görünürlüğünü client tarafında elle düzenlemez,
+Unblock eski follow ilişkisini geri getirmez.
 
-gerektiğinde GET /api/v1/feed ile yeniden yükler,
+Report request yalnız targetType, targetId, reason, details alanlarını kullanır.
 
-target profile artık 404 ise bunun block nedeniyle olduğunu kullanıcıya açıklamaz.
+Report enum casing birebir canonical değerleri kullanır.
 
-Unblock sonrası
+Moderation listesi yalnız canonical status query parametresini kullanabilir.
 
-Başarılı unblock:
+Pending, Resolved, Dismissed dışında moderation status üretilmez.
 
-eski follow ilişkisini geri var saymaz,
+NoAction, RemovePost dışında moderation action üretilmez.
 
-relationship state için canonical profile/social graph response bekler,
+RemovePost User report için sunulmaz.
 
-block listesi GET /api/v1/blocks ile yenilenir.
+RemovePost için normal post DELETE endpoint'i kullanılmaz.
 
-Moderasyon RemovePost sonrası
+Dismiss target kaynağını değiştirmez.
 
-Başarılı RemovePost:
+Report oluşturmak hedefi otomatik olarak kaldırmaz.
 
-moderator client standart DELETE /api/v1/posts/{postId} çağrısı yapmaz,
+Moderasyon response'ta bulunmayan target preview, kullanıcı adı, policy category veya audit detail uydurulmaz.
 
-postu local collection'lardan kalıcı gerçekmiş gibi elle silmez,
-
-ilgili canonical read state'lerini invalidate/refetch eder,
-
-normal kullanıcı görünürlüğünü backend'in moderasyon semantiğine bırakır.
-
-Accessibility
-
-Tüm aksiyonlar minimum 44x44px dokunma alanına sahiptir.
-
-Status yalnız renkle ifade edilmez; metin etiketi bulunur.
-
-Destructive block aksiyonu ikon + metinle açıkça etiketlenir.
-
-RemovePost, NoAction, resolve ve dismiss seçimleri screen reader tarafından ayırt edilebilir label taşır.
-
-Loading sırasında odak sebepsiz yere ekranın başına sıçramaz.
-
-Error ve conflict mesajları semantik live region üzerinden duyurulabilir.
-
-Dinamik metin ölçeklendirmede moderator action alanı yatay taşma üretmez.
-
-Uzun details ve note metinleri sabit yükseklikte kesilmez.
+Yeni admin role veya permission modeli üretilmez.
 
 Do's and Don'ts
 
 Do
 
-GET /api/v1/blocks response'unu engellenen kullanıcılar yönetiminin canonical kaynağı olarak kullan.
+Engellenen hesaplar için GET /api/v1/blocks kullan.
 
-Unblock path'inde satırdaki gerçek username değerini kullan.
+Block için POST /api/v1/profiles/{username}/block kullan.
 
-Block sonrası relationship ve feed görünürlüğünü backend state ile yeniden senkronize et.
+Unblock için DELETE /api/v1/profiles/{username}/block kullan.
 
-Report request'inde yalnız targetType, targetId, reason, details alanlarını kullan.
+Report için exact canonical ReportTargetType ve ReportReason değerlerini kullan.
 
-Canonical enum string'lerini birebir casing ile serialize et.
+targetId için gerçek integer resource id kullan.
 
-Duplicate pending report 409 sonucunu conflict state olarak göster.
+Report details ve moderation note alanlarında 500 karakter sınırını koru.
 
-Moderasyon kuyruğunda yalnız canonical status filtresini kullan.
+409 duplicate pending report'u success olarak gösterme.
 
-İlk moderation kuyruğunun backend varsayılanının Pending olduğunu koru.
+Moderation listesini yalnız moderator rolünde göster.
 
-Rapor detayı path'inde gerçek integer report.id kullan.
+Moderation status filtresinde canonical enum mapping'ini kullan.
 
-RemovePost aksiyonunu yalnız Post report için sun.
+RemovePost aksiyonunu yalnız Post target için göster.
 
-User report resolve için contract dışı kullanıcı yaptırımı üretme.
-
-Resolved/Dismissed rapor detaylarını read-only göster.
-
-Resolve/dismiss 409 sonrasında canonical detail ve listeyi yeniden yükle.
-
-RemovePost sonrasında standart owner delete endpoint'ini çağırma.
+Moderasyon mutation sonrası backend response'u doğruluk kaynağı kabul et.
 
 401'i merkezi login akışına gönder.
 
 403'ü empty state gibi gösterme.
 
-404 sonucundan block ilişkisi çıkarma.
+404'ten block varlığı çıkarmaya çalışma.
+
+Network/5xx hatasında form taslağını koru.
+
+Minimum 44x44px dokunma alanını koru.
+
+Dinamik metin ölçeklendirmeyi destekle.
 
 Don'ts
 
-GET /api/v1/blocks için search, sort, cursor, page veya offset parametresi üretme.
+/api/v1/users/... güvenlik route'u üretme.
 
-Unblock sonrasında eski follow ilişkisini otomatik geri getirme.
+Block için request body'ye username veya id ekleme.
 
-Blocked-users listesini profile cache'inden tahmin etme.
+Unblock sonrasında follow ilişkisini client-side geri kurma.
 
-Report enum değerlerini spam, harassment, post veya başka alias/casing ile gönderme.
+Report request'te postId, userId, reportType, categoryCode veya targetIdentifier kullanma.
 
-postId, userId, reportType, categoryCode veya targetIdentifier request alanı üretme.
+Canonical olmayan report reason alias'ı üretme.
 
-Duplicate pending report 409 sonucunda yeni report oluşturulmuş gibi success gösterme.
+all, open, closed, reviewing gibi moderation status üretme.
 
-Moderasyon için All, Open, Closed gibi canonical olmayan API status değeri üretme.
+remove_post, removePost gibi action alias'ı kullanma.
 
-Moderator olmayan kullanıcıya moderator navigation veya action gösterme.
+User report için RemovePost gösterme.
 
-User report üzerinde RemovePost aksiyonu sunma.
+Moderasyon kaldırması için standart post DELETE endpoint'ini çağırma.
 
-SuspendUser, BanUser, DeleteUser, WarnUser veya başka contract dışı moderation action üretme.
+Moderator olmayan kullanıcıya queue/detail/action UI gösterme.
 
-Resolved veya Dismissed report üzerinde tekrar resolve/dismiss CTA'sı gösterme.
+403'ü “Bekleyen şikâyet yok” state'ine dönüştürme.
 
-409 sonrasında local state'i zorla success durumuna taşıma.
+409 transition conflict sonrasında stale local status'u kalıcılaştırma.
 
-Moderasyon kaldırması için DELETE /api/v1/posts/{postId} kullanma.
+Network hatasını başarılı empty collection gibi gösterme.
 
-Client tarafında block/moderation görünürlüğünü yeniden implement etme.
-
-404 sonucunu “Bu kullanıcı seni engelledi” mesajına dönüştürme.
+Contract'ta olmayan admin dashboard, kullanıcı ban/suspend, role edit veya toplu moderasyon aksiyonu ekleme.
