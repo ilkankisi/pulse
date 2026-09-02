@@ -2009,7 +2009,9 @@ Mutation aksiyonu ile satır navigasyonu birbirine karıştırılmaz.
 
 Takip Ettiklerim feed filtresi
 
-Bu kabul yüzeyi canonical feed contract desteğine bağlıdır.
+Bu kabul yüzeyi görev kabul kapsamının zorunlu bir parçasıdır ve canonical feed contract desteğine bağlı olarak available/unavailable davranışıyla tasarlanır.
+
+Canonical contract desteğinin bulunmaması bu kabul yüzeyini kapsamdan çıkarmaz; bu durumda tasarlanmış contract-unavailable davranışı uygulanır ve kontrol render edilmez.
 
 Canonical feed contract takip edilen hesaplarla sınırlı bir feed scope/filter tanımlıyorsa Ana Akış içinde “Takip Ettiklerim” seçimi gösterilir.
 
@@ -2027,11 +2029,13 @@ Başarılı fakat boş canonical “Takip Ettiklerim” sonucu empty state'tir; 
 
 403 normal empty state değildir.
 
-Canonical feed contract bu davranışı tanımlamıyorsa kontrol placeholder veya disabled biçimde bırakılmaz; render edilmez.
+Canonical feed contract bu davranışı tanımlamıyorsa kontrol placeholder veya disabled biçimde bırakılmaz; render edilmez. Bu durum “Takip Ettiklerim” kabul yüzeyinin tasarlanmış contract-unavailable state'idir.
 
 Seni takip ediyor / Karşılıklı takip göstergeleri
 
-Bu kabul yüzeyi canonical profile/relationship response desteğine bağlıdır.
+Bu kabul yüzeyleri görev kabul kapsamının zorunlu parçalarıdır ve canonical profile/relationship response desteğine bağlı olarak available/unavailable davranışıyla tasarlanır.
+
+Canonical response gerekli ilişki bilgisini sağlamıyorsa bu göstergeler kapsamdan çıkarılmış sayılmaz; tasarlanmış contract-unavailable davranışı olarak tahmini, boş veya disabled ilişki etiketi render edilmez.
 
 Canonical response görüntülenen kullanıcının current user'ı takip ettiğini açık ve güvenilir biçimde bildiriyorsa profil kimlik alanında ikincil “Seni takip ediyor” göstergesi gösterilir.
 
@@ -2054,13 +2058,20 @@ Token: {components.profile-stats}
 Widget hierarchy:
 
 ProfileStats
+
 └── Row
-    ├── StatButton
-    │   ├── Text(followerCount)
-    │   └── Text("Takipçi")
-    └── StatButton
-        ├── Text(followingCount)
-        └── Text("Takip")
+
+├── StatButton
+
+│   ├── Text(followerCount)
+
+│   └── Text("Takipçi")
+
+└── StatButton
+
+├── Text(followingCount)
+
+└── Text("Takip")
 
 Kurallar:
 
@@ -2081,14 +2092,22 @@ Token: {components.social-graph-list-item}
 Widget hierarchy:
 
 InkWell
+
 └── Padding
-    └── Row
-        ├── CircleAvatar
-        ├── Expanded
-        │   └── Column
-        │       ├── Text(displayName)
-        │       └── Text("@username")
-        └── optional relationship action
+
+└── Row
+
+├── CircleAvatar
+
+├── Expanded
+
+│   └── Column
+
+│       ├── Text(displayName)
+
+│       └── Text("@username")
+
+└── optional relationship action
 
 Kurallar:
 
@@ -2139,10 +2158,14 @@ Token: {typography.label-md}, {colors.primary-container}
 Widget hierarchy:
 
 FeedScopeControl
+
 └── contract supports following feed ise
-    └── SegmentedButton | single-select FilterChip group
-        ├── Text("Tümü")
-        └── Text("Takip Ettiklerim")
+
+└── SegmentedButton | single-select FilterChip group
+
+├── Text("Tümü")
+
+└── Text("Takip Ettiklerim")
 
 Kurallar:
 
@@ -2165,9 +2188,12 @@ Token: {typography.body-sm}, {colors.text-secondary}
 Widget hierarchy:
 
 ProfileRelationshipContext
+
 └── Wrap
-    ├── canonical state varsa Text | AssistChip("Seni takip ediyor")
-    └── canonical state varsa Text | AssistChip("Karşılıklı takip")
+
+├── canonical state varsa Text | AssistChip("Seni takip ediyor")
+
+└── canonical state varsa Text | AssistChip("Karşılıklı takip")
 
 Kurallar:
 
@@ -2257,6 +2283,8 @@ Contract unavailable
 
 Canonical feed contract bu scope/filter davranışını tanımlamıyorsa seçim kontrolü render edilmez.
 
+Bu durum kabul yüzeyinin kapsamdan kaldırılması değil, contract-gated unavailable state'idir.
+
 Loading
 
 Seçili scope görünür kalır.
@@ -2292,6 +2320,8 @@ Unavailable
 Gerekli canonical alan bulunmadığında gösterge render edilmez.
 
 Alan yokluğu profil veya sosyal graf error state'i değildir.
+
+Bu unavailable durum kabul yüzeylerinin kapsamdan çıkarıldığı anlamına gelmez.
 
 Follow mutation
 
@@ -2381,11 +2411,11 @@ Bu feature canonical API'de bulunmayan davranışları tasarım gereksinimi gibi
 
 Özellikle:
 
-“Takip Ettiklerim” feed filtresi tasarlanmış contract-gated bir yüzeydir; canonical feed contract ilgili scope/filter mapping'ini tanımlıyorsa gösterilir, tanımlamıyorsa UI mapping uydurmaz ve kontrolü render etmez.
+“Takip Ettiklerim” feed filtresi tasarlanmış ve kabul kapsamındaki zorunlu contract-gated bir yüzeydir; canonical feed contract ilgili scope/filter mapping'ini tanımlıyorsa gösterilir, tanımlamıyorsa UI mapping uydurmaz ve kontrolü render etmez.
 
-“Seni takip ediyor” tasarlanmış contract-gated bir göstergedir; canonical profile veya relationship response bu ilişki bilgisini sağlıyorsa gösterilir, sağlamıyorsa tahmin edilmez.
+“Seni takip ediyor” tasarlanmış ve kabul kapsamındaki zorunlu contract-gated bir göstergedir; canonical profile veya relationship response bu ilişki bilgisini sağlıyorsa gösterilir, sağlamıyorsa tahmin edilmez.
 
-“Karşılıklı takip” tasarlanmış contract-gated bir göstergedir; canonical response karşılıklı ilişkiyi açıkça sağlıyor veya sözleşme iki yönlü alanların güvenilir biçimde birlikte değerlendirilmesine izin veriyorsa gösterilir; aksi halde local listelerden türetilmez.
+“Karşılıklı takip” tasarlanmış ve kabul kapsamındaki zorunlu contract-gated bir göstergedir; canonical response karşılıklı ilişkiyi açıkça sağlıyor veya sözleşme iki yönlü alanların güvenilir biçimde birlikte değerlendirilmesine izin veriyorsa gösterilir; aksi halde local listelerden türetilmez.
 
 Yeni relationship endpoint'i veya query parametresi üretilmez.
 
@@ -2408,6 +2438,8 @@ Follow/unfollow CTA'yı backend relationship state'e göre göster.
 Canonical feed contract destekliyorsa “Takip Ettiklerim” seçimini mevcut Ana Akış içinde göster ve exact contract mapping'ini kullan.
 
 Canonical relationship/profile response destekliyorsa “Seni takip ediyor” ve “Karşılıklı takip” göstergelerini ikincil profil bağlamında göster.
+
+Contract desteğinin bulunmadığı durumda bu zorunlu contract-gated yüzeylerin tanımlı unavailable davranışını uygula; tahmini veri veya placeholder üretme.
 
 Mutation sırasında yalnız ilgili CTA'yı loading/disabled yap.
 
