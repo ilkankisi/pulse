@@ -312,7 +312,7 @@ app.MapProfileEndpoints();
 
 app.MapSocialGraphEndpoints();
 
-app.MapFollowEndpoints(); // POST /api/v1/profiles/{username}/follow
+app.MapFollowEndpoints();
 
 app.MapSecurityModerationEndpoints();
 
