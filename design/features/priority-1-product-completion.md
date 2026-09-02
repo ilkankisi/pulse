@@ -114,7 +114,6 @@ SearchPage
                     ├── empty
                     ├── error
                     └── result list
-```
 
 Kurallar:
 
@@ -137,14 +136,22 @@ Token: {components.social-graph-list-item}
 Widget hierarchy:
 
 InkWell
+
 └── Padding
-    └── Row
-        ├── CircleAvatar
-        ├── Expanded
-        │   └── Column(crossAxis: start)
-        │       ├── Text(displayName)
-        │       └── Text("@username")
-        └── optional relationship action
+
+└── Row
+
+├── CircleAvatar
+
+├── Expanded
+
+│   └── Column(crossAxis: start)
+
+│       ├── Text(displayName)
+
+│       └── Text("@username")
+
+└── optional relationship action
 
 Kurallar:
 
@@ -161,17 +168,28 @@ Token: {components.input}, {components.social-graph-list-item}
 Widget hierarchy:
 
 Composer
+
 └── Stack
-    ├── TextFormField
-    └── mention active ise
-        └── suggestion surface
-            └── ConstrainedBox
-                └── ListView
-                    └── suggestion row
-                        ├── CircleAvatar
-                        └── Column
-                            ├── Text(displayName)
-                            └── Text("@username")
+
+├── TextFormField
+
+└── mention active ise
+
+└── suggestion surface
+
+└── ConstrainedBox
+
+└── ListView
+
+└── suggestion row
+
+├── CircleAvatar
+
+└── Column
+
+├── Text(displayName)
+
+└── Text("@username")
 
 Kurallar:
 
@@ -194,15 +212,24 @@ Token: {components.post-card}
 Widget hierarchy:
 
 ProfilePage
+
 └── profile content
-    ├── ProfileSummary
-    ├── pinned post varsa
-    │   └── Column
-    │       ├── Row
-    │       │   ├── Icon(push_pin_outlined)
-    │       │   └── Text("Sabitlenmiş")
-    │       └── PostCard(pinnedPost)
-    └── profile posts
+
+├── ProfileSummary
+
+├── pinned post varsa
+
+│   └── Column
+
+│       ├── Row
+
+│       │   ├── Icon(push_pin_outlined)
+
+│       │   └── Text("Sabitlenmiş")
+
+│       └── PostCard(pinnedPost)
+
+└── profile posts
 
 Kurallar:
 
@@ -223,10 +250,14 @@ Token: {components.safety-action-menu}
 Widget hierarchy:
 
 MenuAnchor | PopupMenuButton
+
 └── other profile actions
-    └── MenuItemButton
-        ├── Icon(volume_off_outlined | volume_up_outlined)
-        └── Text("Sessize Al" | "Sessizden Çıkar")
+
+└── MenuItemButton
+
+├── Icon(volume_off_outlined | volume_up_outlined)
+
+└── Text("Sessize Al" | "Sessizden Çıkar")
 
 Kurallar:
 
@@ -247,11 +278,16 @@ Token: {colors.error}
 Widget hierarchy:
 
 AlertDialog
+
 ├── title: Text("Taslak silinsin mi?")
+
 ├── content: Text("Yazdığın değişiklikler kaybolacak.")
+
 └── actions
-    ├── TextButton("Vazgeç")
-    └── TextButton | FilledButton("Taslağı Sil")
+
+├── TextButton("Vazgeç")
+
+└── TextButton | FilledButton("Taslağı Sil")
 
 Kurallar:
 
@@ -270,20 +306,34 @@ Token: {components.composer}, {components.primary-button}
 Widget hierarchy:
 
 EditPostPage
+
 └── Scaffold
-    ├── AppBar
-    │   ├── leading: back
-    │   └── action: FilledButton("Kaydet")
-    └── SafeArea
-        └── Padding
-            └── Form
-                └── Column
-                    ├── TextFormField
-                    │   ├── current content
-                    │   ├── multiline
-                    │   └── canonical maxLength
-                    ├── character counter
-                    └── validation message
+
+├── AppBar
+
+│   ├── leading: back
+
+│   └── action: FilledButton("Kaydet")
+
+└── SafeArea
+
+└── Padding
+
+└── Form
+
+└── Column
+
+├── TextFormField
+
+│   ├── current content
+
+│   ├── multiline
+
+│   └── canonical maxLength
+
+├── character counter
+
+└── validation message
 
 Kurallar:
 

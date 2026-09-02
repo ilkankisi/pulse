@@ -716,6 +716,275 @@ Bottom nav / drawer Profil; sayaç tap → social-graph feature.
 
 ---
 
+# Feature: Takipçiler ve takip edilenler
+
+## Scope
+Profil sayaçlarından açılan sosyal graf listeleri.
+
+## Components
+Sosyal graf kullanıcı satırı
+
+Token: {components.social-graph-list-item}, {components.relationship-button}
+
+Widget hierarchy:
+
+```
+SocialGraphListItem(user)
+└── InkWell
+    └── ConstrainedBox(minHeight: 72)
+        └── Padding
+            └── Row
+                ├── CircleAvatar(size: 48)
+                ├── SizedBox(width: spacing.md)
+                ├── Expanded
+                │   └── Column(crossAxis: start)
+                │       ├── Text(user.displayName)
+                │       └── Text("@${user.username}")
+                └── relationship action
+                    ├── user == currentUser
+                    │   └── no action
+                    ├── isFollowing == false
+                    │   └── FilledButton("Takip Et")
+                    └── isFollowing == true
+                        └── OutlinedButton("Takibi Bırak")
+```
+
+fluttertemplates kaynağı: Core / Lists — https://fluttertemplates.dev/widgets
+
+Kurallar:
+
+Avatar, displayName, username veya satırın profil alanına dokunulduğunda ProfilePage(user.username) açılır.
+
+Parent Followers/Following ekranının username'i yerine satırdaki user.username kullanılır.
+
+Kullanıcının kendi satırında follow CTA gösterilmez.
+
+Relationship state canonical backend sonucundan gelir.
+
+Follow/unfollow sırasında yalnız ilgili satır CTA'sı disabled/loading olur.
+
+Tüm liste loading state'e dönmez.
+
+Optimistic update kullanılırsa hata halinde eski state geri alınır.
+
+Follow/unfollow sonrası profil ve sosyal graf sayaçları backend sonucuyla senkronize edilir.
+
+Engelle/şikâyet aksiyonları bu satıra eklenmez; profil güvenlik menüsünden yürütülür.
+
+Takipçiler listesi
+
+Token: {components.social-graph-list-item}, {components.state-panel}
+
+Widget hierarchy:
+
+```
+FollowersPage(username)
+└── Scaffold
+    ├── AppBar
+    │   ├── leading: BackButton
+    │   └── title
+    │       └── Column
+    │           ├── Text("Takipçiler")
+    │           └── optional Text("@username")
+    └── SafeArea
+        └── state
+            ├── loading-state
+            ├── empty-state
+            ├── error-state
+            └── CustomScrollView
+                └── SliverList
+                    └── SocialGraphListItem[]
+```
+
+fluttertemplates kaynağı: Core / Lists — https://fluttertemplates.dev/widgets
+
+Kurallar:
+
+Ekran zorunlu username route parametresi alır.
+
+Veri kaynağı: GET /api/v1/profiles/{username}/followers.
+
+{username}, sosyal grafı görüntülenen profilin username değeridir.
+
+Kendi profilimde sayaçtan açıldığında kendi username'im kullanılır.
+
+Başka profilin sayacından açıldığında o profilin username'i kullanılır.
+
+Liste ilgili profilin takipçilerini gösterir.
+
+Satırdan profile geçerken row.username kullanılır.
+
+Profil A'nın takipçileri içinde Profil B'ye girildiğinde Profil B'nin sayaçları Profil B username'i ile yeni sosyal graf açar.
+
+Geri navigasyonda kaynak FollowersPage(username) route'u korunur.
+
+Mümkünse scroll pozisyonu korunur.
+
+404 kayıt-yok semantiği taşıyorsa empty state olarak ele alınır.
+
+Ağ/5xx empty state'e dönüştürülmez.
+
+401 login akışına gider.
+
+Empty durumda boş SliverList render edilmez.
+
+UI canonical API dışında endpoint veya query parametresi üretmez.
+
+Takip Edilenler listesi
+
+Token: {components.social-graph-list-item}, {components.state-panel}
+
+Widget hierarchy:
+
+```
+FollowingPage(username)
+└── Scaffold
+    ├── AppBar
+    │   ├── leading: BackButton
+    │   └── title
+    │       └── Column
+    │           ├── Text("Takip Edilenler")
+    │           └── optional Text("@username")
+    └── SafeArea
+        └── state
+            ├── loading-state
+            ├── empty-state
+            ├── error-state
+            └── CustomScrollView
+                └── SliverList
+                    └── SocialGraphListItem[]
+```
+
+fluttertemplates kaynağı: Core / Lists — https://fluttertemplates.dev/widgets
+
+Kurallar:
+
+Ekran zorunlu username route parametresi alır.
+
+Veri kaynağı: GET /api/v1/profiles/{username}/following.
+
+{username}, sosyal grafı görüntülenen profilin username değeridir.
+
+Kendi profilimde sayaçtan açıldığında kendi username'im kullanılır.
+
+Başka profilin sayacından açıldığında o profilin username'i kullanılır.
+
+Liste ilgili profilin takip ettiği kullanıcıları gösterir.
+
+Satırdan profile geçerken row.username kullanılır.
+
+Profil A'nın takip listesi içinden Profil B'ye geçildiğinde Profil B sosyal grafı Profil B username'iyle açılır.
+
+Geri navigasyonda kaynak FollowingPage(username) route'u korunur.
+
+Mümkünse scroll pozisyonu korunur.
+
+Relationship CTA canonical backend state'e göre gösterilir.
+
+404 kayıt-yok semantiği taşıyorsa error değildir.
+
+Ağ/5xx error state'tir.
+
+401 login akışına gider.
+
+Empty durumda boş SliverList render edilmez.
+
+UI canonical API dışında endpoint veya query parametresi üretmez.
+
+## Screen states
+Takipçiler
+
+Route
+
+FollowersPage(username)
+
+API: GET /api/v1/profiles/{username}/followers
+
+{username} = sosyal grafı görüntülenen profil.
+
+Empty state
+
+Başlık: "Henüz takipçi yok"
+
+Açıklama: "Bu hesabı henüz kimse takip etmiyor."
+
+Birincil CTA yoktur.
+
+Error state
+
+Başlık: "Takipçiler yüklenemedi"
+
+Açıklama: "Takipçi listesi alınırken bir sorun oluştu."
+
+CTA: "Tekrar Dene"
+
+404 kayıt-yok error değildir.
+
+401 login akışına gider.
+
+Success
+
+Liste yüklenmesinde snackbar yoktur.
+
+Follow: "Takip edildi."
+
+Unfollow: "Takip bırakıldı."
+
+App bar vs body CTA
+
+AppBar: geri + "Takipçiler".
+
+Follow/unfollow ilgili satırdadır.
+
+Takip Edilenler
+
+Route
+
+FollowingPage(username)
+
+API: GET /api/v1/profiles/{username}/following
+
+{username} = sosyal grafı görüntülenen profil.
+
+Empty state
+
+Başlık: "Henüz kimse takip edilmiyor"
+
+Açıklama: "Takip edilen hesaplar burada görünür."
+
+Birincil CTA yoktur.
+
+Error state
+
+Başlık: "Takip edilenler yüklenemedi"
+
+Açıklama: "Takip edilen hesaplar alınırken bir sorun oluştu."
+
+CTA: "Tekrar Dene"
+
+404 kayıt-yok error değildir.
+
+401 login akışına gider.
+
+Success
+
+Liste yüklenmesinde snackbar yoktur.
+
+Follow: "Takip edildi."
+
+Unfollow: "Takip bırakıldı."
+
+App bar vs body CTA
+
+AppBar: geri + "Takip Edilenler".
+
+Follow/unfollow ilgili satırdadır.
+
+## Navigation
+Profil Takip/Takipçi sayaçlarından; liste satırı → profil.
+
+---
+
 # Feature: Engelleme ve şikâyet
 
 ## Scope
@@ -878,6 +1147,152 @@ Gönderi overflow veya profil güvenlik menüsünden.
 
 ---
 
+# Feature: Moderasyon kuyruğu
+
+## Scope
+Moderator-only şikâyet inceleme ve aksiyonlar.
+
+## Components
+Moderasyon kuyruğu kartı
+
+Token: {components.moderation-card}
+
+Widget hierarchy:
+
+```
+CustomScrollView
+└── SliverList
+    └── Card
+        └── Padding
+            └── Column(crossAxis: start)
+                ├── Row
+                │   ├── target summary
+                │   └── status badge
+                ├── Text(report reason)
+                ├── Text(report description, optional)
+                ├── Text(metadata)
+                └── action area
+                    └── canonical moderator actions
+```
+
+fluttertemplates kaynağı: Core / Cards — https://fluttertemplates.dev/widgets
+
+Kurallar:
+
+Yalnız moderator kullanıcıya gösterilir.
+
+Status ve action değerleri docs/api-contract.md ile map edilir.
+
+UI yeni role/status/action üretmez.
+
+İşlenen kayıt backend sonucuna göre yenilenir veya listeden çıkarılır.
+
+## Screen states
+Moderasyon Kuyruğu
+
+Empty state
+
+Başlık: "Bekleyen şikâyet yok"
+
+Açıklama: "İncelenecek yeni şikâyet bulunmuyor."
+
+CTA yoktur.
+
+Error state
+
+Başlık: "Moderasyon kuyruğu yüklenemedi"
+
+Açıklama: "Şikâyetler alınırken bir sorun oluştu."
+
+CTA: "Tekrar Dene"
+
+403 empty değildir.
+
+401 login akışına gider.
+
+Success
+
+Backend'in güncel moderation sonucu render edilir.
+
+App bar vs body CTA
+
+Moderasyon aksiyonları ilgili kayıt body alanındadır.
+
+Do's and Don'ts
+
+Do
+
+Material 3 semantik token'larını kullan.
+
+Takipçiler ve Takip Edilenler için aynı SocialGraphListItem bileşenini kullan.
+
+Profil sayaçlarını minimum 44x44px dokunma alanına sahip yap.
+
+Kendi profilim ve başka profil için aynı Followers/Following ekranlarını yeniden kullan.
+
+Followers route'una görüntülenen profilin username değerini geçir.
+
+Following route'una görüntülenen profilin username değerini geçir.
+
+Takipçiler için GET /api/v1/profiles/{username}/followers kullan.
+
+Takip Edilenler için GET /api/v1/profiles/{username}/following kullan.
+
+Liste satırından profile geçerken row.username kullan.
+
+Profil A → sosyal graf → Profil B → Profil B sosyal graf zincirinde her route'un kendi username bağlamını koru.
+
+Geri navigasyonda mümkünse sosyal graf scroll konumunu koru.
+
+Follow/unfollow durumlarını backend ile senkronize et.
+
+404 kayıt-yok durumunu empty state olarak ele al.
+
+401'i login akışına gönder.
+
+403'ü normal empty state gibi gösterme.
+
+Moderator-only UI'ı role sonucuna göre gizle.
+
+Minimum dokunma alanını 44x44px koru.
+
+Don'ts
+
+Başka profilin “Takipçi” sayacına basınca current-user takipçilerini açma.
+
+Başka profilin “Takip” sayacına basınca current-user takip listesini açma.
+
+Profil A listesindeki Profil B satırından profile geçerken A'nın username'ini kullanma.
+
+Followers ve Following ekranlarını ana NavigationBar/NavigationDrawer öğesi yapma.
+
+API kontratında olmayan sosyal graf endpoint'i üretme.
+
+API kontratında olmayan cursor, offset veya pagination query parametresi üretme.
+
+Takipçi/takip sayaçlarını yalnız local optimistic değerle kalıcı kaynak kabul etme.
+
+Kullanıcının kendi sosyal graf satırında “Takip Et” veya “Takibi Bırak” gösterme.
+
+Followers ve Following için birbirinden farklı duplicate kullanıcı satırı tasarlama.
+
+Sosyal graf satırına duplicate “Engelle” veya “Şikâyet Et” aksiyonu ekleme.
+
+Kayıt yok durumunu "yüklenemedi" error state'e dönüştürme.
+
+401'i normal retry paneli olarak gösterme.
+
+Moderator olmayan kullanıcıya moderation action gösterme.
+
+API kontratında olmayan role, status veya moderation action üretme.
+
+Çok seviyeli thread, DM veya kapsam dışı yeni özellik ekleme.
+
+## Navigation
+Drawer Moderasyon destination (moderator rolü).
+
+---
+
 # Feature: Öncelik 1 ürün tamamlama deneyimi
 
 ## Scope
@@ -994,7 +1409,6 @@ SearchPage
                     ├── empty
                     ├── error
                     └── result list
-```
 
 Kurallar:
 
@@ -1017,14 +1431,22 @@ Token: {components.social-graph-list-item}
 Widget hierarchy:
 
 InkWell
+
 └── Padding
-    └── Row
-        ├── CircleAvatar
-        ├── Expanded
-        │   └── Column(crossAxis: start)
-        │       ├── Text(displayName)
-        │       └── Text("@username")
-        └── optional relationship action
+
+└── Row
+
+├── CircleAvatar
+
+├── Expanded
+
+│   └── Column(crossAxis: start)
+
+│       ├── Text(displayName)
+
+│       └── Text("@username")
+
+└── optional relationship action
 
 Kurallar:
 
@@ -1041,17 +1463,28 @@ Token: {components.input}, {components.social-graph-list-item}
 Widget hierarchy:
 
 Composer
+
 └── Stack
-    ├── TextFormField
-    └── mention active ise
-        └── suggestion surface
-            └── ConstrainedBox
-                └── ListView
-                    └── suggestion row
-                        ├── CircleAvatar
-                        └── Column
-                            ├── Text(displayName)
-                            └── Text("@username")
+
+├── TextFormField
+
+└── mention active ise
+
+└── suggestion surface
+
+└── ConstrainedBox
+
+└── ListView
+
+└── suggestion row
+
+├── CircleAvatar
+
+└── Column
+
+├── Text(displayName)
+
+└── Text("@username")
 
 Kurallar:
 
@@ -1074,15 +1507,24 @@ Token: {components.post-card}
 Widget hierarchy:
 
 ProfilePage
+
 └── profile content
-    ├── ProfileSummary
-    ├── pinned post varsa
-    │   └── Column
-    │       ├── Row
-    │       │   ├── Icon(push_pin_outlined)
-    │       │   └── Text("Sabitlenmiş")
-    │       └── PostCard(pinnedPost)
-    └── profile posts
+
+├── ProfileSummary
+
+├── pinned post varsa
+
+│   └── Column
+
+│       ├── Row
+
+│       │   ├── Icon(push_pin_outlined)
+
+│       │   └── Text("Sabitlenmiş")
+
+│       └── PostCard(pinnedPost)
+
+└── profile posts
 
 Kurallar:
 
@@ -1103,10 +1545,14 @@ Token: {components.safety-action-menu}
 Widget hierarchy:
 
 MenuAnchor | PopupMenuButton
+
 └── other profile actions
-    └── MenuItemButton
-        ├── Icon(volume_off_outlined | volume_up_outlined)
-        └── Text("Sessize Al" | "Sessizden Çıkar")
+
+└── MenuItemButton
+
+├── Icon(volume_off_outlined | volume_up_outlined)
+
+└── Text("Sessize Al" | "Sessizden Çıkar")
 
 Kurallar:
 
@@ -1127,11 +1573,16 @@ Token: {colors.error}
 Widget hierarchy:
 
 AlertDialog
+
 ├── title: Text("Taslak silinsin mi?")
+
 ├── content: Text("Yazdığın değişiklikler kaybolacak.")
+
 └── actions
-    ├── TextButton("Vazgeç")
-    └── TextButton | FilledButton("Taslağı Sil")
+
+├── TextButton("Vazgeç")
+
+└── TextButton | FilledButton("Taslağı Sil")
 
 Kurallar:
 
@@ -1150,20 +1601,34 @@ Token: {components.composer}, {components.primary-button}
 Widget hierarchy:
 
 EditPostPage
+
 └── Scaffold
-    ├── AppBar
-    │   ├── leading: back
-    │   └── action: FilledButton("Kaydet")
-    └── SafeArea
-        └── Padding
-            └── Form
-                └── Column
-                    ├── TextFormField
-                    │   ├── current content
-                    │   ├── multiline
-                    │   └── canonical maxLength
-                    ├── character counter
-                    └── validation message
+
+├── AppBar
+
+│   ├── leading: back
+
+│   └── action: FilledButton("Kaydet")
+
+└── SafeArea
+
+└── Padding
+
+└── Form
+
+└── Column
+
+├── TextFormField
+
+│   ├── current content
+
+│   ├── multiline
+
+│   └── canonical maxLength
+
+├── character counter
+
+└── validation message
 
 Kurallar:
 
@@ -1390,3 +1855,508 @@ Mention suggestion hatasında composer taslağını temizleme.
 Kullanıcının kendi profilinde mute aksiyonu gösterme.
 
 Yeni role, permission, moderation status veya sosyal davranış üretme.
+
+---
+
+# Feature: Öncelik 2 sosyal deneyim akışları
+
+## Scope
+
+Bu feature mevcut canonical sosyal graf sözleşmesini daha tutarlı bir ürün deneyimine dönüştürür:
+
+- Profil ile Takipçiler/Takip Edilenler ekranları arasında ilişki state sürekliliği
+- Sosyal graf satırından takip etme ve takibi bırakma
+- Kendi takipçi listesindeki bağlamsal ilişki bilgisinin gösterimi
+- Follow/unfollow sonrasında profil sayaçları ve açık listelerin backend state ile yeniden senkronize edilmesi
+- Feed'in canonical sözleşmede tanımlanan tek kronolojik akış olarak korunması
+- Block nedeniyle görünmeyen kaynaklarda canonical 404 semantiğinin bilgi sızdırmadan gösterilmesi
+
+Tüm API, response, permission ve mutation davranışları canonical `docs/api-contract.md` sözleşmesinden map edilir.
+
+Canonical veri kaynakları:
+
+- Profil: `GET /api/v1/profiles/{username}`
+- Profil gönderileri: `GET /api/v1/profiles/{username}/posts`
+- Takipçiler: `GET /api/v1/profiles/{username}/followers`
+- Takip Edilenler: `GET /api/v1/profiles/{username}/following`
+- Takip Et: `POST /api/v1/profiles/{username}/follow`
+- Takibi Bırak: `DELETE /api/v1/profiles/{username}/follow`
+- Ana Akış: `GET /api/v1/feed`
+
+UI:
+
+- API kontratında olmayan endpoint üretmez.
+- Feed için API kontratında olmayan query, filter, mode veya cursor üretmez.
+- Profil response'unda bulunmayan ters yönlü follow state'i varmış gibi davranmaz.
+- `isFollowedByCurrentUser` alanını yalnız canonical anlamıyla kullanır.
+- Follow/unfollow mutation response'undaki `isFollowing` alanını `SocialGraphUserResponse.isFollowedByCurrentUser` için yeni alias olarak modellemez.
+- Sayaçları mutation sonrası yalnız local `+1/-1` hesabıyla kalıcı gerçek kabul etmez.
+- 404 sonucundan block ilişkisinin varlığını çıkarmaya veya kullanıcıya açıklamaya çalışmaz.
+
+## Contract-gated yüzeyler
+
+### “Takip Ettiklerim” feed filtresi
+
+Canonical sözleşmede yalnız:
+
+`GET /api/v1/feed`
+
+bulunur.
+
+Bu endpoint için feed mode, following-only query veya ikinci feed endpoint'i tanımlı değildir.
+
+Bu nedenle mevcut tasarım:
+
+- “Takip Ettiklerim” tab/chip/filter göstermez.
+- Global feed response'unu istemci tarafında following collection ile filtreleyip canonical feed gibi sunmaz.
+- `/feed?filter=following`, `/following/feed` veya benzeri route üretmez.
+- Boş “Takip Ettiklerim” placeholder'ı göstermez.
+
+Canonical kontrata following-only feed semantiği eklenirse bu yüzey ayrı bir contract-aligned revizyonda açılır.
+
+### Profilde “Seni takip ediyor / Karşılıklı takip”
+
+Canonical profile response yalnız:
+
+`isFollowedByCurrentUser`
+
+alanını sağlar.
+
+Bu alan oturum sahibinin görüntülenen kullanıcıyı takip edip etmediğini belirtir.
+
+Başka profil header'ında hedef kullanıcının oturum sahibini takip edip etmediğini kanıtlayan ikinci bir alan yoktur.
+
+Bu nedenle başka profil header'ında:
+
+- “Seni takip ediyor”
+- “Karşılıklı takip”
+
+etiketleri gösterilmez.
+
+UI ters yönlü ilişkiyi `followerCount`, `followingCount`, username eşleşmesi veya local cache üzerinden tahmin etmez.
+
+## User flows
+
+### Profil → sosyal graf
+
+- Profil yüklenir.
+- `followerCount` ve `followingCount` canonical profile response'tan gösterilir.
+- “Takipçi” → `FollowersPage(profile.username)`.
+- “Takip” → `FollowingPage(profile.username)`.
+- Açılan sayfa kendi route `username` bağlamını taşır.
+- Başka profil görüntülenirken current-user username ile endpoint değiştirilmez.
+- Sosyal graf satırına dokunma → `ProfilePage(row.username)`.
+
+### Profilde follow / unfollow
+
+Başka profil:
+
+- `isFollowedByCurrentUser=false` → “Takip Et”.
+- `isFollowedByCurrentUser=true` → “Takibi Bırak”.
+
+Takip Et:
+
+- `POST /api/v1/profiles/{profile.username}/follow`
+- Başarı response'u `isFollowing=true` olmalıdır.
+- İlgili relationship CTA mutation süresince disabled/loading olur.
+- Başarı sonrası profil ve ilgili açık sosyal graf read state'i invalidate/refetch edilir.
+
+Takibi Bırak:
+
+- `DELETE /api/v1/profiles/{profile.username}/follow`
+- Başarı response'u `isFollowing=false` olmalıdır.
+- İlgili relationship CTA mutation süresince disabled/loading olur.
+- Başarı sonrası profil ve ilgili açık sosyal graf read state'i invalidate/refetch edilir.
+
+Kendi profilinde follow/unfollow CTA gösterilmez.
+
+### Sosyal graf satırında follow / unfollow
+
+Her `SocialGraphUserResponse` satırında:
+
+- `row.id`
+- `row.username`
+- `row.displayName`
+- `row.avatarUrl`
+- `row.isFollowedByCurrentUser`
+
+canonical alanları kullanılır.
+
+Başka kullanıcı satırı:
+
+- `isFollowedByCurrentUser=false` → “Takip Et”.
+- `isFollowedByCurrentUser=true` → “Takibi Bırak”.
+
+Oturum sahibinin kendi satırında relationship CTA gösterilmez.
+
+Mutation path her zaman:
+
+`row.username`
+
+ile oluşturulur.
+
+Satırdaki ilişki aksiyonu loading iken yalnız o satırın CTA'sı disabled olur; listenin geri kalanı kullanılabilir kalır.
+
+Başarı sonrası mutation response geçici etkileşim sonucunu doğrular, ardından kaynak liste canonical GET endpoint'inden yeniden senkronize edilir.
+
+### Kendi takipçilerimde ilişki bağlamı
+
+Yalnız:
+
+`FollowersPage(myUsername)`
+
+bağlamında listedeki her öğenin oturum sahibini takip ettiği collection üyeliğinin kendisinden bellidir.
+
+Bu nedenle ek backend field üretmeden bağlamsal metadata gösterilebilir:
+
+- `row.isFollowedByCurrentUser=false`
+  - ikincil metin: “Seni takip ediyor”
+  - CTA: “Takip Et”
+- `row.isFollowedByCurrentUser=true`
+  - ikincil metin: “Karşılıklı takip”
+  - CTA: “Takibi Bırak”
+
+“Karşılıklı takip” burada iki canonical gerçeğin birleşimidir:
+
+1. Satır kullanıcısı `FollowersPage(myUsername)` collection'ında bulunduğu için oturum sahibini takip eder.
+2. `isFollowedByCurrentUser=true` olduğu için oturum sahibi de satır kullanıcısını takip eder.
+
+Bu türetme yalnız kendi takipçilerim ekranında yapılır.
+
+Aşağıdaki bağlamlarda aynı etiketler gösterilmez:
+
+- Başka kullanıcının Followers ekranı
+- Başka kullanıcının Following ekranı
+- Kendi Following ekranı
+- Profil header'ı
+- Feed post kartı
+
+### Başka profilin sosyal grafı
+
+`FollowersPage(profile.username)` ve `FollowingPage(profile.username)` aynı liste component'ini kullanır.
+
+Burada `isFollowedByCurrentUser` yalnız oturum sahibinin satırdaki kullanıcıyı takip edip etmediğini belirler.
+
+Collection üyeliği hedef profile göre olduğundan:
+
+- “Seni takip ediyor”
+- “Karşılıklı takip”
+
+etiketleri üretilmez.
+
+Satır aksiyonu yine “Takip Et / Takibi Bırak” olarak kullanılabilir.
+
+### Follow mutation sonrası sayaç senkronizasyonu
+
+Follow/unfollow response'u follower/following count döndürmez.
+
+Bu nedenle UI:
+
+- `followerCount` veya `followingCount` için local artış/azalışı kalıcı kaynak kabul etmez.
+- İlgili profil read state'ini yeniden yükler.
+- Açık Followers/Following collection'ını gerektiğinde canonical endpoint'ten yeniden yükler.
+- Refetch tamamlandığında backend'in döndürdüğü count ve collection sonucu kaynak kabul edilir.
+
+Optimistic animasyon kullanılırsa yalnız geçici görsel feedback'tir; hata halinde geri alınır.
+
+### Feed
+
+Ana Akış:
+
+- yalnız `GET /api/v1/feed` sonucunu gösterir,
+- `createdAt DESC`, eşitlikte `id DESC` canonical sırasını bozmaz,
+- istemci tarafında “takip edilenler” alt kümesi üretmez,
+- block görünürlüğünü yeniden hesaplamaz,
+- moderasyon görünürlüğünü yeniden hesaplamaz.
+
+Follow/unfollow sonrasında kullanıcı Ana Akış'a döndüğünde istenirse canonical feed yeniden yüklenebilir; istemci hangi postların görünmesi gerektiğini ayrıca hesaplamaz.
+
+### Block nedeniyle görünmeyen sosyal kaynak
+
+Profile veya profile bağlı collection isteği `404` dönerse UI:
+
+- gerçek kullanıcı yokluğu ile block nedeniyle görünmezliği ayırt etmeye çalışmaz,
+- “Bu kullanıcı seni engelledi” benzeri açıklama göstermez,
+- canonical “Kullanıcı bulunamadı / içerik kullanılamıyor” deneyimini kullanır.
+
+Sosyal graf satırındaki follow mutation `404` dönerse:
+
+- “engellendin” sonucu çıkarılmaz,
+- mutation loading kapanır,
+- kaynak liste canonical endpoint'ten yenilenebilir,
+- kullanıcıya genel olarak ilişkinin güncellenemediği belirtilir.
+
+## Components
+
+### Sosyal graf ilişki satırı
+
+Token: `{components.social-graph-list-item}`, `{components.relationship-button}`
+
+Widget hierarchy:
+
+```text
+InkWell
+└── Padding
+    └── Row
+        ├── CircleAvatar
+        ├── Expanded
+        │   └── Column(crossAxis: start)
+        │       ├── Text(displayName)
+        │       ├── Text("@username")
+        │       └── own FollowersPage ise optional relationship context
+        │           └── Text(
+        │               "Seni takip ediyor" |
+        │               "Karşılıklı takip"
+        │           )
+        └── row.id currentUser.id değilse relationship action
+            └── FilledButton | OutlinedButton
+                └── loading |
+                    "Takip Et" |
+                    "Takibi Bırak"
+
+Kurallar:
+
+Tüm satır minimum 72px yüksekliği korur.
+
+Satır ve CTA minimum 44x44px dokunma alanına sahiptir.
+
+CTA ile satır navigation gesture'ı çakışmaz.
+
+CTA tap profile navigation başlatmaz.
+
+Avatar, görünen ad ve username uzun metinde CTA'yı ekran dışına itmez.
+
+İlişki metadata'sı {typography.body-sm} ve {colors.text-secondary} kullanır.
+
+“Karşılıklı takip” primary CTA değildir.
+
+Relationship action state yalnız isFollowedByCurrentUser ile belirlenir.
+
+Profil relationship alanı
+
+Token: {components.relationship-button}
+
+Widget hierarchy:
+
+ProfileSummary
+└── actions
+    ├── own profile
+    │   └── OutlinedButton("Profili Düzenle")
+    └── other profile
+        └── FilledButton | OutlinedButton
+            └── loading |
+                "Takip Et" |
+                "Takibi Bırak"
+
+Kurallar:
+
+Profil header ters yönlü follow etiketi üretmez.
+
+isFollowedByCurrentUser yalnız CTA state'ini belirler.
+
+Follow mutation sırasında CTA tekrar tetiklenemez.
+
+Başarı sonrası profile read state canonical endpoint'ten yenilenir.
+
+Canonical feed header
+
+Widget hierarchy:
+
+FeedPage
+└── Scaffold
+    ├── AppBar
+    │   └── Text("Ana Akış")
+    └── body
+        └── canonical feed states
+
+Kurallar:
+
+AppBar altında “Takip Ettiklerim” filter chip/tab gösterilmez.
+
+UI ikinci feed mode'u varmış gibi segmented control üretmez.
+
+Feed empty state tüm canonical feed sonucunun empty state'idir.
+
+Screen states
+
+Takipçiler
+
+Loading state:
+
+Liste skeleton'ı kullanılır.
+
+Önceki başka profile ait satırlar yeni route bağlamında gösterilmez.
+
+Empty state:
+
+Başlık: “Henüz takipçi yok”
+
+Açıklama: “Bu kullanıcıyı henüz kimse takip etmiyor.”
+
+CTA zorunlu değildir.
+
+items=[] empty state'tir; 404 değildir.
+
+Error state:
+
+Ağ/5xx:
+
+Başlık: “Takipçiler yüklenemedi”
+
+CTA: “Tekrar Dene”
+
+404:
+
+Başlık: “Kullanıcı bulunamadı”
+
+Block nedeniyle mi yoksa gerçekten bulunamadığı mı açıklanmaz.
+
+401 merkezi login akışına gider.
+
+Takip Edilenler
+
+Loading state:
+
+Liste skeleton'ı kullanılır.
+
+Route username bağlamı korunur.
+
+Empty state:
+
+Başlık: “Henüz kimseyi takip etmiyor”
+
+Açıklama: “Bu kullanıcının takip ettiği hesap bulunmuyor.”
+
+CTA zorunlu değildir.
+
+items=[] empty state'tir; 404 değildir.
+
+Error state:
+
+Ağ/5xx:
+
+Başlık: “Takip edilenler yüklenemedi”
+
+CTA: “Tekrar Dene”
+
+404:
+
+Başlık: “Kullanıcı bulunamadı”
+
+401 merkezi login akışına gider.
+
+Follow / unfollow
+
+Loading:
+
+Yalnız ilgili relationship CTA loading/disabled olur.
+
+Aynı mutation tekrar tetiklenmez.
+
+Success:
+
+Profil aksiyonu:
+
+Follow: “Takip edildi.”
+
+Unfollow: “Takip bırakıldı.”
+
+Liste satırında hızlı mutationlarda snackbar zorunlu değildir; ilişki CTA'sının backend sonucuna göre güncellenmesi yeterlidir.
+
+Error:
+
+Mevcut canonical state korunur.
+
+Optimistic state varsa geri alınır.
+
+CTA yeniden kullanılabilir hale gelir.
+
+401 login akışına gider.
+
+404 block bilgisi olarak açıklanmaz.
+
+Ana Akış
+
+Empty state:
+
+Başlık: “Akış henüz boş”
+
+Açıklama: “İlk gönderini paylaşarak konuşmayı başlat.”
+
+CTA: “Gönderi Oluştur”
+
+Bu state “Takip Ettiklerim boş” anlamında kullanılmaz.
+
+Navigation
+
+Profil “Takipçi” → FollowersPage(profile.username).
+
+Profil “Takip” → FollowingPage(profile.username).
+
+Followers satırı → ProfilePage(row.username).
+
+Following satırı → ProfilePage(row.username).
+
+Relationship CTA → route değiştirmez.
+
+Sosyal graf listesinden profile gidip geri dönüldüğünde kaynak route username'i korunur.
+
+Mümkün olduğunda scroll konumu korunur.
+
+Profil B üzerinden yeni sosyal graf ekranına geçildiğinde yeni route B'nin username'ini taşır.
+
+Ana Akış tek canonical feed route'u olarak kalır.
+
+Do's and Don'ts
+
+Do
+
+Profile ve sosyal graf endpoint'lerinde ekranda görüntülenen profilin gerçek username değerini kullan.
+
+Liste satırlarında canonical SocialGraphUserResponse alanlarını kullan.
+
+Follow/unfollow path'inde row.username veya profile.username kullan.
+
+isFollowedByCurrentUser alanını oturum sahibinin hedef kullanıcıyı takip etmesi olarak yorumla.
+
+Kendi Followers ekranındaki collection membership bilgisini yalnız o bağlamda inbound relationship kanıtı olarak kullan.
+
+Kendi Followers ekranında iki yön de kanıtlandığında “Karşılıklı takip” gösterebilirsin.
+
+Mutation sonrası profil sayaçlarını canonical profile GET ile yeniden senkronize et.
+
+Mutation sonrası açık sosyal graf listesini gerektiğinde canonical collection GET ile yeniden senkronize et.
+
+items=[] ile 404 semantiğini ayır.
+
+401'i merkezi login akışına gönder.
+
+404 sonucunda block varlığını açıklama.
+
+Minimum 44x44px dokunma alanını koru.
+
+Dinamik metin ölçeklendirmeyi destekle.
+
+Don'ts
+
+/api/v1/feed için following, forYou, mode, filter, tab veya benzeri query parametresi üretme.
+
+“Takip Ettiklerim” feed'ini global feed'i local following listesiyle filtreleyerek canonical özellik gibi gösterme.
+
+Başka profil header'ında “Seni takip ediyor” veya “Karşılıklı takip” bilgisini tahmin etme.
+
+followerCount > 0 değerini current-user relationship kanıtı olarak kullanma.
+
+Başka kullanıcının Followers collection üyeliğini “beni takip ediyor” şeklinde yorumlama.
+
+isFollowing mutation response alanını profile/social-graph response şemasına yeni canonical alan olarak ekleme.
+
+Sayaçları yalnız local +1/-1 ile kalıcılaştırma.
+
+Follow/unfollow sırasında tüm listeyi gereksiz yere bloke etme.
+
+404'ü “Seni engelledi” mesajına dönüştürme.
+
+Sosyal graf ekranlarını global bottom navigation veya drawer destination yapma.
+
+Contract dışında yeni social role, relationship status veya endpoint üretme.
