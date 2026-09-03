@@ -2247,13 +2247,13 @@ Satırın ana navigasyon davranışı her durumda ProfilePage(row.username) olur
 
 Mutation aksiyonu ile satır navigasyonu birbirine karıştırılmaz.
 
-Takip Ettiklerim feed filtresi
+Takip Ettiklerim feed filtresi — zorunlu contract-gated kabul yüzeyi
 
-Bu kabul yüzeyi görev kabul kapsamının zorunlu bir parçasıdır ve canonical feed contract desteğine bağlı olarak available/unavailable davranışıyla tasarlanır.
+Bu yüzey Öncelik 2 görev kabul kapsamının zorunlu bir parçasıdır. Canonical feed contract desteğine bağlı olarak available veya contract-unavailable davranışıyla tasarlanır; contract desteğinin olmaması bu kabul kriterini kapsamdan çıkarmaz.
 
-Canonical contract desteğinin bulunmaması bu kabul yüzeyini kapsamdan çıkarmaz; bu durumda tasarlanmış contract-unavailable davranışı uygulanır ve kontrol render edilmez.
+Available:
 
-Canonical feed contract takip edilen hesaplarla sınırlı bir feed scope/filter tanımlıyorsa Ana Akış içinde “Takip Ettiklerim” seçimi gösterilir.
+Canonical feed contract takip edilen hesaplarla sınırlı bir feed scope/filter tanımlıyorsa Ana Akış içinde “Takip Ettiklerim” seçimi render edilir.
 
 Seçim mevcut feed route'u içinde kalır; yeni NavigationBar veya NavigationDrawer destination oluşturulmaz.
 
@@ -2269,17 +2269,39 @@ Başarılı fakat boş canonical “Takip Ettiklerim” sonucu empty state'tir; 
 
 403 normal empty state değildir.
 
-Canonical feed contract bu davranışı tanımlamıyorsa kontrol placeholder veya disabled biçimde bırakılmaz; render edilmez. Bu durum “Takip Ettiklerim” kabul yüzeyinin tasarlanmış contract-unavailable state'idir.
+Contract-unavailable:
 
-Seni takip ediyor / Karşılıklı takip göstergeleri
+Canonical feed contract bu davranış için endpoint/request mapping'i tanımlamıyorsa seçim kontrolü render edilmez.
 
-Bu kabul yüzeyleri görev kabul kapsamının zorunlu parçalarıdır ve canonical profile/relationship response desteğine bağlı olarak available/unavailable davranışıyla tasarlanır.
+Placeholder, disabled kontrol veya client-side “Takip Ettiklerim” filtresi gösterilmez.
 
-Canonical response gerekli ilişki bilgisini sağlamıyorsa bu göstergeler kapsamdan çıkarılmış sayılmaz; tasarlanmış contract-unavailable davranışı olarak tahmini, boş veya disabled ilişki etiketi render edilmez.
+UI yeni endpoint, query parametresi, enum, scope değeri veya client-side kalıcı feed kaynağı üretmez.
 
-Canonical response görüntülenen kullanıcının current user'ı takip ettiğini açık ve güvenilir biçimde bildiriyorsa profil kimlik alanında ikincil “Seni takip ediyor” göstergesi gösterilir.
+Bu durum kabul yüzeyinin kapsamdan çıkarılması değil, zorunlu kabul yüzeyinin tasarlanmış contract-unavailable sonucudur.
 
-Canonical response karşılıklı takip ilişkisini açıkça sağlıyorsa veya contract iki yönlü relationship alanlarının bu amaçla güvenilir biçimde birlikte değerlendirilmesini tanımlıyorsa “Karşılıklı takip” göstergesi gösterilir.
+Seni takip ediyor / Karşılıklı takip göstergeleri — zorunlu contract-gated kabul yüzeyleri
+
+Bu iki gösterge Öncelik 2 görev kabul kapsamının zorunlu parçalarıdır. Her biri canonical profile/relationship response desteğine bağlı olarak available veya contract-unavailable davranışıyla ayrı ayrı değerlendirilir; canonical alanın bulunmaması kabul kriterini kapsamdan çıkarmaz.
+
+Seni takip ediyor — available:
+
+Canonical response görüntülenen kullanıcının current user'ı takip ettiğini açık ve güvenilir biçimde bildiriyorsa profil kimlik alanında ikincil “Seni takip ediyor” göstergesi render edilir.
+
+Seni takip ediyor — contract-unavailable:
+
+Canonical response bu yönlü ilişki bilgisini sağlamıyorsa gösterge render edilmez.
+
+Local followers listesi, tahmin veya optimistic state bu ilişkiyi üretmek için kullanılmaz.
+
+Karşılıklı takip — available:
+
+Canonical response karşılıklı takip ilişkisini açıkça sağlıyorsa veya contract iki yönlü relationship alanlarının bu amaçla güvenilir biçimde birlikte değerlendirilmesini tanımlıyorsa “Karşılıklı takip” göstergesi render edilir.
+
+Karşılıklı takip — contract-unavailable:
+
+Canonical response karşılıklı ilişkiyi güvenilir biçimde belirlemeye izin vermiyorsa gösterge render edilmez.
+
+Local followers/following listelerinin kesişiminden kalıcı ilişki durumu üretilmez.
 
 Göstergeler follow/unfollow CTA değildir ve “Takip Et” / “Takibi Bırak” mutation davranışını değiştirmez.
 
@@ -2287,7 +2309,7 @@ Göstergeler follow/unfollow CTA değildir ve “Takip Et” / “Takibi Bırak�
 
 Göstergeler ikincil metin/chip stilinde, dinamik metin ölçeklendirmeyi destekleyecek biçimde render edilir.
 
-Canonical response gerekli ilişki bilgisini sağlamıyorsa tahmini, boş veya disabled ilişki etiketi gösterilmez.
+Contract-unavailable durumda tahmini, boş, skeleton veya disabled ilişki etiketi gösterilmez.
 
 Components
 
@@ -2523,7 +2545,7 @@ Contract unavailable
 
 Canonical feed contract bu scope/filter davranışını tanımlamıyorsa seçim kontrolü render edilmez.
 
-Bu durum kabul yüzeyinin kapsamdan kaldırılması değil, contract-gated unavailable state'idir.
+Bu durum kabul yüzeyinin kapsamdan kaldırılması değil, zorunlu kabul yüzeyinin tanımlı contract-unavailable state'idir.
 
 Loading
 
@@ -2561,7 +2583,7 @@ Gerekli canonical alan bulunmadığında gösterge render edilmez.
 
 Alan yokluğu profil veya sosyal graf error state'i değildir.
 
-Bu unavailable durum kabul yüzeylerinin kapsamdan çıkarıldığı anlamına gelmez.
+Bu contract-unavailable durum iki zorunlu kabul yüzeyinin kapsamdan çıkarıldığı anlamına gelmez; her gösterge için tasarlanmış sonuçtur.
 
 Follow mutation
 
@@ -2651,11 +2673,11 @@ Bu feature canonical API'de bulunmayan davranışları tasarım gereksinimi gibi
 
 Özellikle:
 
-“Takip Ettiklerim” feed filtresi tasarlanmış ve kabul kapsamındaki zorunlu contract-gated bir yüzeydir; canonical feed contract ilgili scope/filter mapping'ini tanımlıyorsa gösterilir, tanımlamıyorsa UI mapping uydurmaz ve kontrolü render etmez.
+“Takip Ettiklerim” feed filtresi kabul kapsamındaki zorunlu contract-gated bir yüzeydir; canonical feed contract ilgili scope/filter mapping'ini tanımlıyorsa available olarak gösterilir, tanımlamıyorsa contract-unavailable olarak kontrol render edilmez. Her iki durum da acceptance'ın tasarlanmış sonucudur.
 
-“Seni takip ediyor” tasarlanmış ve kabul kapsamındaki zorunlu contract-gated bir göstergedir; canonical profile veya relationship response bu ilişki bilgisini sağlıyorsa gösterilir, sağlamıyorsa tahmin edilmez.
+“Seni takip ediyor” kabul kapsamındaki zorunlu contract-gated bir göstergedir; canonical profile veya relationship response bu ilişki bilgisini sağlıyorsa available olarak gösterilir, sağlamıyorsa contract-unavailable olur ve tahmin edilmez.
 
-“Karşılıklı takip” tasarlanmış ve kabul kapsamındaki zorunlu contract-gated bir göstergedir; canonical response karşılıklı ilişkiyi açıkça sağlıyor veya sözleşme iki yönlü alanların güvenilir biçimde birlikte değerlendirilmesine izin veriyorsa gösterilir; aksi halde local listelerden türetilmez.
+“Karşılıklı takip” kabul kapsamındaki zorunlu contract-gated bir göstergedir; canonical response karşılıklı ilişkiyi açıkça sağlıyor veya sözleşme iki yönlü alanların güvenilir biçimde birlikte değerlendirilmesine izin veriyorsa available olarak gösterilir; aksi halde contract-unavailable olur ve local listelerden türetilmez.
 
 Yeni relationship endpoint'i veya query parametresi üretilmez.
 
@@ -2679,7 +2701,7 @@ Canonical feed contract destekliyorsa “Takip Ettiklerim” seçimini mevcut An
 
 Canonical relationship/profile response destekliyorsa “Seni takip ediyor” ve “Karşılıklı takip” göstergelerini ikincil profil bağlamında göster.
 
-Contract desteğinin bulunmadığı durumda bu zorunlu contract-gated yüzeylerin tanımlı unavailable davranışını uygula; tahmini veri veya placeholder üretme.
+Contract desteğinin bulunmadığı durumda bu zorunlu contract-gated yüzeylerin tanımlı contract-unavailable davranışını uygula; tahmini veri veya placeholder üretme.
 
 Mutation sırasında yalnız ilgili CTA'yı loading/disabled yap.
 
