@@ -2311,7 +2311,7 @@ Takip Ettiklerim feed filtresi — zorunlu contract-gated kabul yüzeyi
 
 Bu yüzey Öncelik 2 görev kabul kapsamının zorunlu bir parçasıdır. Canonical feed contract desteğine bağlı olarak available veya contract-unavailable davranışıyla tasarlanır; contract desteğinin olmaması bu kabul kriterini kapsamdan çıkarmaz.
 
-Available:
+Available
 
 Canonical feed contract takip edilen hesaplarla sınırlı bir feed scope/filter tanımlıyorsa Ana Akış içinde “Takip Ettiklerim” seçimi render edilir.
 
@@ -2329,7 +2329,7 @@ Başarılı fakat boş canonical “Takip Ettiklerim” sonucu empty state'tir; 
 
 403 normal empty state değildir.
 
-Contract-unavailable:
+Contract-unavailable
 
 Canonical feed contract bu davranış için endpoint/request mapping'i tanımlamıyorsa seçim kontrolü render edilmez.
 
@@ -2343,21 +2343,21 @@ Seni takip ediyor / Karşılıklı takip göstergeleri — zorunlu contract-gate
 
 Bu iki gösterge Öncelik 2 görev kabul kapsamının zorunlu parçalarıdır. Her biri canonical profile/relationship response desteğine bağlı olarak available veya contract-unavailable davranışıyla ayrı ayrı değerlendirilir; canonical alanın bulunmaması kabul kriterini kapsamdan çıkarmaz.
 
-Seni takip ediyor — available:
+Seni takip ediyor — available
 
 Canonical response görüntülenen kullanıcının current user'ı takip ettiğini açık ve güvenilir biçimde bildiriyorsa profil kimlik alanında ikincil “Seni takip ediyor” göstergesi render edilir.
 
-Seni takip ediyor — contract-unavailable:
+Seni takip ediyor — contract-unavailable
 
 Canonical response bu yönlü ilişki bilgisini sağlamıyorsa gösterge render edilmez.
 
 Local followers listesi, tahmin veya optimistic state bu ilişkiyi üretmek için kullanılmaz.
 
-Karşılıklı takip — available:
+Karşılıklı takip — available
 
 Canonical response karşılıklı takip ilişkisini açıkça sağlıyorsa veya contract iki yönlü relationship alanlarının bu amaçla güvenilir biçimde birlikte değerlendirilmesini tanımlıyorsa “Karşılıklı takip” göstergesi render edilir.
 
-Karşılıklı takip — contract-unavailable:
+Karşılıklı takip — contract-unavailable
 
 Canonical response karşılıklı ilişkiyi güvenilir biçimde belirlemeye izin vermiyorsa gösterge render edilmez.
 
@@ -2380,20 +2380,13 @@ Token: {components.profile-stats}
 Widget hierarchy:
 
 ProfileStats
-
 └── Row
-
-├── StatButton
-
-│   ├── Text(followerCount)
-
-│   └── Text("Takipçi")
-
-└── StatButton
-
-├── Text(followingCount)
-
-└── Text("Takip")
+    ├── StatButton
+    │   ├── Text(followerCount)
+    │   └── Text("Takipçi")
+    └── StatButton
+        ├── Text(followingCount)
+        └── Text("Takip")
 
 Kurallar:
 
@@ -2414,22 +2407,14 @@ Token: {components.social-graph-list-item}
 Widget hierarchy:
 
 InkWell
-
 └── Padding
-
-└── Row
-
-├── CircleAvatar
-
-├── Expanded
-
-│   └── Column
-
-│       ├── Text(displayName)
-
-│       └── Text("@username")
-
-└── optional relationship action
+    └── Row
+        ├── CircleAvatar
+        ├── Expanded
+        │   └── Column
+        │       ├── Text(displayName)
+        │       └── Text("@username")
+        └── optional relationship action
 
 Kurallar:
 
@@ -2480,14 +2465,10 @@ Token: {typography.label-md}, {colors.primary-container}
 Widget hierarchy:
 
 FeedScopeControl
-
 └── contract supports following feed ise
-
-└── SegmentedButton | single-select FilterChip group
-
-├── Text("Tümü")
-
-└── Text("Takip Ettiklerim")
+    └── SegmentedButton | single-select FilterChip group
+        ├── Text("Tümü")
+        └── Text("Takip Ettiklerim")
 
 Kurallar:
 
@@ -2510,12 +2491,9 @@ Token: {typography.body-sm}, {colors.text-secondary}
 Widget hierarchy:
 
 ProfileRelationshipContext
-
 └── Wrap
-
-├── canonical state varsa Text | AssistChip("Seni takip ediyor")
-
-└── canonical state varsa Text | AssistChip("Karşılıklı takip")
+    ├── canonical state varsa Text | AssistChip("Seni takip ediyor")
+    └── canonical state varsa Text | AssistChip("Karşılıklı takip")
 
 Kurallar:
 
