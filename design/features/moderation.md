@@ -13,18 +13,30 @@ Token: {components.moderation-card}
 Widget hierarchy:
 
 CustomScrollView
+
 └── SliverList
-    └── Card
-        └── Padding
-            └── Column(crossAxis: start)
-                ├── Row
-                │   ├── target summary
-                │   └── status badge
-                ├── Text(report reason)
-                ├── Text(report description, optional)
-                ├── Text(metadata)
-                └── action area
-                    └── canonical moderator actions
+
+└── Card
+
+└── Padding
+
+└── Column(crossAxis: start)
+
+├── Row
+
+│   ├── target summary
+
+│   └── status badge
+
+├── Text(report reason)
+
+├── Text(report description, optional)
+
+├── Text(metadata)
+
+└── action area
+
+└── canonical moderator actions
 
 fluttertemplates kaynağı: Core / Cards — https://fluttertemplates.dev/widgets
 
@@ -51,32 +63,58 @@ Token: {components.moderation-card}, {components.input}, {components.primary-but
 Widget hierarchy:
 
 ModerationDetailPage
+
 └── Scaffold
-    ├── AppBar
-    │   └── Text("Şikâyet Detayı")
-    └── SafeArea
-        └── CustomScrollView
-            └── SliverToBoxAdapter
-                └── Column
-                    ├── report metadata
-                    │   ├── targetType + targetId
-                    │   ├── reporterUserId
-                    │   ├── reason
-                    │   ├── details, optional
-                    │   ├── status
-                    │   ├── createdAt
-                    │   ├── resolvedAt, optional
-                    │   └── resolvedByUserId, optional
-                    └── status == Pending ise action area
-                        ├── moderation action selector
-                        │   ├── NoAction
-                        │   └── targetType == Post ise RemovePost
-                        ├── TextFormField
-                        │   ├── label: "Moderatör notu (isteğe bağlı)"
-                        │   ├── multiline
-                        │   └── maxLength: 500
-                        ├── FilledButton("Çözümle")
-                        └── OutlinedButton("Reddet")
+
+├── AppBar
+
+│   └── Text("Şikâyet Detayı")
+
+└── SafeArea
+
+└── CustomScrollView
+
+└── SliverToBoxAdapter
+
+└── Column
+
+├── report metadata
+
+│   ├── targetType + targetId
+
+│   ├── reporterUserId
+
+│   ├── reason
+
+│   ├── details, optional
+
+│   ├── status
+
+│   ├── createdAt
+
+│   ├── resolvedAt, optional
+
+│   └── resolvedByUserId, optional
+
+└── status == Pending ise action area
+
+├── moderation action selector
+
+│   ├── NoAction
+
+│   └── targetType == Post ise RemovePost
+
+├── TextFormField
+
+│   ├── label: "Moderatör notu (isteğe bağlı)"
+
+│   ├── multiline
+
+│   └── maxLength: 500
+
+├── FilledButton("Çözümle")
+
+└── OutlinedButton("Reddet")
 
 Kurallar:
 
@@ -184,35 +222,13 @@ Do
 
 Material 3 semantik token'larını kullan.
 
-Takipçiler ve Takip Edilenler için aynı SocialGraphListItem bileşenini kullan.
-
-Profil sayaçlarını minimum 44x44px dokunma alanına sahip yap.
-
-Kendi profilim ve başka profil için aynı Followers/Following ekranlarını yeniden kullan.
-
-Followers route'una görüntülenen profilin username değerini geçir.
-
-Following route'una görüntülenen profilin username değerini geçir.
-
-Takipçiler için GET /api/v1/profiles/{username}/followers kullan.
-
-Takip Edilenler için GET /api/v1/profiles/{username}/following kullan.
-
-Liste satırından profile geçerken row.username kullan.
-
-Profil A → sosyal graf → Profil B → Profil B sosyal graf zincirinde her route'un kendi username bağlamını koru.
-
-Geri navigasyonda mümkünse sosyal graf scroll konumunu koru.
-
-Follow/unfollow durumlarını backend ile senkronize et.
-
-404 kayıt-yok durumunu empty state olarak ele al.
-
 401'i login akışına gönder.
 
 403'ü normal empty state gibi gösterme.
 
-Moderator-only UI'ı role sonucuna göre gizle.
+Moderator-only navigation ve aksiyonları yalnız doğrulanmış Moderator yetki durumunda göster.
+
+403 alındığında moderation içeriğini veya karar CTA'larını göstermeye devam etme.
 
 Pending kayıtta yalnız canonical moderation aksiyonlarını göster.
 
@@ -226,28 +242,6 @@ Minimum dokunma alanını 44x44px koru.
 
 Don'ts
 
-Başka profilin “Takipçi” sayacına basınca current-user takipçilerini açma.
-
-Başka profilin “Takip” sayacına basınca current-user takip listesini açma.
-
-Profil A listesindeki Profil B satırından profile geçerken A'nın username'ini kullanma.
-
-Followers ve Following ekranlarını ana NavigationBar/NavigationDrawer öğesi yapma.
-
-API kontratında olmayan sosyal graf endpoint'i üretme.
-
-API kontratında olmayan cursor, offset veya pagination query parametresi üretme.
-
-Takipçi/takip sayaçlarını yalnız local optimistic değerle kalıcı kaynak kabul etme.
-
-Kullanıcının kendi sosyal graf satırında “Takip Et” veya “Takibi Bırak” gösterme.
-
-Followers ve Following için birbirinden farklı duplicate kullanıcı satırı tasarlama.
-
-Sosyal graf satırına duplicate “Engelle” veya “Şikâyet Et” aksiyonu ekleme.
-
-Kayıt yok durumunu "yüklenemedi" error state'e dönüştürme.
-
 401'i normal retry paneli olarak gösterme.
 
 Moderator olmayan kullanıcıya moderation action gösterme.
@@ -259,6 +253,12 @@ User report için RemovePost request'i üretme.
 Resolved veya Dismissed report üzerinde tekrar resolve/dismiss gösterme.
 
 Moderasyon kaldırması için standart post DELETE endpoint'ini kullanma.
+
+403 sonucunu boş moderation kuyruğu gibi gösterme.
+
+409 sonrasında eski Pending state'i yalnız local state ile koruma.
+
+Resolve veya dismiss sonucunu yalnız optimistic state ile kalıcı kaynak kabul etme.
 
 Çok seviyeli thread, DM veya kapsam dışı yeni özellik ekleme.
 
