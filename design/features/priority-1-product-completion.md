@@ -44,6 +44,8 @@ Kullanıcı sonucu → ProfilePage(result.username).
 
 Gönderi sonucu → ilgili Gönderi Detayı.
 
+Kurallar:
+
 Sonuç bulunmaması empty state'tir.
 
 Ağ/5xx empty state değildir.
@@ -76,6 +78,8 @@ Pinned gönderi mevcut post-card bileşenini yeniden kullanır.
 
 Pinned karta dokunma → Gönderi Detayı.
 
+Kurallar:
+
 Pinned state yalnız backend sonucundan gelir.
 
 Pinned gönderi yoksa placeholder veya empty panel gösterilmez.
@@ -89,6 +93,8 @@ Backend relationship state'e göre:
 Sessize Al
 
 Sessizden Çıkar
+
+Kurallar:
 
 Kendi profilinde mute/unmute gösterilmez.
 
@@ -129,6 +135,8 @@ Edit ekranı mevcut içerikle açılır.
 Kullanıcı canonical validation kuralları içinde içeriği günceller.
 
 Başarılı mutation sonrası backend'in döndürdüğü güncel post render edilir.
+
+Kurallar:
 
 Değişmiş fakat kaydedilmemiş içerikle çıkılırsa discard confirmation gösterilir.
 
