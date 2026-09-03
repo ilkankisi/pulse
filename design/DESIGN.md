@@ -1008,18 +1008,30 @@ Token: {components.safety-action-menu}
 Widget hierarchy:
 
 PopupMenuButton | MenuAnchor
+
 └── menuChildren
-    ├── gönderi:
-    │   └── MenuItemButton
-    │       ├── Icon(flag_outlined)
-    │       └── Text("Şikâyet Et")
-    └── başka kullanıcı profili:
-        ├── MenuItemButton
-        │   ├── Icon(flag_outlined)
-        │   └── Text("Şikâyet Et")
-        └── MenuItemButton
-            ├── Icon(block)
-            └── Text("Kullanıcıyı Engelle" | "Engeli Kaldır")
+
+├── gönderi:
+
+│   └── MenuItemButton
+
+│       ├── Icon(flag_outlined)
+
+│       └── Text("Şikâyet Et")
+
+└── başka kullanıcı profili:
+
+├── MenuItemButton
+
+│   ├── Icon(flag_outlined)
+
+│   └── Text("Şikâyet Et")
+
+└── MenuItemButton
+
+├── Icon(block)
+
+└── Text("Kullanıcıyı Engelle" | "Engeli Kaldır")
 
 fluttertemplates kaynağı: Dialogs & Sheets / Menus — https://fluttertemplates.dev/widgets/dialogs
 
@@ -1046,20 +1058,34 @@ Token: {components.report-sheet}, {components.input}, {components.primary-button
 Widget hierarchy:
 
 showModalBottomSheet
+
 └── SafeArea
-    └── Padding
-        └── Form
-            └── Column(mainAxisSize: min)
-                ├── drag handle
-                ├── Text("Şikâyet Et")
-                ├── Text("Neden şikâyet ediyorsun?")
-                ├── RadioGroup | RadioListTile[]
-                │   └── canonical report reason seçenekleri
-                ├── TextFormField
-                │   ├── label: "Açıklama (isteğe bağlı)"
-                │   ├── multiline
-                │   └── maxLength: 500
-                └── FilledButton("Şikâyet Et")
+
+└── Padding
+
+└── Form
+
+└── Column(mainAxisSize: min)
+
+├── drag handle
+
+├── Text("Şikâyet Et")
+
+├── Text("Neden şikâyet ediyorsun?")
+
+├── RadioGroup | RadioListTile[]
+
+│   └── canonical report reason seçenekleri
+
+├── TextFormField
+
+│   ├── label: "Açıklama (isteğe bağlı)"
+
+│   ├── multiline
+
+│   └── maxLength: 500
+
+└── FilledButton("Şikâyet Et")
 
 fluttertemplates kaynağı: Dialogs & Sheets / Modal Bottom Sheet — https://fluttertemplates.dev/widgets/dialogs
 
@@ -1090,14 +1116,22 @@ Token: {components.safety-action-menu}, {colors.error}
 Widget hierarchy:
 
 showDialog
+
 └── AlertDialog
-    ├── title: Text("Kullanıcı engellensin mi?")
-    ├── content: Text(
-    │       "Bu kullanıcının içerik ve etkileşimleri bloklama kurallarına göre sınırlandırılacak."
-    │   )
-    └── actions
-        ├── TextButton("İptal")
-        └── FilledButton("Engelle")
+
+├── title: Text("Kullanıcı engellensin mi?")
+
+├── content: Text(
+
+│       "Bu kullanıcının içerik ve etkileşimleri bloklama kurallarına göre sınırlandırılacak."
+
+│   )
+
+└── actions
+
+├── TextButton("İptal")
+
+└── FilledButton("Engelle")
 
 fluttertemplates kaynağı: Dialogs & Sheets / Alert Dialog — https://fluttertemplates.dev/widgets/dialogs
 
@@ -1124,24 +1158,42 @@ Token: {components.social-graph-list-item}, {components.state-panel}
 Widget hierarchy:
 
 BlockedUsersPage
+
 └── Scaffold
-    ├── AppBar
-    │   └── Text("Engellenen Hesaplar")
-    └── SafeArea
-        └── blocked users state
-            ├── loading
-            ├── empty
-            ├── error
-            └── CustomScrollView
-                └── SliverList
-                    └── Padding
-                        └── Row
-                            ├── CircleAvatar
-                            ├── Expanded
-                            │   └── Column(crossAxis: start)
-                            │       ├── Text(displayName)
-                            │       └── Text("@username")
-                            └── OutlinedButton("Engeli Kaldır")
+
+├── AppBar
+
+│   └── Text("Engellenen Hesaplar")
+
+└── SafeArea
+
+└── blocked users state
+
+├── loading
+
+├── empty
+
+├── error
+
+└── CustomScrollView
+
+└── SliverList
+
+└── Padding
+
+└── Row
+
+├── CircleAvatar
+
+├── Expanded
+
+│   └── Column(crossAxis: start)
+
+│       ├── Text(displayName)
+
+│       └── Text("@username")
+
+└── OutlinedButton("Engeli Kaldır")
 
 Kurallar:
 
