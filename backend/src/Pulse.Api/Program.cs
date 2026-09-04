@@ -48,7 +48,11 @@ new Dictionary<string, string?>
 
 }
 
-builder.Services.AddControllers();
+builder.Services
+
+.AddControllers()
+
+.AddApplicationPart(typeof(Program).Assembly);
 
 if (openapiMode || builder.Environment.IsEnvironment("Testing"))
 

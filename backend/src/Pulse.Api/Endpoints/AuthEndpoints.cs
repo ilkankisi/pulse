@@ -144,20 +144,21 @@ private static async Task<IResult> LoginAsync(
     AuthRateLimiter rateLimiter,
     CancellationToken cancellationToken)
 {
-    var username = request.Username?.Trim();
+    var login =
+        (request.Login ?? request.Username)?.Trim();
 
-    if (string.IsNullOrWhiteSpace(username)
+    if (string.IsNullOrWhiteSpace(login)
         || string.IsNullOrWhiteSpace(request.Password))
     {
         return ValidationError(
-            "Username and password are required.",
+            "Login and password are required.",
             null);
     }
 
-    var normalizedUsername = Normalize(username);
+    var normalizedLogin = Normalize(login);
 
     var partition =
-        $"{httpContext.Connection.RemoteIpAddress}:{normalizedUsername}";
+        $"{httpContext.Connection.RemoteIpAddress}:{normalizedLogin}";
 
     if (!await rateLimiter.CheckLoginAsync(
             partition,
@@ -173,7 +174,9 @@ private static async Task<IResult> LoginAsync(
         .SingleOrDefaultAsync(
             candidate =>
                 candidate.NormalizedUsername
-                == normalizedUsername,
+                    == normalizedLogin
+                || candidate.NormalizedEmail
+                    == normalizedLogin,
             cancellationToken);
 
     if (user is null
@@ -235,6 +238,7 @@ private sealed record RegisterBody(
     string? DisplayName);
 
 private sealed record LoginBody(
+    string? Login,
     string? Username,
     string? Password);
 
