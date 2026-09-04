@@ -1,254 +1,241 @@
 using Microsoft.EntityFrameworkCore;
+
 using Pulse.Api.Auth;
+
 using Pulse.Api.Contracts;
+
 using Pulse.Api.Data;
+
 using Pulse.Api.Domain;
+
 using Pulse.Api.RateLimiting;
 
 namespace Pulse.Api.Endpoints;
 
 public static class AuthEndpoints
+
 {
-    public static IEndpointRouteBuilder MapAuthEndpoints(
-        this IEndpointRouteBuilder endpoints)
+
+public static IEndpointRouteBuilder MapAuthEndpoints(
+
+this IEndpointRouteBuilder endpoints)
+
+{
+
+var group = endpoints.MapGroup("/api/v1/auth");
+
+    group.MapPost("/register", RegisterAsync)
+        .AllowAnonymous()
+        .Produces(StatusCodes.Status201Created)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status409Conflict);
+
+    group.MapPost("/login", LoginAsync)
+        .AllowAnonymous()
+        .Produces(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized);
+
+    return endpoints;
+}
+
+private static async Task<IResult> RegisterAsync(
+    RegisterBody request,
+    HttpContext httpContext,
+    PulseDbContext dbContext,
+    PasswordService passwordService,
+    JwtTokenService tokenService,
+    AuthRateLimiter rateLimiter,
+    CancellationToken cancellationToken)
+{
+    var partition =
+        httpContext.Connection.RemoteIpAddress?.ToString()
+        ?? "unknown";
+
+    if (!await rateLimiter.CheckRegisterAsync(
+            partition,
+            cancellationToken))
     {
-        var group = endpoints.MapGroup("/api/v1/auth");
-
-        group.MapPost("/register", RegisterAsync)
-            .AllowAnonymous()
-            .Produces(StatusCodes.Status201Created)
-            .Produces(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status409Conflict);
-
-        group.MapPost("/login", LoginAsync)
-            .AllowAnonymous()
-            .Produces(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized);
-
-        return endpoints;
+        return Results.Json(
+            new ApiErrorResponse(
+                "Too many registration attempts."),
+            statusCode: StatusCodes.Status429TooManyRequests);
     }
 
-    private static async Task<IResult> RegisterAsync(
-        RegisterBody request,
-        HttpContext httpContext,
-        PulseDbContext dbContext,
-        PasswordService passwordService,
-        JwtTokenService tokenService,
-        AuthRateLimiter rateLimiter,
-        CancellationToken cancellationToken)
+    var username = request.Username?.Trim();
+    var displayName = request.DisplayName?.Trim();
+    var password = request.Password;
+
+    if (string.IsNullOrWhiteSpace(username)
+        || username.Length is < 3 or > 30
+        || username.Any(
+            character =>
+                !char.IsLetterOrDigit(character)
+                && character != '_'))
     {
-        var partition =
-            httpContext.Connection.RemoteIpAddress?.ToString()
-            ?? "unknown";
+        return ValidationError(
+            "Username must contain 3 to 30 letters, numbers, or underscores.",
+            "username");
+    }
 
-        if (!await rateLimiter.CheckRegisterAsync(
-                partition,
-                cancellationToken))
-        {
-            return Results.Json(
-                new ApiErrorResponse(
-                    "Too many registration attempts."),
-                statusCode: StatusCodes.Status429TooManyRequests);
-        }
+    if (string.IsNullOrWhiteSpace(displayName)
+        || displayName.Length > 80)
+    {
+        return ValidationError(
+            "Display name is required and cannot exceed 80 characters.",
+            "displayName");
+    }
 
-        var username = request.Username?.Trim();
-        var email = request.Email?.Trim();
-        var displayName = request.DisplayName?.Trim();
-        var password = request.Password;
+    if (string.IsNullOrWhiteSpace(password)
+        || password.Length < 8)
+    {
+        return ValidationError(
+            "Password must contain at least 8 characters.",
+            "password");
+    }
 
-        if (string.IsNullOrWhiteSpace(username)
-            || username.Length is < 3 or > 30
-            || username.Any(
-                character =>
-                    !char.IsLetterOrDigit(character)
-                    && character != '_'))
-        {
-            return ValidationError(
-                "Username must contain 3 to 30 letters, numbers, or underscores.",
-                "username");
-        }
+    var normalizedUsername = Normalize(username);
 
-        if (string.IsNullOrWhiteSpace(email)
-            || email.Length > 254
-            || !email.Contains('@'))
-        {
-            return ValidationError(
-                "A valid email address is required.",
-                "email");
-        }
+    var usernameExists = await dbContext.Users.AnyAsync(
+        user =>
+            user.NormalizedUsername
+            == normalizedUsername,
+        cancellationToken);
 
-        if (string.IsNullOrWhiteSpace(displayName)
-            || displayName.Length > 80)
-        {
-            return ValidationError(
-                "Display name is required and cannot exceed 80 characters.",
-                "displayName");
-        }
+    if (usernameExists)
+    {
+        return Results.Conflict(
+            new ApiErrorResponse(
+                "Username is already in use.",
+                "username"));
+    }
 
-        if (string.IsNullOrWhiteSpace(password)
-            || password.Length < 8)
-        {
-            return ValidationError(
-                "Password must contain at least 8 characters.",
-                "password");
-        }
+    var internalEmail = CreateInternalEmail(username);
+    var normalizedEmail = Normalize(internalEmail);
 
-        var normalizedUsername = Normalize(username);
-        var normalizedEmail = Normalize(email);
+    var user = new User
+    {
+        Username = username,
+        NormalizedUsername = normalizedUsername,
+        Email = internalEmail,
+        NormalizedEmail = normalizedEmail,
+        DisplayName = displayName,
+        PasswordHash =
+            passwordService.HashPassword(password),
+        CreatedAtUtc = DateTimeOffset.UtcNow
+    };
 
-        var usernameExists = await dbContext.Users.AnyAsync(
-            user =>
-                user.NormalizedUsername
+    dbContext.Users.Add(user);
+    await dbContext.SaveChangesAsync(cancellationToken);
+
+    var token = tokenService.CreateToken(user);
+
+    return Results.Created(
+        $"/api/v1/profiles/{user.Username}",
+        CreateAuthResponse(user, token));
+}
+
+private static async Task<IResult> LoginAsync(
+    LoginBody request,
+    HttpContext httpContext,
+    PulseDbContext dbContext,
+    PasswordService passwordService,
+    JwtTokenService tokenService,
+    AuthRateLimiter rateLimiter,
+    CancellationToken cancellationToken)
+{
+    var username = request.Username?.Trim();
+
+    if (string.IsNullOrWhiteSpace(username)
+        || string.IsNullOrWhiteSpace(request.Password))
+    {
+        return ValidationError(
+            "Username and password are required.",
+            null);
+    }
+
+    var normalizedUsername = Normalize(username);
+
+    var partition =
+        $"{httpContext.Connection.RemoteIpAddress}:{normalizedUsername}";
+
+    if (!await rateLimiter.CheckLoginAsync(
+            partition,
+            cancellationToken))
+    {
+        return Results.Json(
+            new ApiErrorResponse(
+                "Too many login attempts."),
+            statusCode: StatusCodes.Status429TooManyRequests);
+    }
+
+    var user = await dbContext.Users
+        .SingleOrDefaultAsync(
+            candidate =>
+                candidate.NormalizedUsername
                 == normalizedUsername,
             cancellationToken);
 
-        if (usernameExists)
-        {
-            return Results.Conflict(
-                new ApiErrorResponse(
-                    "Username is already in use.",
-                    "username"));
-        }
-
-        var emailExists = await dbContext.Users.AnyAsync(
-            user =>
-                user.NormalizedEmail
-                == normalizedEmail,
-            cancellationToken);
-
-        if (emailExists)
-        {
-            return Results.Conflict(
-                new ApiErrorResponse(
-                    "Email is already in use.",
-                    "email"));
-        }
-
-        var user = new User
-        {
-            Username = username,
-            NormalizedUsername = normalizedUsername,
-            Email = email,
-            NormalizedEmail = normalizedEmail,
-            DisplayName = displayName,
-            PasswordHash =
-                passwordService.HashPassword(password),
-            CreatedAtUtc = DateTimeOffset.UtcNow
-        };
-
-        dbContext.Users.Add(user);
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        var token = tokenService.CreateToken(user);
-
-        return Results.Created(
-            $"/api/v1/profiles/{user.Username}",
-            CreateAuthResponse(user, token));
-    }
-
-    private static async Task<IResult> LoginAsync(
-        LoginBody request,
-        HttpContext httpContext,
-        PulseDbContext dbContext,
-        PasswordService passwordService,
-        JwtTokenService tokenService,
-        AuthRateLimiter rateLimiter,
-        CancellationToken cancellationToken)
+    if (user is null
+        || !passwordService.VerifyPassword(
+            request.Password,
+            user.PasswordHash))
     {
-        var login =
-            request.Login
-            ?? request.Email
-            ?? request.Username;
-
-        if (string.IsNullOrWhiteSpace(login)
-            || string.IsNullOrWhiteSpace(request.Password))
-        {
-            return ValidationError(
-                "Login and password are required.",
-                null);
-        }
-
-        var partition =
-            $"{httpContext.Connection.RemoteIpAddress}:{Normalize(login)}";
-
-        if (!await rateLimiter.CheckLoginAsync(
-                partition,
-                cancellationToken))
-        {
-            return Results.Json(
-                new ApiErrorResponse(
-                    "Too many login attempts."),
-                statusCode: StatusCodes.Status429TooManyRequests);
-        }
-
-        var normalizedLogin = Normalize(login);
-
-        var user = await dbContext.Users
-            .SingleOrDefaultAsync(
-                candidate =>
-                    candidate.NormalizedEmail
-                    == normalizedLogin
-                    || candidate.NormalizedUsername
-                    == normalizedLogin,
-                cancellationToken);
-
-        if (user is null
-            || !passwordService.VerifyPassword(
-                request.Password,
-                user.PasswordHash))
-        {
-            return Results.Unauthorized();
-        }
-
-        var token = tokenService.CreateToken(user);
-
-        return Results.Ok(
-            CreateAuthResponse(user, token));
+        return Results.Unauthorized();
     }
 
-    private static object CreateAuthResponse(
-        User user,
-        JwtTokenResult token)
+    var token = tokenService.CreateToken(user);
+
+    return Results.Ok(
+        CreateAuthResponse(user, token));
+}
+
+private static object CreateAuthResponse(
+    User user,
+    JwtTokenResult token)
+{
+    return new
     {
-        return new
-        {
-            accessToken = token.AccessToken,
-            tokenType = "Bearer",
-            expiresIn = token.ExpiresIn,
-            user = new AuthUserResponse(
-                user.Id,
-                user.Username,
-                user.DisplayName,
-                user.AvatarUrl)
-        };
-    }
+        accessToken = token.AccessToken,
+        tokenType = "Bearer",
+        expiresIn = token.ExpiresIn,
+        user = new AuthUserResponse(
+            user.Id,
+            user.Username,
+            user.DisplayName,
+            user.AvatarUrl)
+    };
+}
 
-    private static string Normalize(
-        string value)
-    {
-        return value.Trim().ToUpperInvariant();
-    }
+private static string CreateInternalEmail(
+    string username)
+{
+    return $"{username}@pulse.local";
+}
 
-    private static IResult ValidationError(
-        string error,
-        string? field)
-    {
-        return Results.BadRequest(
-            new ApiErrorResponse(
-                error,
-                field));
-    }
+private static string Normalize(
+    string value)
+{
+    return value.Trim().ToUpperInvariant();
+}
 
-    private sealed record RegisterBody(
-        string? Username,
-        string? Email,
-        string? Password,
-        string? DisplayName);
+private static IResult ValidationError(
+    string error,
+    string? field)
+{
+    return Results.BadRequest(
+        new ApiErrorResponse(
+            error,
+            field));
+}
 
-    private sealed record LoginBody(
-        string? Login,
-        string? Email,
-        string? Username,
-        string? Password);
+private sealed record RegisterBody(
+    string? Username,
+    string? Password,
+    string? DisplayName);
+
+private sealed record LoginBody(
+    string? Username,
+    string? Password);
+
 }

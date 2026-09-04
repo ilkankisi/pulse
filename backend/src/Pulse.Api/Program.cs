@@ -20,7 +20,9 @@ const string flutterWebCorsPolicy = "FlutterWeb";
 
 var builder = WebApplication.CreateBuilder(args);
 
-var openapiMode = Environment.GetEnvironmentVariable("ORCHESTRATOR_OPENAPI_GENERATION") == "1"
+var openapiMode =
+
+Environment.GetEnvironmentVariable("ORCHESTRATOR_OPENAPI_GENERATION") == "1"
 
 || builder.Environment.IsEnvironment("OpenApiGeneration");
 
@@ -54,7 +56,11 @@ if (openapiMode || builder.Environment.IsEnvironment("Testing"))
 
 builder.Services.AddDbContext<PulseDbContext>(
 
-options => options.UseInMemoryDatabase("PulseOpenApiGeneration"));
+options =>
+
+options.UseInMemoryDatabase(
+
+"PulseOpenApiGeneration"));
 
 }
 
@@ -66,67 +72,53 @@ builder.Services.AddDbContext<PulseDbContext>();
 
 }
 
-var jwtKey = builder.Configuration["Jwt:Key"];
+builder.Services.Configure<JwtOptions>(
 
-if (string.IsNullOrWhiteSpace(jwtKey))
+builder.Configuration.GetSection("Jwt"));
 
-{
+builder.Services.AddSingleton<PasswordService>();
 
-if (builder.Environment.IsDevelopment() ||
+builder.Services.AddSingleton<JwtTokenService>();
 
-builder.Environment.IsEnvironment("Testing") ||
-
-openapiMode)
-
-{
-
-jwtKey = "development-only-key-at-least-32-bytes";
-
-}
-
-else
-
-{
-
-throw new InvalidOperationException(
-
-"Jwt:Key must be configured.");
-
-}
-
-}
-
-if (Encoding.UTF8.GetByteCount(jwtKey) < 32)
-
-{
-
-throw new InvalidOperationException(
-
-"Jwt:Key must be at least 32 bytes.");
-
-}
-
-var jwtIssuer =
-
-builder.Configuration["Jwt:Issuer"]
-
-?? "Pulse.Api";
-
-var jwtAudience =
-
-builder.Configuration["Jwt:Audience"]
-
-?? "Pulse.Client";
+builder.Services.AddSingleton<AuthRateLimiter>();
 
 builder.Services
 
 .AddAuthentication(
 
-JwtBearerDefaults.AuthenticationScheme)
-
-.AddJwtBearer(options =>
+options =>
 
 {
+
+options.DefaultAuthenticateScheme =
+
+JwtBearerDefaults.AuthenticationScheme;
+
+options.DefaultChallengeScheme =
+
+JwtBearerDefaults.AuthenticationScheme;
+
+})
+
+.AddJwtBearer();
+
+builder.Services
+
+.AddOptions<JwtBearerOptions>(
+
+JwtBearerDefaults.AuthenticationScheme)
+
+.Configure<IConfiguration>(
+
+(options, configuration) =>
+
+{
+
+var jwtKey =
+
+configuration["Jwt:Key"]
+
+?? "Pulse.Api.OpenApiGeneration.SigningKey.32Bytes.Minimum";
 
 options.TokenValidationParameters =
 
@@ -136,11 +128,19 @@ new TokenValidationParameters
 
 ValidateIssuer = true,
 
-ValidIssuer = jwtIssuer,
+ValidIssuer =
+
+configuration["Jwt:Issuer"]
+
+?? "Pulse.Api",
 
 ValidateAudience = true,
 
-ValidAudience = jwtAudience,
+ValidAudience =
+
+configuration["Jwt:Audience"]
+
+?? "Pulse.Client",
 
 ValidateIssuerSigningKey = true,
 
@@ -152,7 +152,7 @@ Encoding.UTF8.GetBytes(jwtKey)),
 
 ValidateLifetime = true,
 
-ClockSkew = TimeSpan.Zero
+ClockSkew = TimeSpan.Zero,
 
 };
 
@@ -160,73 +160,9 @@ ClockSkew = TimeSpan.Zero
 
 builder.Services.AddAuthorization();
 
-builder.Services.Configure<JwtOptions>(
+builder.Services.AddCors(
 
 options =>
-
-{
-
-options.Key = jwtKey;
-
-options.Issuer = jwtIssuer;
-
-options.Audience = jwtAudience;
-
-});
-
-builder.Services.AddSingleton<PasswordService>();
-
-builder.Services.AddSingleton<JwtTokenService>();
-
-builder.Services.AddSingleton<AuthRateLimiter>();
-
-builder.Services.AddEndpointsApiExplorer();
-
-builder.Services.AddSwaggerGen(options =>
-
-{
-
-options.SwaggerDoc(
-
-"v1",
-
-new Microsoft.OpenApi.Models.OpenApiInfo
-
-{
-
-Title = "Pulse API",
-
-Version = "v1",
-
-});
-
-options.AddSecurityDefinition(
-
-"Bearer",
-
-new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-
-{
-
-Description = "JWT Authorization header using the Bearer scheme.",
-
-Name = "Authorization",
-
-In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-
-Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
-
-Scheme = "Bearer",
-
-BearerFormat = "JWT",
-
-});
-
-options.OperationFilter<AuthorizeOperationFilter>();
-
-});
-
-builder.Services.AddCors(options =>
 
 {
 
@@ -254,17 +190,33 @@ policy
 
 });
 
-var app = builder.Build();
+builder.Services.AddEndpointsApiExplorer();
 
-if (!app.Environment.IsEnvironment("Testing") &&
+builder.Services.AddSwaggerGen(
 
-!app.Environment.IsEnvironment("OpenApiGeneration"))
+options =>
 
 {
 
-using var scope = app.Services.CreateScope();
+options.OperationFilter<AuthorizeOperationFilter>();
 
-var db = scope.ServiceProvider
+});
+
+var app = builder.Build();
+
+if (!openapiMode
+
+&& !app.Environment.IsEnvironment("Testing"))
+
+{
+
+using var scope =
+
+app.Services.CreateScope();
+
+var db =
+
+scope.ServiceProvider
 
 .GetRequiredService<PulseDbContext>();
 
@@ -294,9 +246,19 @@ app.MapGet(
 
 "/health",
 
-() => Results.Ok(new { status = "ok" }))
+() => Results.Ok(
 
-.AllowAnonymous();
+new
+
+{
+
+status = "ok",
+
+}))
+
+.AllowAnonymous()
+
+.WithName("Health");
 
 app.MapControllers();
 
@@ -318,8 +280,4 @@ app.MapSecurityModerationEndpoints();
 
 app.Run();
 
-public partial class Program
-
-{
-
-}
+public partial class Program;

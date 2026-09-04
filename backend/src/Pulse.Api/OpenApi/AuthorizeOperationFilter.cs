@@ -10,9 +10,8 @@ internal sealed class AuthorizeOperationFilter : IOperationFilter
     {
         var metadata = context.ApiDescription.ActionDescriptor.EndpointMetadata;
         var allowAnonymous = metadata.OfType<IAllowAnonymous>().Any();
-        var requiresAuth = metadata.OfType<IAuthorizeData>().Any();
 
-        if (allowAnonymous || !requiresAuth)
+        if (allowAnonymous)
         {
             operation.Security = new List<OpenApiSecurityRequirement>();
             return;

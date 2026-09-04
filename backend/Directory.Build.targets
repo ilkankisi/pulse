@@ -1,12 +1,58 @@
 <Project>
-  <Target
-    Name="EnsureWorkspaceDockerCompose"
-    BeforeTargets="Build"
-    Condition="'$(MSBuildProjectName)' == 'Pulse.Api' and Exists('$(MSBuildThisFileDirectory)docker-compose.yml')">
 
-    <Copy
-      SourceFiles="$(MSBuildThisFileDirectory)docker-compose.yml"
-      DestinationFiles="$(MSBuildThisFileDirectory)../docker-compose.yml"
-      SkipUnchangedFiles="true" />
+<Target
+ Name="EnsureWorkspaceDockerCompose"
+ BeforeTargets="Build"
+ Condition="'$(MSBuildProjectName)' == 'Pulse.Api' and Exists('$(MSBuildThisFileDirectory)docker-compose.yml')">
+
+<Copy
+  SourceFiles="$(MSBuildThisFileDirectory)docker-compose.yml"
+  DestinationFiles="$(MSBuildThisFileDirectory)../docker-compose.yml"
+  SkipUnchangedFiles="true" />
+
+  </Target>
+<Target
+ Name="RestoreWorkspaceDotNetTools"
+ AfterTargets="Restore"
+ Condition="'$(MSBuildProjectName)' == 'Pulse.Api' and Exists('$(MSBuildThisFileDirectory).config/dotnet-tools.json') and Exists('$(MSBuildThisFileDirectory)NuGet.Config')">
+
+<Exec
+  Command="dotnet tool restore --tool-manifest &quot;$(MSBuildThisFileDirectory).config/dotnet-tools.json&quot; --configfile &quot;$(MSBuildThisFileDirectory)NuGet.Config&quot;" />
+
+  </Target>
+<Target
+ Name="EnsureBackendVerificationSolution"
+ AfterTargets="Restore"
+ Condition="'$(MSBuildProjectName)' == 'Pulse.Api' and Exists('$(MSBuildThisFileDirectory)tests/Pulse.Api.Tests/Pulse.Api.Tests.csproj')">
+
+<MakeDir Directories="$(MSBuildThisFileDirectory)backend" />
+
+<ItemGroup>
+  <_BackendVerificationSolutionLines Include="Microsoft Visual Studio Solution File, Format Version 12.00" />
+  <_BackendVerificationSolutionLines Include="# Visual Studio Version 17" />
+  <_BackendVerificationSolutionLines Include="VisualStudioVersion = 17.0.31903.59" />
+  <_BackendVerificationSolutionLines Include="MinimumVisualStudioVersion = 10.0.40219.1" />
+  <_BackendVerificationSolutionLines Include="Project(&quot;{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}&quot;) = &quot;Pulse.Api.Tests&quot;, &quot;..\tests\Pulse.Api.Tests\Pulse.Api.Tests.csproj&quot;, &quot;{4FD8F0D2-4ED8-4A58-AD30-91D3248DD44D}&quot;" />
+  <_BackendVerificationSolutionLines Include="EndProject" />
+  <_BackendVerificationSolutionLines Include="Global" />
+  <_BackendVerificationSolutionLines Include="	GlobalSection(SolutionConfigurationPlatforms) = preSolution" />
+  <_BackendVerificationSolutionLines Include="		Debug|Any CPU = Debug|Any CPU" />
+  <_BackendVerificationSolutionLines Include="		Release|Any CPU = Release|Any CPU" />
+  <_BackendVerificationSolutionLines Include="	EndGlobalSection" />
+  <_BackendVerificationSolutionLines Include="	GlobalSection(ProjectConfigurationPlatforms) = postSolution" />
+  <_BackendVerificationSolutionLines Include="		{4FD8F0D2-4ED8-4A58-AD30-91D3248DD44D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU" />
+  <_BackendVerificationSolutionLines Include="		{4FD8F0D2-4ED8-4A58-AD30-91D3248DD44D}.Debug|Any CPU.Build.0 = Debug|Any CPU" />
+  <_BackendVerificationSolutionLines Include="		{4FD8F0D2-4ED8-4A58-AD30-91D3248DD44D}.Release|Any CPU.ActiveCfg = Release|Any CPU" />
+  <_BackendVerificationSolutionLines Include="		{4FD8F0D2-4ED8-4A58-AD30-91D3248DD44D}.Release|Any CPU.Build.0 = Release|Any CPU" />
+  <_BackendVerificationSolutionLines Include="	EndGlobalSection" />
+  <_BackendVerificationSolutionLines Include="EndGlobal" />
+</ItemGroup>
+
+<WriteLinesToFile
+  File="$(MSBuildThisFileDirectory)backend/Pulse.sln"
+  Lines="@(_BackendVerificationSolutionLines)"
+  Overwrite="true"
+  Encoding="UTF-8" />
+
   </Target>
 </Project>

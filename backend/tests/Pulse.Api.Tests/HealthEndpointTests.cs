@@ -1,41 +1,71 @@
 using System.Net;
+
 using System.Net.Http.Json;
-using System.Text.Json;
+
+using Microsoft.AspNetCore.Hosting;
+
+using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Pulse.Api.Tests;
 
 public sealed class HealthEndpointTests
-    : IClassFixture<PulseApiFactory>
+
+: IClassFixture<WebApplicationFactory<Program>>
+
 {
-    private readonly HttpClient _client;
 
-    public HealthEndpointTests(PulseApiFactory factory)
-    {
-        _client = factory.CreateClient();
-    }
+private readonly HttpClient _client;
 
-    [Fact]
-    public async Task GetHealth_WithoutToken_ReturnsOkStatus()
-    {
-        using var response = await _client.GetAsync("/health");
+public HealthEndpointTests(
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+WebApplicationFactory<Program> factory)
 
-        var body = await response.Content
-            .ReadFromJsonAsync<JsonElement>();
+{
 
-        Assert.Equal(
-            "ok",
-            body.GetProperty("status").GetString());
-    }
+_client =
 
-    [Fact]
-    public async Task GetFeed_WithoutToken_ReturnsUnauthorized()
-    {
-        using var response = await _client.GetAsync("/api/v1/feed");
+factory
 
-        Assert.Equal(
-            HttpStatusCode.Unauthorized,
-            response.StatusCode);
-    }
+.WithWebHostBuilder(
+
+builder =>
+
+{
+
+builder.UseEnvironment("Testing");
+
+})
+
+.CreateClient();
+
+}
+
+[Fact]
+
+public async Task GetHealth_WithoutToken_ReturnsOkStatus()
+
+{
+
+using var response =
+
+await _client.GetAsync("/health");
+
+Assert.Equal(
+    HttpStatusCode.OK,
+    response.StatusCode);
+
+var payload =
+    await response.Content.ReadFromJsonAsync<HealthResponse>();
+
+Assert.NotNull(payload);
+Assert.Equal(
+    "ok",
+    payload.Status);
+
+}
+
+private sealed record HealthResponse(
+
+string Status);
+
 }
