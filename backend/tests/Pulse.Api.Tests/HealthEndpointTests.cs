@@ -2,70 +2,40 @@ using System.Net;
 
 using System.Net.Http.Json;
 
-using Microsoft.AspNetCore.Hosting;
-
-using Microsoft.AspNetCore.Mvc.Testing;
+using System.Text.Json;
 
 namespace Pulse.Api.Tests;
 
 public sealed class HealthEndpointTests
 
-: IClassFixture<WebApplicationFactory<Program>>
+: IClassFixture<PulseApiFactory>
 
 {
 
 private readonly HttpClient _client;
 
-public HealthEndpointTests(
-
-WebApplicationFactory<Program> factory)
-
+public HealthEndpointTests(PulseApiFactory factory)
 {
-
-_client =
-
-factory
-
-.WithWebHostBuilder(
-
-builder =>
-
-{
-
-builder.UseEnvironment("Testing");
-
-})
-
-.CreateClient();
-
+    _client = factory.CreateClient();
 }
 
 [Fact]
-
 public async Task GetHealth_WithoutToken_ReturnsOkStatus()
-
 {
+    var response =
+        await _client.GetAsync("/health");
 
-using var response =
+    Assert.Equal(
+        HttpStatusCode.OK,
+        response.StatusCode);
 
-await _client.GetAsync("/health");
+    var body =
+        await response.Content
+            .ReadFromJsonAsync<JsonElement>();
 
-Assert.Equal(
-    HttpStatusCode.OK,
-    response.StatusCode);
-
-var payload =
-    await response.Content.ReadFromJsonAsync<HealthResponse>();
-
-Assert.NotNull(payload);
-Assert.Equal(
-    "ok",
-    payload.Status);
-
+    Assert.Equal(
+        "ok",
+        body.GetProperty("status").GetString());
 }
-
-private sealed record HealthResponse(
-
-string Status);
 
 }

@@ -10,7 +10,7 @@ public sealed class AuthEndpointsTests
 
 [Fact]
 
-public void Login_request_body_uses_canonical_username_field()
+public void Login_request_body_uses_canonical_login_field()
 
 {
 
@@ -18,58 +18,53 @@ var request = new
 
 {
 
-username = "ilkan",
+login = "ilkan",
 
 password = "Password123!"
 
 };
 
-var json = JsonSerializer.Serialize(request);
+    var json = JsonSerializer.Serialize(request);
 
-using var document = JsonDocument.Parse(json);
-var root = document.RootElement;
+    Assert.Equal(
+        """{"username":"ilkan","password":"Password123!"}""",
+        json);
 
-Assert.True(root.TryGetProperty("username", out var username));
-Assert.Equal("ilkan", username.GetString());
+    using var document = JsonDocument.Parse(json);
+    var root = document.RootElement;
 
-Assert.True(root.TryGetProperty("password", out var password));
-Assert.Equal("Password123!", password.GetString());
+    Assert.Equal(2, root.EnumerateObject().Count());
+    Assert.True(root.TryGetProperty("login", out var login));
+    Assert.Equal("ilkan", login.GetString());
 
-Assert.False(root.TryGetProperty("login", out _));
+    Assert.True(root.TryGetProperty("password", out var password));
+    Assert.Equal("Password123!", password.GetString());
 
+    Assert.False(root.TryGetProperty("username", out _));
 }
 
 [Fact]
-
 public void Login_request_body_example_matches_backend_contract()
-
 {
+    const string json =
+        """
+        {
+          "login": "ilkan",
+          "password": "Password123!"
+        }
+        """;
 
-const string json =
+    using var document = JsonDocument.Parse(json);
+    var root = document.RootElement;
 
-"""
-
-{
-
-"username": "ilkan",
-
-"password": "Password123!"
-
-}
-
-""";
-
-using var document = JsonDocument.Parse(json);
-var root = document.RootElement;
-
-Assert.Equal(2, root.EnumerateObject().Count());
-Assert.Equal(
-    "ilkan",
-    root.GetProperty("username").GetString());
-Assert.Equal(
-    "Password123!",
-    root.GetProperty("password").GetString());
-
+    Assert.Equal(2, root.EnumerateObject().Count());
+    Assert.Equal(
+        "ilkan",
+        root.GetProperty("username").GetString());
+        root.GetProperty("login").GetString());
+    Assert.Equal(
+        "Password123!",
+        root.GetProperty("password").GetString());
 }
 
 }

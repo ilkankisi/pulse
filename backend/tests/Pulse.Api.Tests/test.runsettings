@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <RunConfiguration>
+    <EnvironmentVariables>
+      <DOTNET_ENVIRONMENT>Testing</DOTNET_ENVIRONMENT>
+      <ASPNETCORE_ENVIRONMENT>Testing</ASPNETCORE_ENVIRONMENT>
+      <Jwt__Key>testing-only-key-at-least-32-bytes-long</Jwt__Key>
+      <Jwt__Issuer>Pulse.Api</Jwt__Issuer>
+      <Jwt__Audience>Pulse.Client</Jwt__Audience>
+    </EnvironmentVariables>
+  </RunConfiguration>
+</RunSettings>

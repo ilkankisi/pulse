@@ -48,12 +48,6 @@ new Dictionary<string, string?>
 
 }
 
-builder.Services
-
-.AddControllers()
-
-.AddApplicationPart(typeof(Program).Assembly);
-
 if (openapiMode || builder.Environment.IsEnvironment("Testing"))
 
 {
@@ -124,42 +118,27 @@ configuration["Jwt:Key"]
 
 ?? "Pulse.Api.OpenApiGeneration.SigningKey.32Bytes.Minimum";
 
-options.TokenValidationParameters =
+    options.TokenValidationParameters =
+        new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer =
+                configuration["Jwt:Issuer"]
+                ?? "Pulse.Api",
 
-new TokenValidationParameters
+            ValidateAudience = true,
+            ValidAudience =
+                configuration["Jwt:Audience"]
+                ?? "Pulse.Client",
 
-{
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey =
+                new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(jwtKey)),
 
-ValidateIssuer = true,
-
-ValidIssuer =
-
-configuration["Jwt:Issuer"]
-
-?? "Pulse.Api",
-
-ValidateAudience = true,
-
-ValidAudience =
-
-configuration["Jwt:Audience"]
-
-?? "Pulse.Client",
-
-ValidateIssuerSigningKey = true,
-
-IssuerSigningKey =
-
-new SymmetricSecurityKey(
-
-Encoding.UTF8.GetBytes(jwtKey)),
-
-ValidateLifetime = true,
-
-ClockSkew = TimeSpan.Zero,
-
-};
-
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero,
+        };
 });
 
 builder.Services.AddAuthorization();
@@ -264,8 +243,6 @@ status = "ok",
 
 .WithName("Health");
 
-app.MapControllers();
-
 app.MapAuthEndpoints();
 
 app.MapPostEndpoints();
@@ -276,9 +253,9 @@ app.MapMeEndpoints();
 
 app.MapProfileEndpoints();
 
-app.MapSocialGraphEndpoints();
-
 app.MapFollowEndpoints();
+
+app.MapSocialGraphEndpoints(); // social graph route wiring
 
 app.MapSecurityModerationEndpoints();
 
