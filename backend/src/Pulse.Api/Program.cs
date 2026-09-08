@@ -255,7 +255,7 @@ app.MapProfileEndpoints();
 
 app.MapFollowEndpoints();
 
-app.MapSocialGraphEndpoints(); // social graph route wiring
+app.MapSocialGraphEndpoints();
 
 app.MapSecurityModerationEndpoints();
 
