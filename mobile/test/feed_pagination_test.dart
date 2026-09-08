@@ -52,6 +52,39 @@ void main() {
     expect(_renderedChildCount(tester), 89);
     expect(repository.loadCount, 1);
   });
+
+  testWidgets(
+    'kısa ana akış render penceresini gerçek child sayısının üstüne çıkarmaz',
+    (tester) async {
+      final repository = _FakePulseRepository(_buildPosts(3));
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: <Override>[
+            pulseRepositoryProvider.overrideWithValue(repository),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: FeedPage(
+                currentUser: currentUser,
+                onUnauthorized: () async {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(repository.loadCount, 1);
+      expect(_renderedChildCount(tester), 5);
+
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -10000));
+      await tester.pumpAndSettle();
+
+      expect(_renderedChildCount(tester), 5);
+      expect(repository.loadCount, 1);
+    },
+  );
 }
 
 int _renderedChildCount(WidgetTester tester) {
