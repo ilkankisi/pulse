@@ -1,22 +1,32 @@
 import 'package:dio/dio.dart';
+
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/domain/auth_models.dart';
+
 import '../data/pulse_repository.dart';
+
 import '../domain/pulse_models.dart';
+
 import 'composer_sheet.dart';
+
 import 'post_detail_page.dart';
+
 import 'profile_page.dart';
 
 class FeedPage extends ConsumerStatefulWidget {
   const FeedPage({
     required this.currentUser,
+
     required this.onUnauthorized,
+
     super.key,
   });
 
   final AuthUser currentUser;
+
   final Future<void> Function() onUnauthorized;
 
   @override
@@ -25,34 +35,45 @@ class FeedPage extends ConsumerStatefulWidget {
 
 class _FeedPageState extends ConsumerState<FeedPage> {
   static const int _initialChildCount = 39;
+
   static const int _scrollChunk = 40;
 
   final ScrollController _scrollController = ScrollController();
 
   List<PulsePost> _posts = const <PulsePost>[];
+
   bool _isLoading = true;
+
   String? _errorMessage;
+
   int _renderedChildCount = _initialChildCount;
+
+  int _feedRequestGeneration = 0;
 
   @override
   void initState() {
     super.initState();
+
     _scrollController.addListener(_maybeExpandRenderedWindow);
+
     Future<void>.microtask(_loadFeed);
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
+
     super.dispose();
   }
 
-  int _maxChildCount() {
-    if (_posts.isEmpty) {
+  int _maxChildCount() => _maxChildCountFor(_posts);
+
+  int _maxChildCountFor(List<PulsePost> posts) {
+    if (posts.isEmpty) {
       return 0;
     }
 
-    return (_posts.length * 2) - 1;
+    return (posts.length * 2) - 1;
   }
 
   void _maybeExpandRenderedWindow() {
@@ -71,60 +92,79 @@ class _FeedPageState extends ConsumerState<FeedPage> {
     }
 
     setState(() {
-      _renderedChildCount = (_renderedChildCount + _scrollChunk).clamp(
-        _initialChildCount,
-        maxChildCount,
-      );
+      final expandedChildCount = _renderedChildCount + _scrollChunk;
+      _renderedChildCount = expandedChildCount > maxChildCount
+          ? maxChildCount
+          : expandedChildCount;
     });
   }
 
   Future<void> _loadFeed() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    final requestGeneration = ++_feedRequestGeneration;
+
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
       final posts = await ref.read(pulseRepositoryProvider).getFeed();
 
-      if (mounted) {
-        setState(() {
-          _posts = posts;
-          _isLoading = false;
-          _renderedChildCount = _initialChildCount.clamp(
-            0,
-            _maxChildCountFor(posts),
-          );
-        });
+      if (!mounted || requestGeneration != _feedRequestGeneration) {
+        return;
       }
+
+      setState(() {
+        _posts = posts;
+        _isLoading = false;
+
+        final maxChildCount = _maxChildCountFor(posts);
+        _renderedChildCount = maxChildCount < _initialChildCount
+            ? maxChildCount
+            : _initialChildCount;
+      });
     } on DioException catch (error) {
+      if (requestGeneration != _feedRequestGeneration) {
+        return;
+      }
+
       if (error.response?.statusCode == 401) {
         await widget.onUnauthorized();
         return;
       }
 
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = _readError(error, 'Akış yüklenemedi');
-        });
+      if (!mounted) {
+        return;
       }
+
+      setState(() {
+        _isLoading = false;
+        _errorMessage = _readError(error, 'Akış yüklenemedi');
+      });
     } on FormatException {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = 'Akış yüklenemedi';
-        });
+      if (!mounted || requestGeneration != _feedRequestGeneration) {
+        return;
       }
+
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Akış yüklenemedi';
+      });
     }
   }
 
   Future<void> _openComposer() async {
     final created = await showModalBottomSheet<bool>(
       context: context,
+
       isScrollControlled: true,
+
       useSafeArea: true,
+
       elevation: 3,
+
       builder: (context) =>
           ComposerSheet(onUnauthorized: widget.onUnauthorized),
     );
@@ -152,8 +192,11 @@ class _FeedPageState extends ConsumerState<FeedPage> {
       MaterialPageRoute<void>(
         builder: (context) => ProfilePage(
           username: post.author.username,
+
           isCurrentUser: post.author.id == widget.currentUser.id,
+
           showAppBar: true,
+
           onUnauthorized: widget.onUnauthorized,
         ),
       ),
@@ -198,11 +241,14 @@ class _FeedPageState extends ConsumerState<FeedPage> {
         return;
       }
 
-      setState(() {
-        final posts = List<PulsePost>.from(_posts);
-        posts[index] = post;
-        _posts = posts;
-      });
+      final currentIndex = _posts.indexWhere((item) => item.id == post.id);
+      if (currentIndex >= 0) {
+        setState(() {
+          final posts = List<PulsePost>.from(_posts);
+          posts[currentIndex] = post;
+          _posts = posts;
+        });
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(_readError(error, 'Beğeni güncellenemedi.'))),
@@ -213,16 +259,22 @@ class _FeedPageState extends ConsumerState<FeedPage> {
   Future<void> _deletePost(PulsePost post) async {
     final confirmed = await showDialog<bool>(
       context: context,
+
       builder: (context) => AlertDialog(
         title: const Text('Gönderi silinsin mi?'),
+
         content: const Text('Bu işlem geri alınamaz.'),
+
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
+
             child: const Text('Vazgeç'),
           ),
+
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
+
             child: const Text('Sil'),
           ),
         ],
@@ -244,6 +296,11 @@ class _FeedPageState extends ConsumerState<FeedPage> {
         _posts = _posts
             .where((item) => item.id != post.id)
             .toList(growable: false);
+
+        final maxChildCount = _maxChildCount();
+        if (_renderedChildCount > maxChildCount) {
+          _renderedChildCount = maxChildCount;
+        }
       });
 
       ScaffoldMessenger.of(
@@ -255,131 +312,123 @@ class _FeedPageState extends ConsumerState<FeedPage> {
         return;
       }
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_readError(error, 'Gönderi silinemedi.'))),
-        );
+      if (!mounted) {
+        return;
       }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_readError(error, 'Gönderi silinemedi.'))),
+      );
     }
-  }
-
-  Widget _statePanel({
-    required IconData icon,
-    required String title,
-    required String description,
-    required String actionLabel,
-    required VoidCallback onPressed,
-  }) {
-    final theme = Theme.of(context);
-
-    return SliverFillRemaining(
-      hasScrollBody: false,
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 360),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Icon(icon, size: 48, color: theme.colorScheme.primary),
-                const SizedBox(height: 16),
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.titleLarge,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  description,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 24),
-                FilledButton(onPressed: onPressed, child: Text(actionLabel)),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Akış'),
+
+        actions: <Widget>[
+          IconButton(
+            tooltip: 'Yenile',
+
+            onPressed: _isLoading ? null : _loadFeed,
+
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
+
+      body: _buildBody(),
+
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _openComposer,
+
+        icon: const Icon(Icons.edit_outlined),
+
+        label: const Text('Gönderi Oluştur'),
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading && _posts.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_errorMessage != null && _posts.isEmpty) {
+      return _FeedMessage(
+        icon: Icons.wifi_off_outlined,
+        title: _errorMessage!,
+        actionLabel: 'Tekrar Dene',
+        onAction: _loadFeed,
+      );
+    }
+
+    if (_posts.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: _loadFeed,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: const <Widget>[SizedBox(height: 120), _EmptyFeed()],
+        ),
+      );
+    }
+
+    final maxChildCount = _maxChildCount();
+    final childCount = _renderedChildCount > maxChildCount
+        ? maxChildCount
+        : _renderedChildCount;
+
     return RefreshIndicator(
       onRefresh: _loadFeed,
       child: CustomScrollView(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: <Widget>[
-          if (_isLoading && _posts.isEmpty)
-            const SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (_errorMessage != null && _posts.isEmpty)
-            _statePanel(
-              icon: Icons.cloud_off_outlined,
-              title: 'Akış yüklenemedi',
-              description: _errorMessage!,
-              actionLabel: 'Tekrar Dene',
-              onPressed: _loadFeed,
-            )
-          else if (_posts.isEmpty)
-            _statePanel(
-              icon: Icons.forum_outlined,
-              title: 'Akış henüz boş',
-              description: 'İlk gönderini paylaşarak konuşmayı başlat.',
-              actionLabel: 'Gönderi Oluştur',
-              onPressed: _openComposer,
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.all(16),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  final postIndex = index ~/ 2;
+          SliverList(
+            delegate: SliverChildBuilderDelegate((context, index) {
+              if (index.isOdd) {
+                return const Divider(height: 1);
+              }
 
-                  if (index.isOdd) {
-                    return const SizedBox(height: 12);
-                  }
+              final postIndex = index ~/ 2;
+              final post = _posts[postIndex];
 
-                  final post = _posts[postIndex];
-
-                  return _PostCard(
-                    post: post,
-                    onOpen: () => _openPost(post),
-                    onAuthorTap: () => _openProfile(post),
-                    onLike: () => _toggleLike(post),
-                    onReply: () => _openPost(post),
-                    onDelete: post.canDelete ? () => _deletePost(post) : null,
-                  );
-                }, childCount: _renderedChildCount.clamp(0, _maxChildCount())),
-              ),
-            ),
+              return _PostCard(
+                post: post,
+                isCurrentUser: post.author.id == widget.currentUser.id,
+                onOpen: () => _openPost(post),
+                onOpenProfile: () => _openProfile(post),
+                onToggleLike: () => _toggleLike(post),
+                onDelete: post.canDelete ? () => _deletePost(post) : null,
+              );
+            }, childCount: childCount),
+          ),
         ],
       ),
     );
   }
 
-  static int _maxChildCountFor(List<PulsePost> posts) {
-    if (posts.isEmpty) {
-      return 0;
-    }
+  String _readError(DioException error, String fallback) {
+    final data = error.response?.data;
 
-    return (posts.length * 2) - 1;
-  }
-
-  static String _readError(DioException exception, String fallback) {
-    final data = exception.response?.data;
-
-    if (data is Map) {
-      final json = Map<String, dynamic>.from(data);
-      final message = json['error'] ?? json['message'];
-
+    if (data is Map<String, dynamic>) {
+      final message = data['message'];
       if (message is String && message.trim().isNotEmpty) {
-        return message.trim();
+        return message;
+      }
+
+      final errorValue = data['error'];
+      if (errorValue is String && errorValue.trim().isNotEmpty) {
+        return errorValue;
+      }
+
+      if (errorValue is Map<String, dynamic>) {
+        final nestedMessage = errorValue['message'];
+        if (nestedMessage is String && nestedMessage.trim().isNotEmpty) {
+          return nestedMessage;
+        }
       }
     }
 
@@ -387,50 +436,138 @@ class _FeedPageState extends ConsumerState<FeedPage> {
   }
 }
 
+class _EmptyFeed extends StatelessWidget {
+  const _EmptyFeed();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 32),
+
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+
+        children: <Widget>[
+          Icon(Icons.forum_outlined, size: 48),
+
+          SizedBox(height: 16),
+
+          Text(
+            'Akış henüz boş',
+
+            textAlign: TextAlign.center,
+
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+          ),
+
+          SizedBox(height: 8),
+
+          Text(
+            'İlk gönderini paylaşarak konuşmayı başlat.',
+
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeedMessage extends StatelessWidget {
+  const _FeedMessage({
+    required this.icon,
+
+    required this.title,
+
+    required this.actionLabel,
+
+    required this.onAction,
+  });
+
+  final IconData icon;
+
+  final String title;
+
+  final String actionLabel;
+
+  final VoidCallback onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+
+          children: <Widget>[
+            Icon(icon, size: 48),
+
+            const SizedBox(height: 16),
+
+            Text(
+              title,
+
+              textAlign: TextAlign.center,
+
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+
+            const SizedBox(height: 16),
+
+            FilledButton(onPressed: onAction, child: Text(actionLabel)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _PostCard extends StatelessWidget {
   const _PostCard({
     required this.post,
+
+    required this.isCurrentUser,
+
     required this.onOpen,
-    required this.onAuthorTap,
-    required this.onLike,
-    required this.onReply,
-    this.onDelete,
+
+    required this.onOpenProfile,
+
+    required this.onToggleLike,
+
+    required this.onDelete,
   });
 
   final PulsePost post;
+
+  final bool isCurrentUser;
+
   final VoidCallback onOpen;
-  final VoidCallback onAuthorTap;
-  final VoidCallback onLike;
-  final VoidCallback onReply;
+
+  final VoidCallback onOpenProfile;
+
+  final VoidCallback onToggleLike;
+
   final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
 
-    return Card(
+    return Material(
+      color: colorScheme.surface,
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
         onTap: onOpen,
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 14, 8, 10),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               InkWell(
-                borderRadius: BorderRadius.circular(999),
-                onTap: onAuthorTap,
-                child: CircleAvatar(
-                  radius: 22,
-                  backgroundImage: post.author.avatarUrl == null
-                      ? null
-                      : NetworkImage(post.author.avatarUrl!),
-                  child: post.author.avatarUrl == null
-                      ? Text(
-                          post.author.displayName.substring(0, 1).toUpperCase(),
-                        )
-                      : null,
-                ),
+                customBorder: const CircleBorder(),
+                onTap: onOpenProfile,
+                child: _AuthorAvatar(post: post),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -438,53 +575,91 @@ class _PostCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: <Widget>[
                         Expanded(
                           child: InkWell(
-                            onTap: onAuthorTap,
-                            child: Wrap(
-                              spacing: 6,
+                            onTap: onOpenProfile,
+                            child: Row(
                               children: <Widget>[
-                                Text(
-                                  post.author.displayName,
-                                  style: theme.textTheme.titleMedium,
+                                Flexible(
+                                  child: Text(
+                                    post.author.displayName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
                                 ),
-                                Text(
-                                  '@${post.author.username}',
-                                  style: theme.textTheme.bodySmall,
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    '@${post.author.username}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
                           ),
                         ),
-                        if (onDelete != null)
-                          IconButton(
-                            tooltip: 'Gönderiyi sil',
-                            onPressed: onDelete,
-                            icon: const Icon(Icons.delete_outline),
+                        const SizedBox(width: 8),
+                        Text(
+                          _relativeTime(post.createdAt),
+                          style: TextStyle(
+                            color: colorScheme.onSurfaceVariant,
+                            fontSize: 12,
+                          ),
+                        ),
+                        if (onDelete != null || isCurrentUser)
+                          PopupMenuButton<String>(
+                            tooltip: 'Gönderi seçenekleri',
+                            onSelected: (value) {
+                              if (value == 'delete') {
+                                onDelete?.call();
+                              }
+                            },
+                            itemBuilder: (context) => <PopupMenuEntry<String>>[
+                              if (onDelete != null)
+                                const PopupMenuItem<String>(
+                                  value: 'delete',
+                                  child: Row(
+                                    children: <Widget>[
+                                      Icon(Icons.delete_outline),
+                                      SizedBox(width: 12),
+                                      Text('Gönderiyi sil'),
+                                    ],
+                                  ),
+                                ),
+                            ],
                           ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Text(post.content, style: theme.textTheme.bodyMedium),
-                    const SizedBox(height: 12),
+                    if (post.content.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 6),
+                      Text(post.content),
+                    ],
+                    const SizedBox(height: 10),
                     Row(
                       children: <Widget>[
                         _ActionButton(
                           tooltip: 'Yanıtla',
                           icon: Icons.chat_bubble_outline,
-                          label: post.replyCount.toString(),
-                          onPressed: onReply,
+                          count: post.replyCount,
+                          onPressed: onOpen,
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 20),
                         _ActionButton(
                           tooltip: post.isLiked ? 'Beğeniyi kaldır' : 'Beğen',
                           icon: post.isLiked
                               ? Icons.favorite
                               : Icons.favorite_border,
-                          label: post.likeCount.toString(),
-                          selected: post.isLiked,
-                          onPressed: onLike,
+                          count: post.likeCount,
+                          onPressed: onToggleLike,
                         ),
                       ],
                     ),
@@ -499,44 +674,116 @@ class _PostCard extends StatelessWidget {
   }
 }
 
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({
-    required this.tooltip,
-    required this.icon,
-    required this.label,
-    required this.onPressed,
-    this.selected = false,
-  });
+class _AuthorAvatar extends StatelessWidget {
+  const _AuthorAvatar({required this.post});
 
-  final String tooltip;
-  final IconData icon;
-  final String label;
-  final VoidCallback onPressed;
-  final bool selected;
+  final PulsePost post;
 
   @override
   Widget build(BuildContext context) {
-    final color = selected
-        ? Theme.of(context).colorScheme.tertiary
-        : Theme.of(context).colorScheme.onSurfaceVariant;
+    final avatarUrl = post.author.avatarUrl;
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(999),
-      onTap: onPressed,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+    final displayName = post.author.displayName.trim();
+
+    final fallback = displayName.isNotEmpty
+        ? displayName.characters.first.toUpperCase()
+        : post.author.username.characters.first.toUpperCase();
+
+    return CircleAvatar(
+      radius: 22,
+      foregroundImage: avatarUrl == null || avatarUrl.trim().isEmpty
+          ? null
+          : NetworkImage(avatarUrl),
+      child: Text(fallback),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.tooltip,
+
+    required this.icon,
+
+    required this.count,
+
+    required this.onPressed,
+  });
+
+  final String tooltip;
+
+  final IconData icon;
+
+  final int count;
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+
+      label: tooltip,
+
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+
+        onTap: onPressed,
+
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+
           child: Row(
             mainAxisSize: MainAxisSize.min,
+
             children: <Widget>[
-              Icon(icon, size: 20, color: color),
-              const SizedBox(width: 4),
-              Text(label, style: TextStyle(color: color)),
+              Icon(icon, size: 19),
+
+              if (count > 0) ...<Widget>[
+                const SizedBox(width: 5),
+
+                Text('$count'),
+              ],
             ],
           ),
         ),
       ),
     );
   }
+}
+
+String _relativeTime(DateTime value) {
+  final now = DateTime.now();
+
+  final localValue = value.toLocal();
+
+  final difference = now.difference(localValue);
+
+  if (difference.isNegative || difference.inSeconds < 60) {
+    return 'şimdi';
+  }
+
+  if (difference.inMinutes < 60) {
+    return '${difference.inMinutes} dk';
+  }
+
+  if (difference.inHours < 24) {
+    return '${difference.inHours} sa';
+  }
+
+  if (difference.inDays < 7) {
+    return '${difference.inDays} g';
+  }
+
+  final day = localValue.day.toString().padLeft(2, '0');
+
+  final month = localValue.month.toString().padLeft(2, '0');
+
+  final year = localValue.year;
+
+  if (year == now.year) {
+    return '$day.$month';
+  }
+
+  return '$day.$month.$year';
 }
