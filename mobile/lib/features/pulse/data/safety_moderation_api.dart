@@ -60,7 +60,9 @@ class SafetyModerationApi {
   }
 
   Future<ReportRecord> getModerationReport(int reportId) async {
-    final response = await _dio.get<dynamic>(ApiRoutes.moderationReport(reportId));
+    final response = await _dio.get<dynamic>(
+      ApiRoutes.moderationReport(reportId),
+    );
     return ReportRecord.fromJson(_requireMap(response.data));
   }
 
