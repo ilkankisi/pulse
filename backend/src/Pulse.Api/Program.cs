@@ -22,9 +22,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 var openapiMode =
 
-Environment.GetEnvironmentVariable("ORCHESTRATOR_OPENAPI_GENERATION") == "1"
+Environment.GetEnvironmentVariable(
 
-|| builder.Environment.IsEnvironment("OpenApiGeneration");
+"ORCHESTRATOR_OPENAPI_GENERATION") == "1"
+
+|| builder.Environment.IsEnvironment(
+
+"OpenApiGeneration");
 
 if (openapiMode)
 
@@ -48,7 +52,9 @@ new Dictionary<string, string?>
 
 }
 
-if (openapiMode || builder.Environment.IsEnvironment("Testing"))
+if (openapiMode
+
+|| builder.Environment.IsEnvironment("Testing"))
 
 {
 
@@ -72,7 +78,9 @@ options =>
 
 options.UseSqlite(
 
-builder.Configuration.GetConnectionString("DefaultConnection")
+builder.Configuration.GetConnectionString(
+
+"DefaultConnection")
 
 ?? "Data Source=pulse.db"));
 
@@ -126,28 +134,25 @@ configuration["Jwt:Key"]
 
 ?? "Pulse.Api.OpenApiGeneration.SigningKey.32Bytes.Minimum";
 
-    options.TokenValidationParameters =
-        new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidIssuer =
-                configuration["Jwt:Issuer"]
-                ?? "Pulse.Api",
-
-            ValidateAudience = true,
-            ValidAudience =
-                configuration["Jwt:Audience"]
-                ?? "Pulse.Client",
-
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey =
-                new SymmetricSecurityKey(
-                    Encoding.UTF8.GetBytes(jwtKey)),
-
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.Zero,
-        };
-});
+        options.TokenValidationParameters =
+            new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidIssuer =
+                    configuration["Jwt:Issuer"]
+                    ?? "Pulse.Api",
+                ValidateAudience = true,
+                ValidAudience =
+                    configuration["Jwt:Audience"]
+                    ?? "Pulse.Client",
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey =
+                    new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(jwtKey)),
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero,
+            };
+    });
 
 builder.Services.AddAuthorization();
 
@@ -201,15 +206,11 @@ if (!openapiMode
 
 {
 
-using var scope =
-
-app.Services.CreateScope();
+using var scope = app.Services.CreateScope();
 
 var db =
-
-scope.ServiceProvider
-
-.GetRequiredService<PulseDbContext>();
+    scope.ServiceProvider
+        .GetRequiredService<PulseDbContext>();
 
 db.Database.Migrate();
 
@@ -263,10 +264,14 @@ app.MapProfileEndpoints();
 
 app.MapFollowEndpoints();
 
-app.MapSocialGraphEndpoints();
-
 app.MapSecurityModerationEndpoints();
+
+app.MapSocialGraphEndpoints();
 
 app.Run();
 
-public partial class Program;
+public partial class Program
+
+{
+
+}

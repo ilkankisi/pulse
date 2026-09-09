@@ -1,4 +1,5 @@
 using System.Security.Claims;
+
 using Pulse.Api.Contracts;
 using Pulse.Api.Data;
 
