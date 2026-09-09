@@ -66,7 +66,15 @@ else
 
 {
 
-builder.Services.AddDbContext<PulseDbContext>();
+builder.Services.AddDbContext<PulseDbContext>(
+
+options =>
+
+options.UseSqlite(
+
+builder.Configuration.GetConnectionString("DefaultConnection")
+
+?? "Data Source=pulse.db"));
 
 }
 
