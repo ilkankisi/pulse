@@ -26,7 +26,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
   late final TextEditingController _usernameController;
 
-  late final TextEditingController _loginUsernameController;
+  late final TextEditingController _emailController;
 
   late final TextEditingController _passwordController;
 
@@ -45,13 +45,9 @@ class _RegisterPageState extends State<RegisterPage> {
     super.initState();
 
     _displayNameController = TextEditingController();
-
     _usernameController = TextEditingController();
-
-    _loginUsernameController = TextEditingController(text: widget.initialEmail);
-
+    _emailController = TextEditingController(text: widget.initialEmail);
     _passwordController = TextEditingController();
-
     _passwordConfirmController = TextEditingController();
   }
 
@@ -61,7 +57,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
     _usernameController.dispose();
 
-    _loginUsernameController.dispose();
+    _emailController.dispose();
 
     _passwordController.dispose();
 
@@ -87,6 +83,26 @@ class _RegisterPageState extends State<RegisterPage> {
 
     if (username.length < 3) {
       return 'Kullanıcı adı en az 3 karakter olmalıdır.';
+    }
+
+    return null;
+  }
+
+  String? _validateEmail(String? value) {
+    final email = value?.trim() ?? '';
+
+    if (email.isEmpty) {
+      return 'E-posta zorunludur.';
+    }
+
+    final atIndex = email.indexOf('@');
+    final dotIndex = email.lastIndexOf('.');
+
+    if (atIndex <= 0 ||
+        atIndex == email.length - 1 ||
+        dotIndex <= atIndex + 1 ||
+        dotIndex == email.length - 1) {
+      return 'Geçerli bir e-posta adresi girin.';
     }
 
     return null;
@@ -126,7 +142,7 @@ class _RegisterPageState extends State<RegisterPage> {
       await widget.onRegister(
         RegisterRequest(
           username: _usernameController.text.trim(),
-          email: _loginUsernameController.text.trim(),
+          email: _emailController.text.trim(),
           password: _passwordController.text,
           displayName: _displayNameController.text.trim(),
         ),
@@ -198,18 +214,18 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
-                        controller: _loginUsernameController,
+                        controller: _emailController,
                         enabled: !_isSubmitting,
-                        keyboardType: TextInputType.text,
+                        keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.next,
-                        autofillHints: const [AutofillHints.username],
+                        autofillHints: const [AutofillHints.email],
                         autocorrect: false,
                         decoration: const InputDecoration(
-                          labelText: 'Giriş kullanıcı adı',
-                          hintText: 'Girişte kullanılacak adı girin',
-                          prefixIcon: Icon(Icons.account_circle_outlined),
+                          labelText: 'E-posta',
+                          hintText: 'E-posta adresinizi girin',
+                          prefixIcon: Icon(Icons.email_outlined),
                         ),
-                        validator: _validateUsername,
+                        validator: _validateEmail,
                       ),
                       const SizedBox(height: 16),
                       TextFormField(

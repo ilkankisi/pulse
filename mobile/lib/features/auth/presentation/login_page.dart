@@ -53,7 +53,6 @@ class _LoginPageState extends State<LoginPage> {
     _usernameController = TextEditingController(
       text: widget.initialEmail ?? widget.prefilledEmail,
     );
-
     _passwordController = TextEditingController();
   }
 
@@ -122,10 +121,7 @@ class _LoginPageState extends State<LoginPage> {
 
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (_) => RegisterPage(
-          onRegister: onRegister,
-          initialEmail: _usernameController.text.trim(),
-        ),
+        builder: (_) => RegisterPage(onRegister: onRegister),
       ),
     );
   }
