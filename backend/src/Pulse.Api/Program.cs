@@ -18,6 +18,10 @@ using Pulse.Api.RateLimiting;
 
 const string flutterWebCorsPolicy = "FlutterWeb";
 
+const string developmentJwtKey =
+
+"development-signing-key-at-least-32-bytes-long-2026";
+
 var builder = WebApplication.CreateBuilder(args);
 
 var openapiMode =
@@ -51,6 +55,40 @@ new Dictionary<string, string?>
 });
 
 }
+
+var configuredJwtKey = builder.Configuration["Jwt:Key"];
+
+var jwtKey = configuredJwtKey;
+
+if (string.IsNullOrWhiteSpace(jwtKey)
+
+|| Encoding.UTF8.GetByteCount(jwtKey) < 32)
+
+{
+
+if (builder.Environment.IsProduction())
+
+{
+
+throw new InvalidOperationException(
+
+"Jwt:Key must be configured with at least 32 bytes in production.");
+
+}
+
+jwtKey = developmentJwtKey;
+
+}
+
+builder.Configuration.AddInMemoryCollection(
+
+new Dictionary<string, string?>
+
+{
+
+["Jwt:Key"] = jwtKey,
+
+});
 
 if (openapiMode
 
@@ -108,12 +146,9 @@ options.DefaultAuthenticateScheme =
 
 JwtBearerDefaults.AuthenticationScheme;
 
-options.DefaultChallengeScheme =
-
-JwtBearerDefaults.AuthenticationScheme;
-
-})
-
+        options.DefaultChallengeScheme =
+            JwtBearerDefaults.AuthenticationScheme;
+    })
 .AddJwtBearer();
 
 builder.Services
@@ -128,11 +163,14 @@ JwtBearerDefaults.AuthenticationScheme)
 
 {
 
-var jwtKey =
+var validationKey = configuration["Jwt:Key"];
 
-configuration["Jwt:Key"]
-
-?? "Pulse.Api.OpenApiGeneration.SigningKey.32Bytes.Minimum";
+        if (string.IsNullOrWhiteSpace(validationKey)
+            || Encoding.UTF8.GetByteCount(validationKey) < 32)
+        {
+            throw new InvalidOperationException(
+                "Jwt:Key must contain at least 32 bytes.");
+        }
 
         options.TokenValidationParameters =
             new TokenValidationParameters
@@ -148,7 +186,8 @@ configuration["Jwt:Key"]
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey =
                     new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(jwtKey)),
+                        Encoding.UTF8.GetBytes(
+                            validationKey)),
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.Zero,
             };

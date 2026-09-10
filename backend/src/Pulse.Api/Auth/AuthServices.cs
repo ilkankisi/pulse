@@ -74,15 +74,19 @@ public JwtTokenResult Create(
     if (string.IsNullOrWhiteSpace(key)
         || Encoding.UTF8.GetByteCount(key) < 32)
     {
-        key = "development-only-key-at-least-32-bytes";
+        throw new InvalidOperationException(
+            "Jwt:Key must contain at least 32 bytes.");
     }
 
     var now = DateTimeOffset.UtcNow;
+
     var expirationMinutes =
         _options.ExpirationMinutes > 0
             ? _options.ExpirationMinutes
             : 60;
-    var expiresAt = now.AddMinutes(expirationMinutes);
+
+    var expiresAt = now.AddMinutes(
+        expirationMinutes);
 
     var claims = new[]
     {
@@ -108,26 +112,30 @@ public JwtTokenResult Create(
                 : user.Role),
         new Claim(
             JwtRegisteredClaimNames.Jti,
-            Guid.NewGuid().ToString("N"))
+            Guid.NewGuid().ToString("N")),
     };
 
-    var signingKey = new SymmetricSecurityKey(
-        Encoding.UTF8.GetBytes(key));
+    var signingKey =
+        new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(key));
 
-    var credentials = new SigningCredentials(
-        signingKey,
-        SecurityAlgorithms.HmacSha256);
+    var credentials =
+        new SigningCredentials(
+            signingKey,
+            SecurityAlgorithms.HmacSha256);
 
-    var token = new JwtSecurityToken(
-        issuer: _options.Issuer,
-        audience: _options.Audience,
-        claims: claims,
-        notBefore: now.UtcDateTime,
-        expires: expiresAt.UtcDateTime,
-        signingCredentials: credentials);
+    var token =
+        new JwtSecurityToken(
+            issuer: _options.Issuer,
+            audience: _options.Audience,
+            claims: claims,
+            notBefore: now.UtcDateTime,
+            expires: expiresAt.UtcDateTime,
+            signingCredentials: credentials);
 
     var accessToken =
-        new JwtSecurityTokenHandler().WriteToken(token);
+        new JwtSecurityTokenHandler()
+            .WriteToken(token);
 
     return new JwtTokenResult(
         accessToken,
@@ -175,12 +183,14 @@ public bool VerifyPassword(
         return false;
     }
 
-    var result = _hasher.VerifyHashedPassword(
-        new User(),
-        passwordHash,
-        password);
+    var result =
+        _hasher.VerifyHashedPassword(
+            new User(),
+            passwordHash,
+            password);
 
-    return result is PasswordVerificationResult.Success
+    return result
+        is PasswordVerificationResult.Success
         or PasswordVerificationResult.SuccessRehashNeeded;
 }
 
@@ -188,7 +198,9 @@ public bool Verify(
     string password,
     string passwordHash)
 {
-    return VerifyPassword(password, passwordHash);
+    return VerifyPassword(
+        password,
+        passwordHash);
 }
 
 }
