@@ -4,13 +4,16 @@ import '../domain/auth_models.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({
-    required this.initialEmail,
-    required this.onRegister,
     super.key,
+
+    required this.onRegister,
+
+    this.initialEmail = '',
   });
 
-  final String initialEmail;
   final Future<bool> Function(RegisterRequest request) onRegister;
+
+  final String initialEmail;
 
   @override
   State<RegisterPage> createState() => _RegisterPageState();
@@ -18,36 +21,99 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
-  final _displayNameController = TextEditingController();
-  late final TextEditingController _emailController;
-  final _passwordController = TextEditingController();
-  final _confirmationController = TextEditingController();
+
+  late final TextEditingController _displayNameController;
+
+  late final TextEditingController _usernameController;
+
+  late final TextEditingController _loginUsernameController;
+
+  late final TextEditingController _passwordController;
+
+  late final TextEditingController _passwordConfirmController;
 
   bool _isSubmitting = false;
+
   bool _obscurePassword = true;
+
+  bool _obscurePasswordConfirm = true;
+
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _emailController = TextEditingController(text: widget.initialEmail);
+
+    _displayNameController = TextEditingController();
+
+    _usernameController = TextEditingController();
+
+    _loginUsernameController = TextEditingController(text: widget.initialEmail);
+
+    _passwordController = TextEditingController();
+
+    _passwordConfirmController = TextEditingController();
   }
 
   @override
   void dispose() {
-    _usernameController.dispose();
     _displayNameController.dispose();
-    _emailController.dispose();
+
+    _usernameController.dispose();
+
+    _loginUsernameController.dispose();
+
     _passwordController.dispose();
-    _confirmationController.dispose();
+
+    _passwordConfirmController.dispose();
+
     super.dispose();
   }
 
-  Future<void> _submit() async {
-    FocusScope.of(context).unfocus();
+  String? _validateDisplayName(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Görünen ad zorunludur.';
+    }
 
-    if (!_formKey.currentState!.validate()) {
+    return null;
+  }
+
+  String? _validateUsername(String? value) {
+    final username = value?.trim() ?? '';
+
+    if (username.isEmpty) {
+      return 'Kullanıcı adı zorunludur.';
+    }
+
+    if (username.length < 3) {
+      return 'Kullanıcı adı en az 3 karakter olmalıdır.';
+    }
+
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Şifre zorunludur.';
+    }
+
+    return null;
+  }
+
+  String? _validatePasswordConfirm(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Şifre tekrarı zorunludur.';
+    }
+
+    if (value != _passwordController.text) {
+      return 'Şifreler eşleşmiyor.';
+    }
+
+    return null;
+  }
+
+  Future<void> _submit() async {
+    if (_isSubmitting || !_formKey.currentState!.validate()) {
       return;
     }
 
@@ -56,29 +122,35 @@ class _RegisterPageState extends State<RegisterPage> {
       _errorMessage = null;
     });
 
-    final authenticated = await widget.onRegister(
-      RegisterRequest(
-        username: _usernameController.text.trim(),
-        displayName: _displayNameController.text.trim(),
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      ),
-    );
+    try {
+      await widget.onRegister(
+        RegisterRequest(
+          username: _usernameController.text.trim(),
+          email: _loginUsernameController.text.trim(),
+          password: _passwordController.text,
+          displayName: _displayNameController.text.trim(),
+        ),
+      );
 
-    if (!mounted) {
-      return;
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isSubmitting = false;
+      });
+
+      Navigator.of(context).pop();
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isSubmitting = false;
+        _errorMessage = 'Kayıt oluşturulamadı.';
+      });
     }
-
-    if (authenticated) {
-      Navigator.of(context).popUntil((route) => route.isFirst);
-      return;
-    }
-
-    setState(() {
-      _isSubmitting = false;
-    });
-
-    Navigator.of(context).pop(_emailController.text.trim());
   }
 
   @override
@@ -86,138 +158,125 @@ class _RegisterPageState extends State<RegisterPage> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Kayıt Ol')),
+      appBar: AppBar(title: const Text('Pulse’a katıl')),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    Text('Pulse’a katıl', style: theme.textTheme.headlineLarge),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Davet kodu veya yönetici onayı gerekmez.',
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 24),
-                    TextFormField(
-                      controller: _usernameController,
-                      enabled: !_isSubmitting,
-                      decoration: const InputDecoration(
-                        labelText: 'Kullanıcı adı',
-                        prefixText: '@',
+              constraints: const BoxConstraints(maxWidth: 440),
+              child: AutofillGroup(
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextFormField(
+                        controller: _displayNameController,
+                        enabled: !_isSubmitting,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: 'Görünen ad',
+                          prefixIcon: Icon(Icons.badge_outlined),
+                        ),
+                        validator: _validateDisplayName,
                       ),
-                      validator: (value) {
-                        final username = value?.trim() ?? '';
-
-                        if (username.isEmpty) {
-                          return 'Kullanıcı adı girin.';
-                        }
-
-                        if (username.length < 3 || username.length > 30) {
-                          return 'Kullanıcı adı 3-30 karakter olmalıdır.';
-                        }
-
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _displayNameController,
-                      enabled: !_isSubmitting,
-                      decoration: const InputDecoration(labelText: 'Ad'),
-                      validator: (value) {
-                        final displayName = value?.trim() ?? '';
-
-                        if (displayName.isEmpty) {
-                          return 'Görünen adınızı girin.';
-                        }
-
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _emailController,
-                      enabled: !_isSubmitting,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(labelText: 'E-posta'),
-                      validator: (value) {
-                        final email = value?.trim() ?? '';
-
-                        if (email.isEmpty || !email.contains('@')) {
-                          return 'Geçerli bir e-posta adresi girin.';
-                        }
-
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _passwordController,
-                      enabled: !_isSubmitting,
-                      obscureText: _obscurePassword,
-                      decoration: InputDecoration(
-                        labelText: 'Şifre',
-                        suffixIcon: IconButton(
-                          tooltip: _obscurePassword
-                              ? 'Şifreyi göster'
-                              : 'Şifreyi gizle',
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _usernameController,
+                        enabled: !_isSubmitting,
+                        keyboardType: TextInputType.text,
+                        textInputAction: TextInputAction.next,
+                        autofillHints: const [AutofillHints.newUsername],
+                        autocorrect: false,
+                        decoration: const InputDecoration(
+                          labelText: 'Kullanıcı adı',
+                          hintText: 'Kullanıcı adınızı girin',
+                          prefixIcon: Icon(Icons.person_outline),
+                        ),
+                        validator: _validateUsername,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _loginUsernameController,
+                        enabled: !_isSubmitting,
+                        keyboardType: TextInputType.text,
+                        textInputAction: TextInputAction.next,
+                        autofillHints: const [AutofillHints.username],
+                        autocorrect: false,
+                        decoration: const InputDecoration(
+                          labelText: 'Giriş kullanıcı adı',
+                          hintText: 'Girişte kullanılacak adı girin',
+                          prefixIcon: Icon(Icons.account_circle_outlined),
+                        ),
+                        validator: _validateUsername,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _passwordController,
+                        enabled: !_isSubmitting,
+                        obscureText: _obscurePassword,
+                        textInputAction: TextInputAction.next,
+                        autofillHints: const [AutofillHints.newPassword],
+                        decoration: InputDecoration(
+                          labelText: 'Şifre',
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            onPressed: _isSubmitting
+                                ? null
+                                : () {
+                                    setState(() {
+                                      _obscurePassword = !_obscurePassword;
+                                    });
+                                  },
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                            ),
                           ),
                         ),
+                        validator: _validatePassword,
                       ),
-                      validator: (value) {
-                        if ((value ?? '').length < 8) {
-                          return 'Şifre en az 8 karakter olmalıdır.';
-                        }
-
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _confirmationController,
-                      enabled: !_isSubmitting,
-                      obscureText: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Şifre tekrarı',
-                      ),
-                      validator: (value) {
-                        if (value != _passwordController.text) {
-                          return 'Şifreler eşleşmiyor.';
-                        }
-
-                        return null;
-                      },
-                      onFieldSubmitted: (_) => _submit(),
-                    ),
-                    if (_errorMessage != null) ...<Widget>[
-                      const SizedBox(height: 12),
-                      Text(
-                        _errorMessage!,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.error,
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _passwordConfirmController,
+                        enabled: !_isSubmitting,
+                        obscureText: _obscurePasswordConfirm,
+                        textInputAction: TextInputAction.done,
+                        autofillHints: const [AutofillHints.newPassword],
+                        decoration: InputDecoration(
+                          labelText: 'Şifre tekrarı',
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            onPressed: _isSubmitting
+                                ? null
+                                : () {
+                                    setState(() {
+                                      _obscurePasswordConfirm =
+                                          !_obscurePasswordConfirm;
+                                    });
+                                  },
+                            icon: Icon(
+                              _obscurePasswordConfirm
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                            ),
+                          ),
                         ),
+                        validator: _validatePasswordConfirm,
+                        onFieldSubmitted: (_) => _submit(),
                       ),
-                    ],
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      height: 48,
-                      child: FilledButton(
+                      if (_errorMessage != null) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          _errorMessage!,
+                          style: TextStyle(color: theme.colorScheme.error),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                      const SizedBox(height: 24),
+                      FilledButton(
                         onPressed: _isSubmitting ? null : _submit,
                         child: _isSubmitting
                             ? const SizedBox.square(
@@ -228,8 +287,8 @@ class _RegisterPageState extends State<RegisterPage> {
                               )
                             : const Text('Kayıt Ol'),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
