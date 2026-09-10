@@ -340,14 +340,6 @@ class _FeedPageState extends ConsumerState<FeedPage> {
       ),
 
       body: _buildBody(),
-
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openComposer,
-
-        icon: const Icon(Icons.edit_outlined),
-
-        label: const Text('Gönderi Oluştur'),
-      ),
     );
   }
 
@@ -370,7 +362,10 @@ class _FeedPageState extends ConsumerState<FeedPage> {
         onRefresh: _loadFeed,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          children: const <Widget>[SizedBox(height: 120), _EmptyFeed()],
+          children: <Widget>[
+            const SizedBox(height: 120),
+            _EmptyFeed(onCreate: _openComposer),
+          ],
         ),
       );
     }
@@ -437,22 +432,24 @@ class _FeedPageState extends ConsumerState<FeedPage> {
 }
 
 class _EmptyFeed extends StatelessWidget {
-  const _EmptyFeed();
+  const _EmptyFeed({required this.onCreate});
+
+  final VoidCallback onCreate;
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 32),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
 
       child: Column(
         mainAxisSize: MainAxisSize.min,
 
         children: <Widget>[
-          Icon(Icons.forum_outlined, size: 48),
+          const Icon(Icons.forum_outlined, size: 48),
 
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
 
-          Text(
+          const Text(
             'Akış henüz boş',
 
             textAlign: TextAlign.center,
@@ -460,12 +457,22 @@ class _EmptyFeed extends StatelessWidget {
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
           ),
 
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
 
-          Text(
+          const Text(
             'İlk gönderini paylaşarak konuşmayı başlat.',
 
             textAlign: TextAlign.center,
+          ),
+
+          const SizedBox(height: 16),
+
+          FilledButton.icon(
+            onPressed: onCreate,
+
+            icon: const Icon(Icons.edit_outlined),
+
+            label: const Text('Gönderi Oluştur'),
           ),
         ],
       ),
