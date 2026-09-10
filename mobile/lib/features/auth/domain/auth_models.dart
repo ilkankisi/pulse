@@ -1,68 +1,94 @@
 class LoginRequest {
-  const LoginRequest({required this.email, required this.password});
+  LoginRequest({required String email, required String password})
+    : email = email,
+
+      password = password,
+
+      toJson = LoginRequestJson(email, password);
 
   final String email;
+
   final String password;
 
-  Map<String, dynamic> toJson() {
-    return <String, dynamic>{'email': email.trim(), 'password': password};
-  }
+  final LoginRequestJson toJson;
+}
+
+class LoginRequestJson {
+  const LoginRequestJson(this.email, this.password);
+
+  final String email;
+
+  final String password;
+
+  Map<String, dynamic> call() => <String, dynamic>{
+    'username': email,
+
+    'password': password,
+  };
 }
 
 class RegisterRequest {
   const RegisterRequest({
     required this.username,
-    required this.displayName,
+
     required this.email,
+
     required this.password,
+
+    required this.displayName,
   });
 
   final String username;
-  final String displayName;
+
   final String email;
+
   final String password;
 
-  Map<String, dynamic> toJson() {
-    return <String, dynamic>{
-      'username': username.trim(),
-      'displayName': displayName.trim(),
-      'email': email.trim(),
-      'password': password,
-    };
-  }
+  final String displayName;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'username': username,
+
+    'password': password,
+
+    'displayName': displayName,
+  };
 }
 
 class AuthUser {
   const AuthUser({
     required this.id,
+
     required this.username,
+
     required this.displayName,
-    required this.email,
-    this.bio,
+
+    this.email,
+
     this.avatarUrl,
   });
 
   final int id;
+
   final String username;
+
   final String displayName;
-  final String email;
-  final String? bio;
+
+  final String? email;
+
   final String? avatarUrl;
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
     return AuthUser(
-      id: _readRequiredInt(json, const <String>['id', 'userId']),
-      username: _readRequiredString(json, const <String>[
-        'username',
-        'userName',
-      ]),
-      displayName: _readRequiredString(json, const <String>[
-        'displayName',
-        'name',
-      ]),
-      email: _readOptionalString(json['email']) ?? '',
-      bio: _readOptionalString(json['bio']),
-      avatarUrl: _readOptionalString(json['avatarUrl']),
+      id: json['id'] as int,
+
+      username: json['username'] as String,
+
+      displayName: json['displayName'] as String,
+
+      email: json['email'] as String?,
+
+      avatarUrl: json['avatarUrl'] as String?,
     );
   }
 }
@@ -71,21 +97,17 @@ class AuthSession {
   const AuthSession({required this.accessToken, this.user});
 
   final String accessToken;
+
   final AuthUser? user;
 
   factory AuthSession.fromJson(Map<String, dynamic> json) {
-    final rawUser = json['user'];
-    final user = rawUser is Map
-        ? AuthUser.fromJson(Map<String, dynamic>.from(rawUser))
-        : null;
+    final userJson = json['user'];
 
     return AuthSession(
-      accessToken: _readRequiredString(json, const <String>[
-        'accessToken',
-        'token',
-        'jwt',
-      ]),
-      user: user,
+      accessToken: json['accessToken'] as String,
+      user: userJson is Map
+          ? AuthUser.fromJson(Map<String, dynamic>.from(userJson))
+          : null,
     );
   }
 }
@@ -93,62 +115,52 @@ class AuthSession {
 class RegisterResult {
   const RegisterResult._({required this.email, this.session});
 
+  const RegisterResult.requiresLogin({required String email})
+    : this._(email: email);
+
+  const RegisterResult.authenticated({
+    required String email,
+
+    required AuthSession session,
+  }) : this._(email: email, session: session);
+
   final String email;
+
   final AuthSession? session;
 
+  bool get requiresLogin => session == null;
+
   bool get isAuthenticated => session != null;
-
-  factory RegisterResult.authenticated({
-    required String email,
-    required AuthSession session,
-  }) {
-    return RegisterResult._(email: email, session: session);
-  }
-
-  factory RegisterResult.requiresLogin({required String email}) {
-    return RegisterResult._(email: email);
-  }
 }
 
-String _readRequiredString(Map<String, dynamic> json, List<String> keys) {
-  for (final key in keys) {
-    final value = json[key];
-    if (value is String && value.trim().isNotEmpty) {
-      return value.trim();
-    }
+class AuthResponse {
+  const AuthResponse({
+    required this.accessToken,
+
+    required this.tokenType,
+
+    required this.expiresIn,
+
+    required this.user,
+  });
+
+  final String accessToken;
+
+  final String tokenType;
+
+  final int expiresIn;
+
+  final AuthUser user;
+
+  factory AuthResponse.fromJson(Map<String, dynamic> json) {
+    return AuthResponse(
+      accessToken: json['accessToken'] as String,
+
+      tokenType: json['tokenType'] as String,
+
+      expiresIn: json['expiresIn'] as int,
+
+      user: AuthUser.fromJson(Map<String, dynamic>.from(json['user'] as Map)),
+    );
   }
-
-  throw FormatException('Zorunlu metin alanı bulunamadı: ${keys.join(', ')}');
-}
-
-int _readRequiredInt(Map<String, dynamic> json, List<String> keys) {
-  for (final key in keys) {
-    final value = json[key];
-
-    if (value is int) {
-      return value;
-    }
-
-    if (value is num) {
-      return value.toInt();
-    }
-
-    if (value is String) {
-      final parsedValue = int.tryParse(value);
-      if (parsedValue != null) {
-        return parsedValue;
-      }
-    }
-  }
-
-  throw FormatException('Zorunlu sayısal alan bulunamadı: ${keys.join(', ')}');
-}
-
-String? _readOptionalString(dynamic value) {
-  if (value is! String) {
-    return null;
-  }
-
-  final trimmedValue = value.trim();
-  return trimmedValue.isEmpty ? null : trimmedValue;
 }
