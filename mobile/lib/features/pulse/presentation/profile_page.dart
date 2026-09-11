@@ -1,40 +1,69 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/pulse_repository.dart';
+
 import '../data/safety_moderation_api.dart';
+
 import '../domain/moderation_models.dart';
+
 import '../domain/pulse_models.dart';
+
 import 'blocked_users_page.dart';
+
 import 'report_sheet.dart';
+
 import 'social_graph_page.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({
     super.key,
+
     this.username,
+
     this.initialProfile,
+
     this.loadProfile,
+
     this.updateProfile,
+
     this.isCurrentUser,
+
     this.showAppBar = true,
+
     this.onUnauthorized,
+
+    this.exportAccountData,
+
     this.deleteAccount,
+
     this.onAccountDeleted,
   });
 
   final String? username;
+
   final PulseProfile? initialProfile;
+
   final Future<PulseProfile?> Function()? loadProfile;
+
   final Future<PulseProfile> Function(UpdateProfileRequest request)?
   updateProfile;
+
   final bool? isCurrentUser;
+
   final bool showAppBar;
+
   final VoidCallback? onUnauthorized;
+
+  final Future<void> Function()? exportAccountData;
+
   final Future<void> Function()? deleteAccount;
+
   final VoidCallback? onAccountDeleted;
 
   @override
@@ -43,16 +72,23 @@ class ProfilePage extends ConsumerStatefulWidget {
 
 class _ProfilePageState extends ConsumerState<ProfilePage> {
   PulseProfile? _profile;
+
   List<PulsePost> _posts = const <PulsePost>[];
 
   Object? _profileError;
+
   Object? _postsError;
 
   bool _isLoadingProfile = true;
+
   bool _isLoadingPosts = true;
+
   bool _isBlocked = false;
+
   bool _isFollowRequestPending = false;
+
   bool? _isFollowingOverride;
+
   int? _followerCountOverride;
 
   bool get _isOwnProfile =>
@@ -110,7 +146,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       if (showLoading) {
         _isLoadingProfile = true;
       }
-
       _profileError = null;
     });
 
@@ -211,7 +246,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (_) {
+        builder: (BuildContext context) {
           return SocialGraphPage(
             username: username,
             kind: kind,
@@ -362,8 +397,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   Future<void> _reportPost(PulsePost post) async {
     final sent = await ReportSheet.show(
       context,
+
       targetType: ReportTargetType.post,
+
       targetId: post.id,
+
       onUnauthorized: widget.onUnauthorized,
     );
 
@@ -379,22 +417,25 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     );
   }
 
-  Future<void> _openBlockedUsers() async {
+  Future<void> openBlockedUsers() async {
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (_) {
+        builder: (BuildContext context) {
           return BlockedUsersPage(onUnauthorized: widget.onUnauthorized);
         },
       ),
     );
   }
 
-  Future<void> _openSettings() async {
+  Future<void> openSettings() async {
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (_) {
+        builder: (BuildContext context) {
           return _ProfileSettingsPage(
+            exportAccountData: widget.exportAccountData,
+
             deleteAccount: widget.deleteAccount,
+
             onAccountDeleted: widget.onAccountDeleted,
           );
         },
@@ -411,7 +452,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
     final updatedProfile = await showDialog<PulseProfile>(
       context: context,
-      builder: (_) {
+      builder: (BuildContext context) {
         return _EditProfileDialog(
           profile: profile,
           onSave: (request) {
@@ -563,7 +604,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                   break;
                               }
                             },
-                            itemBuilder: (_) {
+                            itemBuilder: (BuildContext context) {
                               return [
                                 PopupMenuItem<_ProfileSafetyAction>(
                                   value: _ProfileSafetyAction.block,
@@ -633,7 +674,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             label: const Text('Profili Düzenle'),
                           ),
                           OutlinedButton.icon(
-                            onPressed: _openBlockedUsers,
+                            onPressed: openBlockedUsers,
                             icon: const Icon(Icons.block_outlined),
                             label: const Text('Engellenen Hesaplar'),
                           ),
@@ -641,7 +682,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             key: const ValueKey<String>(
                               'profile-settings-button',
                             ),
-                            onPressed: _openSettings,
+                            onPressed: openSettings,
                             icon: const Icon(Icons.settings_outlined),
                             label: const Text('Ayarlar'),
                           ),
@@ -749,29 +790,91 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
 class _ProfileSettingsPage extends StatelessWidget {
   const _ProfileSettingsPage({
+    required this.exportAccountData,
+
     required this.deleteAccount,
+
     required this.onAccountDeleted,
   });
 
+  final Future<void> Function()? exportAccountData;
+
   final Future<void> Function()? deleteAccount;
+
   final VoidCallback? onAccountDeleted;
+
+  Future<void> _exportData(BuildContext context) async {
+    final action = exportAccountData;
+
+    if (action == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Veri dışa aktarma şu anda kullanılamıyor.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    try {
+      await action();
+
+      if (!context.mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Verileriniz dışa aktarıldı.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!context.mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Veriler dışa aktarılamadı. Tekrar deneyin.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Ayarlar')),
+
       body: ListView(
         children: [
           ListTile(
+            key: const ValueKey<String>('export-account-data-tile'),
+
+            leading: const Icon(Icons.download_outlined),
+
+            title: const Text('Verilerimi Dışa Aktar'),
+
+            onTap: () => _exportData(context),
+          ),
+
+          ListTile(
             key: const ValueKey<String>('delete-account-tile'),
+
             leading: const Icon(Icons.delete_outline),
+
             title: const Text('Hesabımı Sil'),
+
             onTap: () {
               showDialog<void>(
                 context: context,
-                builder: (_) {
+
+                builder: (BuildContext dialogContext) {
                   return _DeleteAccountDialog(
                     deleteAccount: deleteAccount,
+
                     onAccountDeleted: onAccountDeleted,
                   );
                 },
@@ -787,10 +890,12 @@ class _ProfileSettingsPage extends StatelessWidget {
 class _DeleteAccountDialog extends StatefulWidget {
   const _DeleteAccountDialog({
     required this.deleteAccount,
+
     required this.onAccountDeleted,
   });
 
   final Future<void> Function()? deleteAccount;
+
   final VoidCallback? onAccountDeleted;
 
   @override
@@ -799,6 +904,7 @@ class _DeleteAccountDialog extends StatefulWidget {
 
 class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
   bool _isDeleting = false;
+
   String? _errorMessage;
 
   Future<void> _deleteAccount() async {
@@ -842,23 +948,31 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Hesabımı Sil'),
+
       content: Column(
         mainAxisSize: MainAxisSize.min,
+
         crossAxisAlignment: CrossAxisAlignment.start,
+
         children: [
           const Text(
             'Hesabınızı kalıcı olarak silmek istediğinizden emin misiniz?',
           ),
+
           if (_errorMessage != null) ...[
             const SizedBox(height: 12),
+
             Text(
               _errorMessage!,
+
               key: const ValueKey<String>('delete-account-error'),
+
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ],
         ],
       ),
+
       actions: [
         TextButton(
           onPressed: _isDeleting
@@ -866,14 +980,19 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
               : () {
                   Navigator.of(context).pop();
                 },
+
           child: const Text('Vazgeç'),
         ),
+
         FilledButton(
           key: const ValueKey<String>('confirm-delete-account'),
+
           onPressed: _isDeleting ? null : _deleteAccount,
+
           child: _isDeleting
               ? const SizedBox.square(
                   dimension: 20,
+
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Text('Hesabı Sil'),
@@ -887,18 +1006,24 @@ class _ProfileStat extends StatelessWidget {
   const _ProfileStat({required this.value, required this.label, this.onTap});
 
   final int value;
+
   final String label;
+
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final content = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+
         crossAxisAlignment: CrossAxisAlignment.start,
+
         children: [
           Text('$value', style: Theme.of(context).textTheme.titleMedium),
+
           Text(label, style: Theme.of(context).textTheme.bodySmall),
         ],
       ),
@@ -924,6 +1049,7 @@ class _ProfilePostCard extends StatelessWidget {
   const _ProfilePostCard({required this.post, this.onReport});
 
   final PulsePost post;
+
   final VoidCallback? onReport;
 
   @override
@@ -1022,6 +1148,7 @@ class _EditProfileDialog extends StatefulWidget {
   const _EditProfileDialog({required this.profile, required this.onSave});
 
   final PulseProfile profile;
+
   final Future<PulseProfile> Function(UpdateProfileRequest request) onSave;
 
   @override
@@ -1030,10 +1157,13 @@ class _EditProfileDialog extends StatefulWidget {
 
 class _EditProfileDialogState extends State<_EditProfileDialog> {
   late final TextEditingController _displayNameController;
+
   late final TextEditingController _bioController;
+
   late final TextEditingController _avatarUrlController;
 
   bool _isSaving = false;
+
   String? _errorMessage;
 
   @override
@@ -1052,8 +1182,11 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
   @override
   void dispose() {
     _displayNameController.dispose();
+
     _bioController.dispose();
+
     _avatarUrlController.dispose();
+
     super.dispose();
   }
 
@@ -1121,42 +1254,63 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Profili Düzenle'),
+
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
+
           children: [
             TextField(
               key: const ValueKey<String>('profile-display-name-field'),
+
               controller: _displayNameController,
+
               enabled: !_isSaving,
+
               decoration: const InputDecoration(labelText: 'Görünen ad'),
             ),
+
             const SizedBox(height: 12),
+
             TextField(
               key: const ValueKey<String>('profile-bio-field'),
+
               controller: _bioController,
+
               enabled: !_isSaving,
+
               minLines: 2,
+
               maxLines: 4,
+
               decoration: const InputDecoration(labelText: 'Biyografi'),
             ),
+
             const SizedBox(height: 12),
+
             TextField(
               key: const ValueKey<String>('profile-avatar-url-field'),
+
               controller: _avatarUrlController,
+
               enabled: !_isSaving,
+
               decoration: const InputDecoration(labelText: 'Avatar URL'),
             ),
+
             if (_errorMessage != null) ...[
               const SizedBox(height: 12),
+
               Text(
                 _errorMessage!,
+
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ],
           ],
         ),
       ),
+
       actions: [
         TextButton(
           onPressed: _isSaving
@@ -1164,21 +1318,29 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
               : () {
                   Navigator.of(context).pop();
                 },
+
           child: const Text('İptal'),
         ),
+
         FilledButton(
           key: const ValueKey<String>('profile-save-button'),
+
           onPressed: _isSaving ? null : _save,
+
           child: Row(
             mainAxisSize: MainAxisSize.min,
+
             children: [
               if (_isSaving) ...[
                 const SizedBox.square(
                   dimension: 20,
+
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
+
                 const SizedBox(width: 8),
               ],
+
               const Text('Kaydet'),
             ],
           ),
