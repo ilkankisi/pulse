@@ -1,157 +1,116 @@
-Feature: Öncelik 1 ürün tamamlama deneyimi
+# Feature: Öncelik 1 ürün tamamlama deneyimi
 
-Scope
+## Scope
 
 Ürünün temel sosyal deneyimini tamamlayan yüzeyler:
 
-Kullanıcı ve içerik araması
+- Kullanıcı ve içerik araması
+- Gönderi oluştururken mention keşfi ve seçimi
+- Profilde sabitlenmiş gönderi gösterimi
+- Kullanıcıyı sessize alma ve sessizden çıkarma
+- Gönderi oluşturma taslağının korunması
+- Kullanıcının kendi gönderisini düzenlemesi
 
-Gönderi oluştururken mention keşfi ve seçimi
-
-Profilde sabitlenmiş gönderi gösterimi
-
-Kullanıcıyı sessize alma ve sessizden çıkarma
-
-Gönderi oluşturma taslağının korunması
-
-Kullanıcının kendi gönderisini düzenlemesi
-
-Tüm API, response, permission ve mutation davranışları canonical docs/api-contract.md sözleşmesinden map edilir.
+Tüm API, response, permission ve mutation davranışları canonical `docs/api-contract.md` sözleşmesinden map edilir.
 
 UI:
 
-API kontratında olmayan endpoint üretmez.
+- API kontratında olmayan endpoint üretmez.
+- API kontratında olmayan query parametresi üretmez.
+- API kontratında olmayan role, status, enum veya action üretmez.
+- Backend'in desteklemediği davranışı yalnız local state ile kalıcı ürün özelliği gibi göstermez.
+- Canonical response field adlarını yeniden tanımlamaz.
 
-API kontratında olmayan query parametresi üretmez.
+## User flows
 
-API kontratında olmayan role, status, enum veya action üretmez.
+### Arama
 
-Backend'in desteklemediği davranışı yalnız local state ile kalıcı ürün özelliği gibi göstermez.
-
-Canonical response field adlarını yeniden tanımlamaz.
-
-User flows
-
-Arama
-
-Arama giriş noktası → Arama ekranı.
-
-Kullanıcı sorgusunu girer.
-
-Sonuçlar canonical backend response'una göre render edilir.
-
-Kullanıcı sonucu → ProfilePage(result.username).
-
-Gönderi sonucu → ilgili Gönderi Detayı.
+1. Arama giriş noktası → Arama ekranı.
+2. Kullanıcı sorgusunu girer.
+3. Sonuçlar canonical backend response'una göre render edilir.
+4. Kullanıcı sonucu → `ProfilePage(result.username)`.
+5. Gönderi sonucu → ilgili Gönderi Detayı.
 
 Kurallar:
 
-Sonuç bulunmaması empty state'tir.
+- Sonuç bulunmaması empty state'tir.
+- Ağ/5xx empty state değildir.
+- 401 merkezi login akışına gider.
+- Yeni sorgu başladığında eski sorgunun geciken cevabı güncel sonucu overwrite etmez.
 
-Ağ/5xx empty state değildir.
+### Mention
 
-401 merkezi login akışına gider.
-
-Yeni sorgu başladığında eski sorgunun geciken cevabı güncel sonucu overwrite etmez.
-
-Mention
-
-Composer içinde @ mention bağlamı başladığında suggestion yüzeyi açılır.
-
-Suggestion verisi yalnız canonical API davranışından gelir.
-
-Kullanıcı suggestion seçtiğinde canonical username composer'a eklenir.
-
-Suggestion loading, empty veya error durumunda composer taslağı korunur.
-
-Render edilmiş mention destekleniyorsa ProfilePage(username) açar.
+1. Composer içinde `@` mention bağlamı başladığında suggestion yüzeyi açılır.
+2. Suggestion verisi yalnız canonical API davranışından gelir.
+3. Kullanıcı suggestion seçtiğinde canonical username composer'a eklenir.
+4. Suggestion loading, empty veya error durumunda composer taslağı korunur.
+5. Render edilmiş mention destekleniyorsa `ProfilePage(username)` açar.
 
 UI backend'in tanımadığı mention identifier veya syntax üretmez.
 
-Profil ve pinned post
+### Profil ve pinned post
 
-Profil yüklenir.
-
-Backend response sabitlenmiş gönderi içeriyorsa profil gönderilerinden önce pinned yüzeyi gösterilir.
-
-Pinned gönderi mevcut post-card bileşenini yeniden kullanır.
-
-Pinned karta dokunma → Gönderi Detayı.
+1. Profil yüklenir.
+2. Backend response sabitlenmiş gönderi içeriyorsa profil gönderilerinden önce pinned yüzeyi gösterilir.
+3. Pinned gönderi mevcut post-card bileşenini yeniden kullanır.
+4. Pinned karta dokunma → Gönderi Detayı.
 
 Kurallar:
 
-Pinned state yalnız backend sonucundan gelir.
+- Pinned state yalnız backend sonucundan gelir.
+- Pinned gönderi yoksa placeholder veya empty panel gösterilmez.
 
-Pinned gönderi yoksa placeholder veya empty panel gösterilmez.
-
-Mute / unmute
+### Mute / unmute
 
 Başka kullanıcı profili → güvenlik/overflow menüsü.
 
 Backend relationship state'e göre:
 
-Sessize Al
-
-Sessizden Çıkar
-
-Kurallar:
-
-Kendi profilinde mute/unmute gösterilmez.
-
-Mutation sırasında yalnız ilgili aksiyon loading/disabled olur.
-
-Başarı sonrası state backend sonucuyla senkronize edilir.
-
-Hata halinde önceki state korunur.
-
-Feed görünürlük davranışı UI'da yeniden uygulanmaz.
-
-Draft
-
-Composer'daki yazılmış içerik gönderim tamamlanana veya kullanıcı açıkça silene kadar korunur.
-
-Ağ hatası taslağı temizlemez.
-
-Validation hatası taslağı temizlemez.
-
-Mention lookup loading/error taslağı temizlemez.
-
-Başarılı gönderim taslağı temizler.
-
-İçerik bulunan composer kapatılırken discard confirmation gösterilir.
-
-Vazgeç composer'a döner.
-
-Taslağı Sil taslağı temizler ve composer'ı kapatır.
-
-Backend desteği yoksa cross-device draft sync üretilmez.
-
-Gönderi düzenleme
-
-Kullanıcının kendi düzenlenebilir gönderisi → overflow → Gönderiyi Düzenle.
-
-Edit ekranı mevcut içerikle açılır.
-
-Kullanıcı canonical validation kuralları içinde içeriği günceller.
-
-Başarılı mutation sonrası backend'in döndürdüğü güncel post render edilir.
+- Sessize Al
+- Sessizden Çıkar
 
 Kurallar:
 
-Değişmiş fakat kaydedilmemiş içerikle çıkılırsa discard confirmation gösterilir.
+- Kendi profilinde mute/unmute gösterilmez.
+- Mutation sırasında yalnız ilgili aksiyon loading/disabled olur.
+- Başarı sonrası state backend sonucuyla senkronize edilir.
+- Hata halinde önceki state korunur.
+- Feed görünürlük davranışı UI'da yeniden uygulanmaz.
 
-Başkasının gönderisinde edit aksiyonu gösterilmez.
+### Draft
 
-Backend izin vermiyorsa local edit kalıcılaştırılmaz.
+- Composer'daki yazılmış içerik gönderim tamamlanana veya kullanıcı açıkça silene kadar korunur.
+- Ağ hatası taslağı temizlemez.
+- Validation hatası taslağı temizlemez.
+- Mention lookup loading/error taslağı temizlemez.
+- Başarılı gönderim taslağı temizler.
+- İçerik bulunan composer kapatılırken discard confirmation gösterilir.
+- Vazgeç composer'a döner.
+- Taslağı Sil taslağı temizler ve composer'ı kapatır.
+- Backend desteği yoksa cross-device draft sync üretilmez.
 
-Components
+### Gönderi düzenleme
 
-Arama alanı
+1. Kullanıcının kendi düzenlenebilir gönderisi → overflow → Gönderiyi Düzenle.
+2. Edit ekranı mevcut içerikle açılır.
+3. Kullanıcı canonical validation kuralları içinde içeriği günceller.
+4. Başarılı mutation sonrası backend'in döndürdüğü güncel post render edilir.
 
-Token: {components.input}
+Kurallar:
+
+- Değişmiş fakat kaydedilmemiş içerikle çıkılırsa discard confirmation gösterilir.
+- Başkasının gönderisinde edit aksiyonu gösterilmez.
+- Backend izin vermiyorsa local edit kalıcılaştırılmaz.
+
+## Components
+
+### Arama alanı
+
+Token: `{components.input}`
 
 Widget hierarchy:
 
+```text
 SearchPage
 └── Scaffold
     ├── AppBar
