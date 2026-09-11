@@ -1,10 +1,15 @@
 import 'package:dio/dio.dart';
+
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/auth_api.dart';
+
 import '../domain/auth_models.dart';
+
 import '../../pulse/presentation/app_shell.dart';
+
 import 'login_page.dart';
 
 enum _GateStatus { checking, unauthenticated, authenticated }
@@ -18,14 +23,19 @@ class AuthGate extends ConsumerStatefulWidget {
 
 class _AuthGateState extends ConsumerState<AuthGate> {
   _GateStatus _status = _GateStatus.checking;
+
   AuthUser? _user;
+
   String _prefilledEmail = '';
+
   String? _errorMessage;
+
   bool _isSubmitting = false;
 
   @override
   void initState() {
     super.initState();
+
     Future<void>.microtask(_checkSession);
   }
 
@@ -83,6 +93,7 @@ class _AuthGateState extends ConsumerState<AuthGate> {
   Future<void> _login(String email, String password) async {
     setState(() {
       _isSubmitting = true;
+
       _errorMessage = null;
     });
 
@@ -126,6 +137,7 @@ class _AuthGateState extends ConsumerState<AuthGate> {
   Future<bool> _register(RegisterRequest request) async {
     setState(() {
       _isSubmitting = true;
+
       _errorMessage = null;
     });
 
@@ -209,18 +221,28 @@ class _AuthGateState extends ConsumerState<AuthGate> {
         return const Scaffold(
           body: SafeArea(child: Center(child: CircularProgressIndicator())),
         );
+
       case _GateStatus.unauthenticated:
         return LoginPage(
           initialEmail: _prefilledEmail,
+
           isSubmitting: _isSubmitting,
+
           errorMessage: _errorMessage,
+
           onLogin: _login,
+
           onRegister: _register,
         );
+
       case _GateStatus.authenticated:
         return AppShell(
+          key: ValueKey<AuthUser>(_user!),
+
           currentUser: _user!,
+
           onLogout: _logout,
+
           onUnauthorized: _handleUnauthorized,
         );
     }
