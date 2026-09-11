@@ -18,25 +18,17 @@ Başka kullanıcıyı takipten çıkarma.
 
 Başka kullanıcı profillerinde ilişki durumuna göre doğru CTA'yı gösterme.
 
-Canonical feed contract destekliyorsa “Takip Ettiklerim” feed görünümünü seçme.
+“Takip Ettiklerim” feed filtresi kabul yüzeyini contract-gated olarak tasarlama.
 
-Canonical profile/relationship response destekliyorsa “Seni takip ediyor” ve “Karşılıklı takip” ilişki göstergelerini görüntüleme.
+“Seni takip ediyor” ve “Karşılıklı takip” ilişki göstergelerini contract-gated olarak tasarlama.
 
 Loading, empty, error ve mutation durumlarını tutarlı biçimde ele alma.
 
-Tüm endpoint, response alanı ve permission davranışları canonical docs/api-contract.md sözleşmesinden map edilir.
+Tüm endpoint, response alanı ve permission davranışları canonical API sözleşmesinden map edilir.
 
-UI:
+UI hiçbir zaman sözleşmede bulunmayan endpoint, query parametresi, response alanı veya sosyal ilişki durumu üretmez.
 
-API kontratında olmayan sosyal ilişki durumu üretmez.
-
-“Takip Ettiklerim” feed yüzeyi contract-gated'tir; canonical feed contract bu davranışı tanımlıyorsa gösterilir ve yalnız sözleşmedeki request mapping'i kullanılır.
-
-“Seni takip ediyor” ve “Karşılıklı takip” göstergeleri contract-gated'tir; yalnız canonical response gerekli ilişki bilgisini güvenilir biçimde sağladığında gösterilir.
-
-Başka profil görüntülenirken current-user username kullanarak route bağlamını değiştirmez.
-
-Takipçi ve takip edilen sayılarının kaynağı canonical profile response'tur.
+“Takip Ettiklerim” ve ilişki göstergeleri kabul kapsamının zorunlu yüzeyleridir. Canonical contract desteğinin bulunmaması bu yüzeyleri tasarım kapsamından çıkarmaz; bunun yerine her yüzey için açık bir contract-unavailable durumu tanımlanır.
 
 User flows
 
@@ -60,9 +52,9 @@ Takipçiler
 
 FollowersPage(username) route parametresindeki profile ait takipçileri yükler.
 
-Başlık kullanıcıya anlaşılır şekilde “Takipçiler” olarak gösterilir.
+Başlık: “Takipçiler”.
 
-Liste canonical followers endpoint response'una göre render edilir.
+Liste canonical followers response'una göre render edilir.
 
 Her satır canonical kullanıcı kimliği ve username değerini kullanır.
 
@@ -82,9 +74,9 @@ Takip edilenler
 
 FollowingPage(username) route parametresindeki profile ait takip edilen hesapları yükler.
 
-Başlık kullanıcıya anlaşılır şekilde “Takip Edilenler” olarak gösterilir.
+Başlık: “Takip Edilenler”.
 
-Liste canonical following endpoint response'una göre render edilir.
+Liste canonical following response'una göre render edilir.
 
 Her satır canonical kullanıcı kimliği ve username değerini kullanır.
 
@@ -150,470 +142,407 @@ Satırın ana navigasyon davranışı her durumda ProfilePage(row.username) olur
 
 Mutation aksiyonu ile satır navigasyonu birbirine karıştırılmaz.
 
-Takip Ettiklerim feed filtresi — zorunlu contract-gated kabul yüzeyi
+Components
 
-Bu yüzey Öncelik 2 görev kabul kapsamının zorunlu bir parçasıdır. Canonical feed contract desteğine bağlı olarak available veya contract-unavailable davranışıyla tasarlanır; contract desteğinin olmaması bu kabul kriterini kapsamdan çıkarmaz.
+Profil sosyal sayaçları
 
-Available
+Token: {components.social-summary-card}
+
+Widget hierarchy:
+
+Card
+└── Padding
+    └── Row
+        ├── InkWell
+        │   └── Column
+        │       ├── Text(followerCount)
+        │       └── Text("Takipçi")
+        └── InkWell
+            └── Column
+                ├── Text(followingCount)
+                └── Text("Takip")
+
+fluttertemplates: Social Profile — /widgets/social
+
+Kurallar:
+
+Sayaçlar canonical profile response değerlerinden gelir.
+
+Takipçi sayacı → FollowersPage.
+
+Takip sayacı → FollowingPage.
+
+Sayaç varsa karşılık gelen liste ekranı ve empty/error state zorunludur.
+
+Takipçiler / Takip Edilenler listesi
+
+Token: {components.social-graph-list}
+
+Widget hierarchy:
+
+Scaffold
+├── AppBar
+│   └── Text("Takipçiler" | "Takip Edilenler")
+└── body
+    └── state
+        ├── loading: ListView
+        │   └── shimmer rows
+        ├── success: ListView
+        │   └── user row
+        │       ├── CircleAvatar
+        │       ├── Column
+        │       │   ├── Text(displayName if available)
+        │       │   └── Text("@username")
+        │       └── optional canonical relationship action
+        ├── empty: EmptyState
+        └── error: ErrorState
+            └── FilledButton("Yeniden Dene")
+
+fluttertemplates: User Search / Social Profile — /widgets/social
+
+Kurallar:
+
+Satır tap → ProfilePage(row.username).
+
+Relationship action yalnız canonical row state bunu destekliyorsa gösterilir.
+
+404 veya canonical “kayıt yok” semantiği empty state'tir.
+
+Network/5xx/403 empty olarak gösterilmez.
+
+Takip Et / Takibi Bırak CTA
+
+Token: {components.relationship-action}
+
+Widget hierarchy:
+
+FilledButton | OutlinedButton
+├── state: idle
+│   └── Text("Takip Et" | "Takibi Bırak")
+└── state: loading
+    └── SizedBox
+        └── CircularProgressIndicator
+
+fluttertemplates: Social Profile — /widgets/social
+
+Kurallar:
+
+Kendi profilinde gösterilmez.
+
+Mutation sırasında disabled olur.
+
+Başarısız mutation mevcut doğrulanmış state'i bozmaz.
+
+CTA metni yalnız canonical relationship state'ten türetilir.
+
+Takip Ettiklerim feed filtresi — zorunlu kabul yüzeyi
+
+Token: {components.following-feed-filter}
+
+Bu yüzey kabul kapsamının zorunlu parçasıdır ve iki contract durumuyla tasarlanır.
+
+Contract available
 
 Canonical feed contract takip edilen hesaplarla sınırlı bir feed scope/filter tanımlıyorsa Ana Akış içinde “Takip Ettiklerim” seçimi render edilir.
 
-Seçim mevcut feed route'u içinde kalır; yeni NavigationBar veya NavigationDrawer destination oluşturulmaz.
+Widget hierarchy:
+
+FeedPage
+├── AppBar
+└── body
+    └── Column
+        ├── feed filter region
+        │   └── SegmentedButton | FilterChip row
+        │       ├── canonical default feed option
+        │       └── option: Text("Takip Ettiklerim")
+        └── Expanded
+            └── feed state
+                ├── loading: feed skeleton
+                ├── success: ListView
+                │   └── PostCard*
+                ├── empty: EmptyState
+                └── error: ErrorState
+                    └── FilledButton("Yeniden Dene")
+
+fluttertemplates: Activity Feed — /widgets/social
+
+Kurallar:
+
+Seçim mevcut feed route'u içinde kalır.
+
+Yeni NavigationBar veya NavigationDrawer destination oluşturulmaz.
 
 Request yalnız canonical contract'ta tanımlanan endpoint, parametre ve değer mapping'iyle oluşturulur.
 
 UI kendi following, followedOnly, scope veya benzeri query parametresi/değeri üretmez.
 
-Scope değiştiğinde eski isteğin geciken cevabı yeni seçimin sonucunu overwrite etmez.
+Filtre değişiminde önceki liste yeni scope altında stale içerik olarak gösterilmez.
 
-Başarılı fakat boş canonical “Takip Ettiklerim” sonucu empty state'tir; network/5xx empty state değildir.
+Loading yalnız feed gövdesini etkiler.
 
-401 merkezi login akışına gider.
+Empty state filtre bağlamını açıkça belirtir.
 
-403 normal empty state değildir.
+Retry aynı seçili filtreyi korur.
 
-Contract-unavailable
+Contract unavailable
 
-Canonical feed contract bu davranış için endpoint/request mapping'i tanımlamıyorsa seçim kontrolü render edilmez.
-
-Placeholder, disabled kontrol veya client-side “Takip Ettiklerim” filtresi gösterilmez.
-
-UI yeni endpoint, query parametresi, enum, scope değeri veya client-side kalıcı feed kaynağı üretmez.
-
-Bu durum kabul yüzeyinin kapsamdan çıkarılması değil, zorunlu kabul yüzeyinin tasarlanmış contract-unavailable sonucudur.
-
-Seni takip ediyor / Karşılıklı takip göstergeleri — zorunlu contract-gated kabul yüzeyleri
-
-Bu iki gösterge Öncelik 2 görev kabul kapsamının zorunlu parçalarıdır. Her biri canonical profile/relationship response desteğine bağlı olarak available veya contract-unavailable davranışıyla ayrı ayrı değerlendirilir; canonical alanın bulunmaması kabul kriterini kapsamdan çıkarmaz.
-
-Seni takip ediyor — available
-
-Canonical response görüntülenen kullanıcının current user'ı takip ettiğini açık ve güvenilir biçimde bildiriyorsa profil kimlik alanında ikincil “Seni takip ediyor” göstergesi render edilir.
-
-Seni takip ediyor — contract-unavailable
-
-Canonical response bu yönlü ilişki bilgisini sağlamıyorsa gösterge render edilmez.
-
-Local followers listesi, tahmin veya optimistic state bu ilişkiyi üretmek için kullanılmaz.
-
-Karşılıklı takip — available
-
-Canonical response karşılıklı takip ilişkisini açıkça sağlıyorsa veya contract iki yönlü relationship alanlarının bu amaçla güvenilir biçimde birlikte değerlendirilmesini tanımlıyorsa “Karşılıklı takip” göstergesi render edilir.
-
-Karşılıklı takip — contract-unavailable
-
-Canonical response karşılıklı ilişkiyi güvenilir biçimde belirlemeye izin vermiyorsa gösterge render edilmez.
-
-Local followers/following listelerinin kesişiminden kalıcı ilişki durumu üretilmez.
-
-Göstergeler follow/unfollow CTA değildir ve “Takip Et” / “Takibi Bırak” mutation davranışını değiştirmez.
-
-“Karşılıklı takip” local followers/following liste üyeliği, liste uzunluğu veya optimistic state üzerinden kalıcı ilişki durumu olarak türetilmez.
-
-Göstergeler ikincil metin/chip stilinde, dinamik metin ölçeklendirmeyi destekleyecek biçimde render edilir.
-
-Contract-unavailable durumda tahmini, boş, skeleton veya disabled ilişki etiketi gösterilmez.
-
-Components
-
-Profil sosyal istatistikleri
-
-Token: {components.profile-stats}
+Canonical feed contract takip edilen hesaplarla sınırlı bir request mapping'i tanımlamıyorsa yüzey tasarımdan çıkarılmaz.
 
 Widget hierarchy:
 
-ProfileStats
-└── Row
-    ├── StatButton
-    │   ├── Text(followerCount)
-    │   └── Text("Takipçi")
-    └── StatButton
-        ├── Text(followingCount)
-        └── Text("Takip")
+FeedPage
+├── AppBar
+└── body
+    └── Column
+        ├── feed filter region
+        │   └── Tooltip / helper region
+        │       └── disabled FilterChip
+        │           └── Text("Takip Ettiklerim")
+        ├── Text("Takip Ettiklerim görünümü şu anda kullanılamıyor.")
+        └── Expanded
+            └── canonical default feed
 
 Kurallar:
 
-Değerler canonical profile response'tan gelir.
+Disabled yüzey herhangi bir HTTP isteği üretmez.
 
-Sayaçlar local liste uzunluğundan türetilerek kalıcı kaynak kabul edilmez.
+Kullanıcıya default feed gösterilmeye devam edilir.
 
-Her sayaç minimum 44x44px dokunma alanına sahiptir.
+“Takip Ettiklerim” seçilmiş gibi sahte state oluşturulmaz.
 
-Dinamik metin ölçeklendirmede değer ve etiket okunabilir kalır.
+Yeni endpoint veya parametre icat edilmez.
 
-Profil sahibi değiştiğinde sayaçların route bağlamı da yeni profile.username olur.
+Bu durum kabul yüzeyinin tasarlandığını kanıtlar; kriter kapsamdan çıkarılmış sayılmaz.
 
-Sosyal graf liste öğesi
+Profil ilişki göstergeleri — zorunlu kabul yüzeyi
 
-Token: {components.social-graph-list-item}
+Token: {components.relationship-indicators}
+
+Bu yüzey “Seni takip ediyor” ve “Karşılıklı takip” durumlarını kapsar ve iki contract durumuyla tasarlanır.
+
+Contract available
+
+Canonical profile/relationship response gerekli ilişki bilgisini güvenilir biçimde sağlıyorsa başka kullanıcı profilinde relationship CTA yakınında gösterilir.
 
 Widget hierarchy:
 
-InkWell
-└── Padding
-    └── Row
-        ├── CircleAvatar
-        ├── Expanded
-        │   └── Column
-        │       ├── Text(displayName)
-        │       └── Text("@username")
-        └── optional relationship action
+ProfileHeader
+└── Column
+    ├── identity row
+    │   ├── CircleAvatar
+    │   └── Column
+    │       ├── Text(displayName)
+    │       └── Text("@username")
+    ├── relationship indicator region
+    │   └── Wrap
+    │       ├── optional AssistChip
+    │       │   └── Text("Seni takip ediyor")
+    │       └── optional AssistChip
+    │           └── Text("Karşılıklı takip")
+    └── relationship CTA
+        └── FilledButton | OutlinedButton
+
+fluttertemplates: Social Profile — /widgets/social
 
 Kurallar:
 
-Avatar yoksa mevcut avatar fallback pattern'i reuse edilir.
+“Seni takip ediyor” yalnız canonical response bunun doğru olduğunu açıkça gösteriyorsa görünür.
 
-Display name ve username canonical response'tan gelir.
+“Karşılıklı takip” yalnız canonical response iki yönlü ilişkiyi güvenilir biçimde belirlemeye izin veriyorsa görünür.
 
-Satıra dokunma → ProfilePage(row.username).
+Göstergeler tahmin amacıyla follower/following count değerlerinden türetilmez.
 
-Tüm satırın minimum dokunma yüksekliği 44px'tir.
+CTA state'i ile indicator state'i farklı kaynaklardan geliyorsa biri diğerinden varsayılmaz.
 
-Uzun display name tek satırda uygun ellipsis davranışı kullanabilir.
+Kendi profilinde bu relationship göstergeleri gösterilmez.
 
-Username görünür ve profile navigasyonunda canonical değer olarak kullanılır.
+Mutation sonrasında canonical response/refetch ile yeniden hesaplanır.
 
-Block/report gibi farklı amaçlı aksiyonlar bu satıra duplicate edilmez.
+Contract unavailable
 
-Relationship CTA
-
-Token: {components.relationship-button}
-
-Durumlar:
-
-Follow ediliyor değil → FilledButton veya mevcut primary relationship button: “Takip Et”.
-
-Follow ediliyor → OutlinedButton veya mevcut secondary relationship button: “Takibi Bırak”.
-
-Mutation → spinner/progress indicator + disabled state.
-
-Kendi profilinde → relationship CTA yok.
-
-Kurallar:
-
-Buton etiketi backend relationship state'e göre belirlenir.
-
-Optimistic görsel değişiklik kalıcı doğruluk kaynağı değildir.
-
-Başarılı response sonrası canonical state kullanılır.
-
-Hata durumunda kullanıcı tekrar deneyebilir.
-
-Layout buton etiketinin iki durumu arasında gereksiz sıçrama üretmemelidir.
-
-Takip Ettiklerim feed seçim kontrolü
-
-Token: {typography.label-md}, {colors.primary-container}
+Canonical response gerekli ilişki bilgisini sağlamıyorsa kabul yüzeyi tasarımdan çıkarılmaz; nötr bir unavailable durumu tanımlanır.
 
 Widget hierarchy:
 
-FeedScopeControl
-└── contract supports following feed ise
-    └── SegmentedButton | single-select FilterChip group
-        ├── Text("Tümü")
-        └── Text("Takip Ettiklerim")
+ProfileHeader
+└── Column
+    ├── identity row
+    ├── relationship indicator region
+    │   └── Text("İlişki bilgisi kullanılamıyor")
+    └── canonical relationship CTA, available ise
 
 Kurallar:
 
-Kontrol yalnız canonical feed contract ilgili davranışı desteklediğinde render edilir.
+“Seni takip ediyor” veya “Karşılıklı takip” etiketi sahte olarak gösterilmez.
 
-Görsel etiketler request parametresi değildir; seçimin backend mapping'i canonical contract'tan gelir.
+Nötr unavailable metni ilişki yönü iddia etmez.
 
-Seçili durum Material 3 semantik token'larıyla anlaşılır biçimde gösterilir.
+Bu durum takip/follow CTA'sını canonical state destekliyorsa engellemez.
 
-Her seçim minimum 44x44px dokunma alanına sahiptir.
+Response alanı veya ikinci bir ilişki endpoint'i tasarım tarafından uydurulmaz.
 
-Loading sırasında aktif seçim anlaşılır kalır.
-
-Scope değişimi navigation stack'e yeni ana destination eklemez.
-
-Profil ilişki göstergeleri
-
-Token: {typography.body-sm}, {colors.text-secondary}
-
-Widget hierarchy:
-
-ProfileRelationshipContext
-└── Wrap
-    ├── canonical state varsa Text | AssistChip("Seni takip ediyor")
-    └── canonical state varsa Text | AssistChip("Karşılıklı takip")
-
-Kurallar:
-
-Her gösterge yalnız canonical response gerekli ilişki bilgisini sağladığında render edilir.
-
-Göstergeler follow/unfollow CTA yerine kullanılmaz.
-
-“Karşılıklı takip” local sosyal graf listelerinin kesişiminden kalıcı state olarak üretilmez.
-
-Göstergeler profile route veya mutation davranışını değiştirmez.
-
-Contract desteği yoksa boş chip, skeleton etiketi veya tahmini ilişki metni gösterilmez.
+Canonical destek eklendiğinde aynı region available hierarchy'ye geçer; navigation yapısı değişmez.
 
 Screen states
 
 FollowersPage
 
-Initial/loading
+Empty state:
 
-AppBar ve route bağlamı korunur.
+title: "Henüz takipçi yok"
 
-Liste alanında mevcut list skeleton/loading pattern'i kullanılır.
+description: "Bu profili takip eden hesaplar burada görünecek."
 
-Sahte kullanıcı satırı gösterilmez.
+primaryCta: yok
 
-Empty
+Error state:
 
-Başlık: “Henüz takipçi yok”
+title: "Takipçiler yüklenemedi"
 
-Açıklama: “Bu hesabı henüz kimse takip etmiyor.”
+description: "Bağlantını kontrol edip yeniden deneyebilirsin."
 
-Empty state yalnız başarılı fakat boş canonical response için gösterilir.
+primaryCta: "Yeniden Dene"
 
-CTA zorunlu değildir.
+401:
 
-Error
+merkezi login/session akışına yönlendir.
 
-Başlık: “Takipçiler yüklenemedi”
+403:
 
-Açıklama: “Takipçiler alınırken bir sorun oluştu.”
+title: "Bu listeye erişilemiyor"
 
-CTA: “Tekrar Dene”
-
-401 merkezi login akışına gider.
-
-403 empty state gibi gösterilmez.
-
-Yeniden deneme aynı username route bağlamını kullanır.
+empty state olarak gösterilmez.
 
 FollowingPage
 
-Initial/loading
+Empty state:
 
-AppBar ve route bağlamı korunur.
+title: "Henüz takip edilen hesap yok"
 
-Liste alanında mevcut list skeleton/loading pattern'i kullanılır.
+description: "Bu profilin takip ettiği hesaplar burada görünecek."
 
-Sahte kullanıcı satırı gösterilmez.
+primaryCta: yok
 
-Empty
+Error state:
 
-Başlık: “Henüz kimseyi takip etmiyor”
+title: "Takip edilenler yüklenemedi"
 
-Açıklama: “Bu hesabın takip ettiği kullanıcı bulunmuyor.”
+description: "Bağlantını kontrol edip yeniden deneyebilirsin."
 
-Empty state yalnız başarılı fakat boş canonical response için gösterilir.
+primaryCta: "Yeniden Dene"
 
-CTA zorunlu değildir.
+401:
 
-Error
+merkezi login/session akışına yönlendir.
 
-Başlık: “Takip edilenler yüklenemedi”
+403:
 
-Açıklama: “Takip edilen hesaplar alınırken bir sorun oluştu.”
+title: "Bu listeye erişilemiyor"
 
-CTA: “Tekrar Dene”
-
-401 merkezi login akışına gider.
-
-403 empty state gibi gösterilmez.
-
-Yeniden deneme aynı username route bağlamını kullanır.
+empty state olarak gösterilmez.
 
 Takip Ettiklerim feed filtresi
 
-Contract unavailable
+Available empty state:
 
-Canonical feed contract bu scope/filter davranışını tanımlamıyorsa seçim kontrolü render edilmez.
+title: "Takip ettiklerinden henüz gönderi yok"
 
-Bu durum kabul yüzeyinin kapsamdan kaldırılması değil, zorunlu kabul yüzeyinin tanımlı contract-unavailable state'idir.
+description: "Takip ettiğin hesapların gönderileri burada görünecek."
 
-Loading
+primaryCta: yok
 
-Seçili scope görünür kalır.
+Available error state:
 
-Önceki scope sonucu yeni scope sonucu gibi gösterilmez.
+title: "Gönderiler yüklenemedi"
 
-Empty
+description: "Bağlantını kontrol edip yeniden deneyebilirsin."
 
-Başlık: “Takip ettiklerinden henüz içerik yok”
+primaryCta: "Yeniden Dene"
 
-Yalnız canonical “Takip Ettiklerim” isteği başarılı ve boş döndüğünde gösterilir.
+Contract-unavailable:
 
-Network/5xx sonucu bu empty state'e dönüştürülmez.
+title: "Takip Ettiklerim"
 
-Error
+description: "Takip Ettiklerim görünümü şu anda kullanılamıyor."
 
-Feed error/retry pattern'i reuse edilir.
+primaryCta: yok
 
-Yeniden deneme aynı canonical feed scope mapping'ini kullanır.
-
-401 merkezi login akışına gider.
-
-403 empty state değildir.
+default feed görünmeye devam eder.
 
 İlişki göstergeleri
 
-Available
+Available:
 
-Canonical response destekliyorsa “Seni takip ediyor” ve/veya “Karşılıklı takip” ikincil profil bağlamında render edilir.
+exact canonical state'e göre “Seni takip ediyor” ve/veya “Karşılıklı takip” gösterilir.
 
-Unavailable
+Contract-unavailable:
 
-Gerekli canonical alan bulunmadığında gösterge render edilmez.
+title: yok
 
-Alan yokluğu profil veya sosyal graf error state'i değildir.
+description: "İlişki bilgisi kullanılamıyor."
 
-Bu contract-unavailable durum iki zorunlu kabul yüzeyinin kapsamdan çıkarıldığı anlamına gelmez; her gösterge için tasarlanmış sonuçtur.
+ilişki yönü tahmin edilmez.
 
-Follow mutation
+Follow / unfollow mutation
 
-Loading
+Success:
 
-Relationship CTA disabled olur.
+Takip sonrası snackbar: "Takip edildi."
 
-Sayfanın geri kalanı kullanılabilir kalır.
+Takipten çıkarma sonrası snackbar: "Takipten çıkarıldı."
 
-Full-screen loading kullanılmaz.
+Error:
 
-Success
+title: yok
 
-Backend'in canonical relationship state'i render edilir.
+snackbar: "İşlem tamamlanamadı. Tekrar deneyin."
 
-Profile relationship state güncellenir.
-
-Follower/following count gerekiyorsa canonical refetch sonucuyla güncellenir.
-
-İlgili açık sosyal graf verisi invalidate/refetch edilir.
-
-Error
-
-Mutation öncesindeki doğrulanmış relationship state korunur.
-
-CTA tekrar kullanılabilir hale gelir.
-
-Network/5xx profil ekranını empty state'e dönüştürmez.
-
-401 merkezi login akışına gider.
-
-403 permission/error davranışı olarak gösterilir.
-
-Unfollow mutation
-
-Loading
-
-Relationship CTA disabled olur.
-
-Sayfanın geri kalanı kullanılabilir kalır.
-
-Full-screen loading kullanılmaz.
-
-Success
-
-Backend'in canonical relationship state'i render edilir.
-
-Profile relationship state güncellenir.
-
-Follower/following count gerekiyorsa canonical refetch sonucuyla güncellenir.
-
-İlgili açık sosyal graf verisi invalidate/refetch edilir.
-
-Error
-
-Mutation öncesindeki doğrulanmış relationship state korunur.
-
-CTA tekrar kullanılabilir hale gelir.
-
-Network/5xx profil ekranını empty state'e dönüştürmez.
-
-401 merkezi login akışına gider.
-
-403 permission/error davranışı olarak gösterilir.
+doğrulanmış önceki relationship state korunur.
 
 Navigation
 
-ProfilePage(username) → “Takipçi” → FollowersPage(username).
+ProfilePage(username) → “Takipçi” sayacı → FollowersPage(username).
 
-ProfilePage(username) → “Takip” → FollowingPage(username).
+ProfilePage(username) → “Takip” sayacı → FollowingPage(username).
 
-FollowersPage(username) → kullanıcı satırı → ProfilePage(row.username).
+FollowersPage kullanıcı satırı → ProfilePage(row.username).
 
-FollowingPage(username) → kullanıcı satırı → ProfilePage(row.username).
+FollowingPage kullanıcı satırı → ProfilePage(row.username).
 
-Canonical feed contract destekliyorsa Ana Akış içindeki “Tümü” ↔ “Takip Ettiklerim” seçimi aynı feed route'u içinde gerçekleşir; yeni global navigation destination oluşturmaz.
+“Takip Ettiklerim” mevcut FeedPage içinde filtre yüzeyidir; yeni top-level destination değildir.
 
-Follow/unfollow mutation route değiştirmez.
+Relationship indicator kullanıcıyı yeni route'a götürmez; profil bağlamında salt-okunur durum göstergesidir.
 
-Başka profil görüntülenirken sosyal graf endpoint'i current user adına çevrilmez.
+Follow/unfollow CTA profil route'unu değiştirmez.
 
-Back navigation önceki profil/list bağlamını korur.
-
-Contract boundaries
-
-Bu feature canonical API'de bulunmayan davranışları tasarım gereksinimi gibi tanımlamaz.
-
-Özellikle:
-
-“Takip Ettiklerim” feed filtresi kabul kapsamındaki zorunlu contract-gated bir yüzeydir; canonical feed contract ilgili scope/filter mapping'ini tanımlıyorsa available olarak gösterilir, tanımlamıyorsa contract-unavailable olarak kontrol render edilmez. Her iki durum da acceptance'ın tasarlanmış sonucudur.
-
-“Seni takip ediyor” kabul kapsamındaki zorunlu contract-gated bir göstergedir; canonical profile veya relationship response bu ilişki bilgisini sağlıyorsa available olarak gösterilir, sağlamıyorsa contract-unavailable olur ve tahmin edilmez.
-
-“Karşılıklı takip” kabul kapsamındaki zorunlu contract-gated bir göstergedir; canonical response karşılıklı ilişkiyi açıkça sağlıyor veya sözleşme iki yönlü alanların güvenilir biçimde birlikte değerlendirilmesine izin veriyorsa available olarak gösterilir; aksi halde contract-unavailable olur ve local listelerden türetilmez.
-
-Yeni relationship endpoint'i veya query parametresi üretilmez.
-
-Sosyal graf için client-side kalıcı ilişki kaynağı oluşturulmaz.
-
-Profile count değerleri liste uzunluğundan canonical alan yerine türetilmez.
+Route username hiçbir durumda current-user username ile sessizce değiştirilmez.
 
 Do's and Don'ts
 
-Do
+Do:
 
-Profil sayaçlarında canonical followerCount ve followingCount değerlerini kullan.
+Canonical contract tarafından sağlanan relationship state'i kullan.
 
-Sosyal graf ekranlarında route username bağlamını koru.
+Feed filtresini contract available/unavailable olarak açık tasarla.
 
-Satır navigasyonunda row.username kullan.
+Relationship göstergelerini contract available/unavailable olarak açık tasarla.
 
-Follow/unfollow CTA'yı backend relationship state'e göre göster.
+Sayaçlardan gerçek liste ekranlarına navigasyon sağla.
 
-Canonical feed contract destekliyorsa “Takip Ettiklerim” seçimini mevcut Ana Akış içinde göster ve exact contract mapping'ini kullan.
+404/kayıt-yok semantiğini empty state olarak ele al.
 
-Canonical relationship/profile response destekliyorsa “Seni takip ediyor” ve “Karşılıklı takip” göstergelerini ikincil profil bağlamında göster.
+Retry sırasında mevcut route ve filtre bağlamını koru.
 
-Contract desteğinin bulunmadığı durumda bu zorunlu contract-gated yüzeylerin tanımlı contract-unavailable davranışını uygula; tahmini veri veya placeholder üretme.
+Don't:
 
-Mutation sırasında yalnız ilgili CTA'yı loading/disabled yap.
+“Takip Ettiklerim” kriterini canonical destek yok diye tasarım kapsamından çıkarma.
 
-Başarı sonrası backend sonucunu doğruluk kaynağı kabul et.
+“Seni takip ediyor / Karşılıklı takip” kriterini canonical destek yok diye silme.
 
-Profil ve açık sosyal graf read state'ini gerektiğinde invalidate/refetch et.
+Canonical contract'ta olmayan query parametresi veya endpoint üretme.
 
-401'i merkezi login akışına gönder.
+Follower/following count üzerinden ilişki yönü tahmin etme.
 
-403'ü empty state olarak gösterme.
+Network/5xx/403 durumlarını empty state gibi gösterme.
 
-Minimum 44x44px dokunma alanını koru.
-
-Dinamik metin ölçeklendirmeyi destekle.
-
-Don't
-
-Başka profilin followers/following route'unda current-user username kullanma.
-
-“Takip Ettiklerim” için canonical contract'ta bulunmayan endpoint, query parametresi, enum veya scope değeri üretme.
-
-“Seni takip ediyor” bilgisini canonical response sağlamıyorsa local takip listelerinden veya tahminden üretme.
-
-“Karşılıklı takip” bilgisini canonical response güvenilir biçimde desteklemiyorsa local followers/following kesişiminden kalıcı state olarak üretme.
-
-Liste uzunluğunu canonical follower/following count yerine kalıcı kaynak kabul etme.
-
-Başarısız follow/unfollow mutation sonrası local optimistic state'i kalıcılaştırma.
-
-Sosyal graf satırlarına gereksiz block/report aksiyonları ekleme.
-
-Network hatasını başarılı boş liste gibi gösterme.
-
-Yeni role, permission, relationship status veya endpoint üretme.
+Başka profil route'unu current-user username ile değiştirme.

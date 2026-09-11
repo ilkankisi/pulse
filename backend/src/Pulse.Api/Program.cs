@@ -146,12 +146,9 @@ options.DefaultAuthenticateScheme =
 
 JwtBearerDefaults.AuthenticationScheme;
 
-options.DefaultChallengeScheme =
-
-JwtBearerDefaults.AuthenticationScheme;
-
-})
-
+        options.DefaultChallengeScheme =
+            JwtBearerDefaults.AuthenticationScheme;
+    })
 .AddJwtBearer();
 
 builder.Services
@@ -313,6 +310,7 @@ PostEndpoints.DeletePostAsync)
 .RequireAuthorization();
 
 app.MapPost(
+
 "/api/v1/posts/{postId}/replies",
 
 PostEndpoints.CreateReplyAsync)
@@ -358,5 +356,7 @@ app.MapAccountExportEndpoints();
 app.Run();
 
 public partial class Program
+
 {
+
 }
