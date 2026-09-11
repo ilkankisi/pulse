@@ -25,90 +25,141 @@ using var factory =
 new CanonicalRouteWebApplicationFactory();
 
 using var scope =
-    factory.Services.CreateScope();
+
+factory.Services.CreateScope();
 
 var endpointDataSource =
-    scope.ServiceProvider
-        .GetRequiredService<EndpointDataSource>();
+
+scope.ServiceProvider
+
+.GetRequiredService<EndpointDataSource>();
 
 var actualRoutes =
-    endpointDataSource.Endpoints
-        .OfType<RouteEndpoint>()
-        .Select(
-            endpoint =>
-            {
-                var httpMethods =
-                    endpoint.Metadata
-                        .GetMetadata<HttpMethodMetadata>()?
-                        .HttpMethods;
 
-                return new
-                {
-                    Methods =
-                        httpMethods
-                        ?? Array.Empty<string>(),
-                    Path =
-                        NormalizeRoute(
-                            endpoint.RoutePattern.RawText
-                            ?? string.Empty)
-                };
-            })
-        .SelectMany(
-            endpoint =>
-                endpoint.Methods.Select(
-                    method =>
-                        $"{method.ToUpperInvariant()} {endpoint.Path}"))
-        .Where(
-            route =>
-                route.StartsWith(
-                    "GET /health",
-                    StringComparison.Ordinal)
-                || route.Contains(
-                    " /api/v1/",
-                    StringComparison.Ordinal))
-        .ToHashSet(
-            StringComparer.Ordinal);
+endpointDataSource.Endpoints
+
+.OfType<RouteEndpoint>()
+
+.Select(
+
+endpoint =>
+
+{
+
+var httpMethods =
+
+endpoint.Metadata
+
+.GetMetadata<HttpMethodMetadata>()?
+
+.HttpMethods;
+
+            return new
+            {
+                Methods =
+                    httpMethods
+                    ?? Array.Empty<string>(),
+                Path =
+                    NormalizeRoute(
+                        endpoint.RoutePattern.RawText
+                        ?? string.Empty)
+            };
+        })
+    .SelectMany(
+        endpoint =>
+            endpoint.Methods.Select(
+                method =>
+                    $"{method.ToUpperInvariant()} {endpoint.Path}"))
+    .Where(
+        route =>
+            route.StartsWith(
+                "GET /health",
+                StringComparison.Ordinal)
+            || route.Contains(
+                " /api/v1/",
+                StringComparison.Ordinal))
+    .ToHashSet(
+        StringComparer.Ordinal);
 
 var expectedRoutes =
-    new HashSet<string>(
-        StringComparer.Ordinal)
-    {
-        "GET /health",
-        "POST /api/v1/auth/register",
-        "POST /api/v1/auth/login",
-        "GET /api/v1/me",
-        "PUT /api/v1/me",
-        "GET /api/v1/me/export",
-        "GET /api/v1/profiles/{username}",
-        "GET /api/v1/profiles/{username}/followers",
-        "GET /api/v1/profiles/{username}/following",
-        "GET /api/v1/profiles/{username}/posts",
-        "GET /api/v1/search/mentions",
-        "GET /api/v1/search/posts",
-        "GET /api/v1/search/users",
-        "POST /api/v1/profiles/{username}/follow",
-        "DELETE /api/v1/profiles/{username}/follow",
-        "GET /api/v1/feed",
-        "POST /api/v1/posts",
-        "DELETE /api/v1/posts/{postId}",
-        "POST /api/v1/posts/{postId}/replies",
-        "POST /api/v1/posts/{postId}/likes",
-        "DELETE /api/v1/posts/{postId}/likes",
-        "POST /api/v1/profiles/{username}/block",
-        "DELETE /api/v1/profiles/{username}/block",
-        "GET /api/v1/blocks",
-        "POST /api/v1/reports",
-        "GET /api/v1/moderation/reports",
-        "GET /api/v1/moderation/reports/{reportId}",
-        "POST /api/v1/moderation/reports/{reportId}/resolve",
-        "POST /api/v1/moderation/reports/{reportId}/dismiss"
-    };
+
+new HashSet<string>(
+
+StringComparer.Ordinal)
+
+{
+
+"GET /health",
+
+"POST /api/v1/auth/register",
+
+"POST /api/v1/auth/login",
+
+"GET /api/v1/me",
+
+"PUT /api/v1/me",
+
+"GET /api/v1/me/export",
+
+"GET /api/v1/profiles/{username}",
+
+"GET /api/v1/profiles/{username}/followers",
+
+"GET /api/v1/profiles/{username}/following",
+
+"GET /api/v1/profiles/{username}/posts",
+
+"GET /api/v1/search/mentions",
+
+"GET /api/v1/search/posts",
+
+"GET /api/v1/search/users",
+
+"POST /api/v1/profiles/{username}/follow",
+
+"DELETE /api/v1/profiles/{username}/follow",
+
+"GET /api/v1/feed",
+
+"POST /api/v1/posts",
+
+"DELETE /api/v1/posts/{postId}",
+
+"GET /api/v1/posts/{postId}/replies",
+
+"POST /api/v1/posts/{postId}/replies",
+
+"POST /api/v1/posts/{postId}/likes",
+
+"DELETE /api/v1/posts/{postId}/likes",
+
+"POST /api/v1/profiles/{username}/block",
+
+"DELETE /api/v1/profiles/{username}/block",
+
+"GET /api/v1/blocks",
+
+"POST /api/v1/reports",
+
+"GET /api/v1/moderation/reports",
+
+"GET /api/v1/moderation/reports/{reportId}",
+
+"POST /api/v1/moderation/reports/{reportId}/resolve",
+
+"POST /api/v1/moderation/reports/{reportId}/dismiss"
+
+};
 
 Assert.Equal(
-    expectedRoutes.OrderBy(
-        route => route),
-    actualRoutes.OrderBy(
-        route => route));
+
+expectedRoutes.OrderBy(
+
+route => route),
+
+actualRoutes.OrderBy(
+
+route => route));
 
 }
 
@@ -151,8 +202,10 @@ StringComparison.Ordinal)
 : $"/{route}";
 
 return normalized.Length > 1
-    ? normalized.TrimEnd('/')
-    : normalized;
+
+? normalized.TrimEnd('/')
+
+: normalized;
 
 }
 

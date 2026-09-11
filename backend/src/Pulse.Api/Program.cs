@@ -146,9 +146,12 @@ options.DefaultAuthenticateScheme =
 
 JwtBearerDefaults.AuthenticationScheme;
 
-        options.DefaultChallengeScheme =
-            JwtBearerDefaults.AuthenticationScheme;
-    })
+options.DefaultChallengeScheme =
+
+JwtBearerDefaults.AuthenticationScheme;
+
+})
+
 .AddJwtBearer();
 
 builder.Services
@@ -293,7 +296,44 @@ status = "ok",
 
 app.MapAuthEndpoints();
 
-app.MapPostEndpoints();
+app.MapPost(
+
+"/api/v1/posts",
+
+PostEndpoints.CreatePostAsync)
+
+.RequireAuthorization();
+
+app.MapDelete(
+
+"/api/v1/posts/{postId}",
+
+PostEndpoints.DeletePostAsync)
+
+.RequireAuthorization();
+
+app.MapPost(
+"/api/v1/posts/{postId}/replies",
+
+PostEndpoints.CreateReplyAsync)
+
+.RequireAuthorization();
+
+app.MapPost(
+
+"/api/v1/posts/{postId}/likes",
+
+PostEndpoints.LikePostAsync)
+
+.RequireAuthorization();
+
+app.MapDelete(
+
+"/api/v1/posts/{postId}/likes",
+
+PostEndpoints.UnlikePostAsync)
+
+.RequireAuthorization();
 
 app.MapFeedEndpoints();
 
@@ -304,9 +344,9 @@ app.MapProfileEndpoints();
 app.MapFollowEndpoints();
 
 app.MapSecurityModerationEndpoints();
-app.MapSocialGraphEndpoints();
 
 app.MapAccountExportEndpoints();
+
 app.Run();
 
 public partial class Program
