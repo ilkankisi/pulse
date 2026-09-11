@@ -1,299 +1,268 @@
-Markdown
-# Genişletilmiş Akış ve State Davranışları
+Feature: Genişletilmiş akış ve state davranışları
 
-Bu feature mevcut Pulse tasarım sistemini değiştirmeden şu davranışları tamamlar:
+Scope
 
-- Ana akışta sonsuz kaydırma
-- Gönderi detayında yanıtların listelenmesi
-- Kendi takipçiler listesinden kullanıcı kaldırma
-- Kendi profilinden kalıcı hesap silme
+Bu feature ana feature dosyalarını tamamlayan genişletilmiş mobil akış ve state davranışlarını tanımlar.
 
-Renk, tipografi, spacing ve state token'ları `design/DESIGN.core.md` kaynağından kullanılır.
+Kapsam:
 
-UI katmanı canonical `docs/api-contract.md` dışında endpoint, cursor, pagination parametresi veya mutation payload'ı üretmez.
+Ana akışta artımlı/infinite scroll.
 
-## User flows
+Gönderi detayında yanıt listesinin yüklenmesi ve yenilenmesi.
 
-- Ana Akış → ilk sayfa → aşağı kaydır → sonraki sayfa → gönderileri listenin sonuna ekle.
-- Son sayfa → yeni network isteği gönderme.
-- Pull-to-refresh → pagination state'ini sıfırla → ilk sayfayı yeniden yükle.
-- Load-more hatası → mevcut gönderileri koru → “Tekrar Dene”.
-- Gönderi → Gönderi Detayı → ana gönderi + yanıtlar.
-- Yanıt yok → “Henüz yanıt yok” → “Yanıtla”.
-- Kendi Takipçilerim → kullanıcı aksiyonu → “Takipçilerimden Çıkar” → onay → canonical mutation.
-- Kendi Profilim → hesap/güvenlik → “Hesabımı Sil” → destructive onay → canonical mutation → başarılıysa session temizle → Oturum Aç.
-- Başka kullanıcı profilinde hesap silme veya takipçiden çıkarma owner aksiyonu gösterilmez.
+Takipçi kaldırma akışı.
 
-## Components
+Hesap silme akışı.
 
-### Sonsuz kaydırmalı ana akış
+Loading, empty, error ve mutation state'lerinin birbirinden ayrılması.
 
-**Token:** `{components.post-card}`, `{components.state-panel}`
+401, 403, 404, 409, 429 ve network/5xx durumlarının başarılı empty state olarak yorumlanmaması.
 
-**Widget hierarchy:**
+Tüm endpoint, request alanı, enum, pagination ve hata semantiği canonical docs/api-contract.md sözleşmesinden map edilir.
 
-```text
-RefreshIndicator
-└── CustomScrollView
-    ├── SliverList
-    │   └── PostCard[]
-    └── SliverToBoxAdapter
-        └── footer
-            ├── loadingMore
-            │   └── CircularProgressIndicator
-            ├── loadMoreError
-            │   └── Column
-            │       ├── Text("Daha fazla gönderi yüklenemedi.")
-            │       └── TextButton("Tekrar Dene")
-            └── endReached
-                └── SizedBox
-```
+UI canonical contract'ta bulunmayan endpoint, query parametresi, cursor/page alanı, role, permission veya mutation üretmez.
 
-fluttertemplates kaynağı: Core / Lists — https://fluttertemplates.dev/widgets
+Components
 
-Kurallar:
-
-İlk loading ile load-more loading ayrı state'lerdir.
-
-Load-more sırasında mevcut gönderiler görünür kalır.
-
-Aynı cursor/sayfa için paralel istek başlatılmaz.
-
-post.id bazında duplicate satır gösterilmez.
-
-Son sayfadan sonra yeni istek yapılmaz.
-
-Pull-to-refresh eski pagination state'ini kullanmaz.
-
-Pagination şekli yalnız docs/api-contract.md ile belirlenir.
-
-Kontratta olmayan cursor, offset, page veya limit parametresi üretilmez.
-
-Load-more error state
-
-Token: {components.state-panel}, {colors.error}
+Infinite feed listesi
 
 Widget hierarchy:
 
-```
-SliverToBoxAdapter
+FeedList
+└── RefreshIndicator
+    └── ListView | CustomScrollView
+        ├── PostCard[]
+        └── pagination footer
+            ├── loading indicator
+            ├── retry action
+            └── end-of-list state
+
+Kurallar:
+
+İlk yükleme ve sonraki sayfa yükleme farklı state'lerdir.
+
+İlk yükleme başarısızsa feed error state gösterilir.
+
+Sonraki sayfa yüklemesi başarısızsa mevcut başarılı içerik ekranda korunur.
+
+Pagination sırasında mevcut post listesi temizlenmez.
+
+Aynı continuation/cursor/page isteği eşzamanlı olarak tekrar tetiklenmez.
+
+Yeni sayfa canonical response sırasını korur.
+
+UI kendi pagination parametresini veya page size değerini üretmez.
+
+Refresh canonical ilk-page davranışını yeniden başlatır.
+
+Reply listesi
+
+Widget hierarchy:
+
+PostDetailReplies
 └── Column
-    ├── Text("Daha fazla gönderi yüklenemedi.")
-    └── TextButton("Tekrar Dene")
-```
-
-fluttertemplates kaynağı: States & Errors / Error State — https://fluttertemplates.dev/widgets/states
-
-Kurallar:
-
-Tam ekran “Akış yüklenemedi” state'ine dönüşmez.
-
-Daha önce yüklenen gönderiler silinmez.
-
-“Tekrar Dene” yalnız başarısız sonraki yüklemeyi tekrarlar.
-
-401 merkezi login akışına gider.
-
-Gönderi detayı ve yanıt listesi
-
-Token: {components.post-card}, {components.composer}, {components.state-panel}
-
-Widget hierarchy:
-
-```
-Scaffold
-├── AppBar(title: "Gönderi")
-└── SafeArea
-    └── CustomScrollView
-        ├── SliverToBoxAdapter
-        │   └── PostCard(parentPost)
-        ├── SliverToBoxAdapter
-        │   └── reply composer | "Yanıtla"
-        └── repliesState
-            ├── loading → skeleton rows
-            ├── empty → EmptyState
-            ├── error → ErrorState
-            └── loaded
-                └── SliverList
-                    └── PostCard(reply)[]
-```
-
-fluttertemplates kaynağı: Core / Lists — https://fluttertemplates.dev/widgets
+    ├── reply count
+    └── replies state
+        ├── loading
+        ├── empty
+        ├── error
+        └── ListView | SliverList
+            └── ReplyCard[]
 
 Kurallar:
 
-Yanıtlar tek seviyelidir.
+Reply count canonical post/detail response'tan gelir.
 
-Yanıt yokken hata gösterilmez.
+Reply listesi canonical sıralamayı kullanır.
 
-Ana gönderi bulunamazsa “Gönderi bulunamadı” gösterilir.
+Canonical contract eski → yeni sıralamayı tanımlıyorsa UI aynı sırayı korur.
 
-Reply yükleme hatasında ana gönderi görünür kalır.
+Parent gönderinin sahibi tarafından yazılan reply, mevcut tasarım sistemi içinde ikincil “Gönderi sahibi” etiketiyle vurgulanabilir.
 
-Aynı reply id iki kez gösterilmez.
+Bu etiket role veya permission değildir.
 
-Reply read davranışı canonical API kontratından alınır; yeni endpoint uydurulmaz.
+Reply count kalıcı olarak local liste uzunluğundan türetilmez.
 
-Yanıtlar empty state
+Yeni reply başarıyla oluşturulduktan sonra backend response ve gerekli refetch/invalidation doğruluk kaynağıdır.
 
-Token: {components.state-panel}
+Takipçi kaldırma aksiyonu
 
 Widget hierarchy:
 
-```
-Center
+FollowerListItem
+└── Row
+    ├── avatar + identity
+    └── current user's own followers list ise
+        └── TextButton("Takipçiyi Kaldır")
+
+Kurallar:
+
+Aksiyon yalnız canonical contract takipçi kaldırmayı destekliyorsa gösterilir.
+
+Başka kullanıcının followers ekranında gösterilmez.
+
+Confirmation gerekiyorsa mutation öncesi gösterilir.
+
+Mutation sırasında yalnız ilgili satır disabled/loading olur.
+
+Başarı sonrası canonical followers state yenilenir.
+
+UI kaldırılan takipçiyi block edilmiş kabul etmez.
+
+Hesap silme
+
+Widget hierarchy:
+
+DeleteAccountSection
 └── Column
-    ├── Icon(chat_bubble_outline)
-    ├── Text("Henüz yanıt yok")
-    ├── Text("İlk yanıtı sen yaz.")
-    └── FilledButton.tonal("Yanıtla")
-```
-
-fluttertemplates kaynağı: States & Errors / Empty State — https://fluttertemplates.dev/widgets/states
+    ├── warning text
+    └── FilledButton | TextButton("Hesabımı Sil")
+        └── confirmation flow
 
 Kurallar:
 
-Boş collection veya kayıt-yok semantiğindeki 404 empty state'tir.
+Hesap silme yalnız canonical account deletion contract'ı mevcutsa gösterilir.
 
-Yanıt olmaması error state değildir.
+Destructive aksiyon açık biçimde işaretlenir.
 
-Empty state CTA body içindedir.
+Confirmation olmadan mutation başlatılmaz.
 
-Takipçiyi kaldırma
+Canonical contract yeniden kimlik doğrulama, password veya başka doğrulama alanı gerektiriyorsa yalnız belirtilen alanlar gösterilir.
 
-Token: {components.social-graph-list-item}, {colors.error}
+UI kendi doğrulama alanını, grace period süresini veya silme endpoint'ini üretmez.
 
-Widget hierarchy:
+Başarı sonrası local authenticated session merkezi auth akışıyla kapatılır.
 
-```
-SocialGraphListItem(follower)
-└── owner-only overflow
-    └── MenuItemButton("Takipçilerimden Çıkar")
+Screen states
 
-showDialog
-└── AlertDialog
-    ├── title: Text("Takipçi kaldırılsın mı?")
-    ├── content: Text("Bu kullanıcı takipçilerinden çıkarılacak.")
-    └── actions
-        ├── TextButton("İptal")
-        └── FilledButton("Kaldır")
-```
+Infinite feed
 
-fluttertemplates kaynağı: Dialogs & Sheets / Alert Dialog — https://fluttertemplates.dev/widgets/dialogs
+Loading:
 
-Kurallar:
+İlk yüklemede feed loading pattern'i gösterilir.
 
-Aksiyon yalnız current-user'ın kendi Takipçiler ekranında gösterilir.
+Sahte post içeriği canonical veri gibi render edilmez.
 
-Başka profilin Takipçiler ekranında gösterilmez.
+Success:
 
-Follower removal, unfollow ile aynı mutation olarak varsayılmaz.
+Canonical response postları mevcut PostCard bileşeniyle gösterilir.
 
-Endpoint ve payload canonical API kontratından alınır.
+Sonraki sayfa yüklenirken mevcut içerik korunur.
 
-Loading sırasında tekrar tetiklenmez.
+Empty:
 
-Başarı: “Takipçi kaldırıldı.”
+Yalnız başarılı canonical ilk-page response gerçekten içerik içermiyorsa gösterilir.
 
-Hata: “Takipçi kaldırılamadı. Tekrar deneyin.”
+Network/5xx empty state değildir.
 
-Başarı sonrası liste ve takipçi sayacı backend state ile senkronize edilir.
+Pagination error:
+
+Mevcut başarılı liste korunur.
+
+Footer seviyesinde retry aksiyonu gösterilir.
+
+CTA: “Tekrar Dene”.
+
+Refresh error:
+
+Önceden yüklenmiş doğrulanmış içerik varsa korunur.
+
+Gönderi detayı yanıtları
+
+Loading:
+
+Parent gönderi mevcutsa görünür kalır.
+
+Replies alanında loading state gösterilir.
+
+Empty:
+
+Yalnız başarılı canonical reply collection boş olduğunda gösterilir.
+
+Ağ hatası empty state değildir.
+
+Error:
+
+CTA: “Tekrar Dene”.
 
 401 merkezi login akışına gider.
 
 403 empty state değildir.
 
-Kalıcı hesap silme
+404 parent post veya canonical resource bulunamadı state'idir.
 
-Token: {colors.error}, {components.state-panel}
+Yeni reply mutation hatasında yazılmış içerik temizlenmez.
 
-Widget hierarchy:
+Takipçi kaldırma
 
-```
-OwnProfilePage
-└── account/security
-    └── ListTile("Hesabımı Sil")
+Loading:
 
-showDialog
-└── AlertDialog
-    ├── title: Text("Hesabın kalıcı olarak silinsin mi?")
-    ├── content: Text("Bu işlem geri alınamaz.")
-    └── actions
-        ├── TextButton("Vazgeç")
-        └── FilledButton("Hesabımı Sil")
-```
+Yalnız seçili satır aksiyonu disabled/loading olur.
 
-fluttertemplates kaynağı: Dialogs & Sheets / Alert Dialog — https://fluttertemplates.dev/widgets/dialogs
+Success:
 
-Kurallar:
+Backend sonucu veya canonical refetch liste doğruluk kaynağıdır.
 
-Yalnız kendi profilinde gösterilir.
+Error:
 
-Destructive aksiyon {colors.error} kullanır.
+Mevcut doğrulanmış follower satırı korunur.
 
-Confirmation olmadan mutation başlatılmaz.
+401 merkezi login akışına gider.
 
-Endpoint ve payload yalnız canonical API kontratından alınır.
+403 yetki state'idir.
 
-UI hesap silme endpoint'i uydurmaz.
+404 stale resource olarak ele alınır ve gerekirse liste yenilenir.
 
-Loading sırasında destructive CTA tekrar tetiklenmez.
+Network/5xx başarılı kaldırma gibi gösterilmez.
 
-Başarısız işlemde session korunur.
+Hesap silme
 
-Hata: “Hesap silinemedi. Tekrar deneyin.”
+Initial:
 
-Başarılı işlemden sonra JWT/session temizlenir ve Oturum Aç ekranına gidilir.
+Destructive açıklama ve CTA gösterilir.
 
-State matrix
+Confirmation:
 
-AkışLoadingEmptyErrorSuccess
-Feed ilk yüklemeskeleton"Akış henüz boş""Akış yüklenemedi" + "Tekrar Dene"gönderiler
-Feed load-morefooter progressuygulanmaz"Daha fazla gönderi yüklenemedi."append
-Yanıt listesiskeleton"Henüz yanıt yok"reply retryyanıtlar
-Takipçi kaldırmaaction disableduygulanmaz"Takipçi kaldırılamadı. Tekrar deneyin.""Takipçi kaldırıldı."
-Hesap silmedestructive CTA disableduygulanmaz"Hesap silinemedi. Tekrar deneyin."session → Login
+Kullanıcıya geri dönüşü olmayan sonuç açık biçimde anlatılır.
 
-Do's and Don'ts
+Loading:
 
-Do
+Silme CTA'sı tekrar tetiklenemez.
 
-İlk loading ile load-more state'ini ayır.
+Form gerekiyorsa değerleri görünür kalır.
 
-Load-more hatasında mevcut feed'i koru.
+Success:
 
-Pagination sonuçlarını id bazında tekilleştir.
+Canonical başarı sonrası authenticated kullanıcı state'i temizlenir ve auth başlangıç akışına geçilir.
 
-Refresh'te pagination state'ini sıfırla.
+Error:
 
-Yanıt boş listesini empty state olarak göster.
+Validation veya authentication hatası ilgili alanda gösterilir.
 
-Takipçi kaldırmayı yalnız kendi followers ekranında göster.
+403 başarılı silme değildir.
 
-Hesap silmede destructive confirmation kullan.
+409 varsa canonical conflict mesajı gösterilir.
 
-404 kayıt-yok durumunu empty state olarak ele al.
+429 retry/rate-limit state'idir; form temizlenmez.
 
-401'i merkezi login akışına gönder.
+Network/5xx form state'ini temizlemez.
 
-403'ü empty state yapma.
+Navigation
 
-Don'ts
+Ana Akış → post satırı → Gönderi Detayı.
 
-Load-more sırasında tüm feed'i spinner ile değiştirme.
+Ana Akış içinde scroll sonuna yaklaşma → canonical pagination davranışı.
 
-Aynı cursor/sayfa için paralel istek başlatma.
+Gönderi Detayı → reply listesi aynı route içinde devam eder.
 
-Yanıt yokken hata gösterme.
+Kendi Profilim → Takipçi sayacı → Takipçiler.
 
-Canonical kontratta olmayan reply endpoint'i üretme.
+Kendi Takipçilerim → canonical contract destekliyorsa “Takipçiyi Kaldır”; route değişmeden liste güncellenir.
 
-Follower removal işlemini unfollow ile aynı varsayma.
+Ayarlar / Hesap → Hesabı Sil.
 
-Başka profilin followers ekranında owner aksiyonu gösterme.
+Hesap silme başarıyla tamamlanırsa merkezi authentication başlangıç akışına gidilir.
 
-Hesap silme endpoint'i uydurma.
+401 tüm korumalı genişletilmiş akışlardan merkezi login akışına gider.
 
-Confirmation olmadan kalıcı silme başlatma.
-
-Silme başarısızken session temizleme.
+UI canonical contract'ta bulunmayan navigation destination veya role-gated route üretmez.
