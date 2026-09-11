@@ -1826,9 +1826,15 @@ GOLDEN_REQUEST_MATCH | POST /api/v1/moderation/reports/{reportId}/dismiss | back
 
 Bu kayıtlarda backend ve mobile alan kümeleri sıralamadan bağımsız olarak birebir aynı olmalıdır.
 
-Mobil toJson() veya repository request body içinde bu canonical kümelere alan eklenemez, alan çıkarılamaz ve alias kullanılamaz.
+GOLDEN_JSON_PARITY | backend-integration-test | mobile-toJson/request-body | EXACT
 
-Enum değerleri §24'teki case-sensitive canonical string değerlerini kullanır.
+Mobil toJson() veya repository request body içinde ilgili backend golden request'e göre alan eklenemez, alan çıkarılamaz, alan adı değiştirilemez ve alias kullanılamaz.
+
+Optional/null alan golden request içinde null olarak gönderiliyorsa mobil request de aynı canonical alanı null olarak üretir; farklı property adına map edilmez.
+
+Enum değerleri §24'teki case-sensitive canonical string değerlerini birebir kullanır.
+
+Backend golden request ile mobil request body arasında property adı, null semantiği veya enum string değeri farkı kontrat ihlalidir.
 Reply repository ve backend integration testleri GET /api/v1/posts/{postId}/replies response'unu items: PostResponse[] olarak doğrulamalı; sıralama createdAt ASC, eşitlikte id ASC olmalıdır.
 
 Aynı paylaşılan enum/tip için istemci tarafında tek canonical serializer kullanılmalıdır. Endpoint'e göre alternatif enum casing veya farklı serializer tanımlanamaz.
@@ -2263,10 +2269,18 @@ Backend integration testleri ve mobil model/request-response testleri bu alan ad
 
 Bu doküman backend ve mobil arasında API sözleşmesinin tek human-readable kaynağıdır.
 
+PIPELINE_GATE | architect | read-after-write-contract | READY_FOR_BACKEND
+
+Architect read-after-write kararı bu dokümandaki canonical endpoint tanımlarıdır. Backend route/handler wiring'i ve contract testleri bu route setine hizalanır; backend implementasyonu canonical sözleşmeyi yeniden tanımlamaz.
 docs/api-contract.openapi.json aynı canonical sözleşmenin machine-readable OpenAPI 3.0.x karşılığıdır.
 
 Backend DTO alanı ile mobil model alanı farklı isim kullanamaz.
 
+PRODUCT_COMPLETENESS_GATE | contract | REQUIRED
+
+Build ve testlerin başarılı olması tek başına API ürün bütünlüğü kabulü değildir.
+
+Canonical endpoint, request/response alanları, mutation ↔ read eşleşmeleri ve golden JSON ↔ mobile request/toJson eşleşmeleri bu dokümanla uyumlu değilse contract katmanı kırmızı kabul edilir ve görev tamamlanmış sayılmaz.
 Aynı davranış için ikinci route tanımlanamaz.
 
 Legacy fallback kullanılamaz.
