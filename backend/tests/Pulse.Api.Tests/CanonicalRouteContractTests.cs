@@ -78,6 +78,7 @@ var expectedRoutes =
         "POST /api/v1/auth/login",
         "GET /api/v1/me",
         "PUT /api/v1/me",
+        "GET /api/v1/me/export",
         "GET /api/v1/profiles/{username}",
         "GET /api/v1/profiles/{username}/followers",
         "GET /api/v1/profiles/{username}/following",

@@ -304,13 +304,11 @@ app.MapProfileEndpoints();
 app.MapFollowEndpoints();
 
 app.MapSecurityModerationEndpoints();
-
 app.MapSocialGraphEndpoints();
 
+app.MapAccountExportEndpoints();
 app.Run();
 
 public partial class Program
-
 {
-
 }

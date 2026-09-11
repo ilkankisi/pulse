@@ -13,13 +13,15 @@ public static class AccountExportEndpoints
 {
 
 public static IEndpointRouteBuilder MapAccountExportEndpoints(
-
 this IEndpointRouteBuilder endpoints)
-
 {
-
+var group = endpoints
+.MapGroup("/api/v1/me")
+.RequireAuthorization();
+group.MapGet(
+"/export",
+ExportAccountDataAsync);
 return endpoints;
-
 }
 
 private static async Task<IResult> ExportAccountDataAsync(
