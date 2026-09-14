@@ -2259,6 +2259,70 @@ Satırın ana navigasyon davranışı her durumda ProfilePage(row.username) olur
 
 Mutation aksiyonu ile satır navigasyonu birbirine karıştırılmaz.
 
+Takip Ettiklerim feed filtresi — contract-gated
+
+Feed ekranının sosyal deneyim yüzeyinde iki seçenek bulunur:
+
+“Tümü”.
+
+“Takip Ettiklerim”.
+
+“Tümü” canonical GET /api/v1/feed davranışını kullanır.
+
+“Takip Ettiklerim” seçeneği kabul kapsamının kalıcı bir parçasıdır; canonical contract bu filtreyi desteklediğinde yalnız sözleşmede tanımlanan path/query/response davranışı kullanılır.
+
+Canonical contract “Takip Ettiklerim” için gerekli endpoint veya filtre parametresini henüz tanımlamıyorsa Mobile yeni query parametresi, alternatif endpoint veya client-side takip listesi birleştirmesi üretmez.
+
+Bu durumda “Takip Ettiklerim” yüzeyi kaldırılmaz. Seçenek görünür kalır ve contract-unavailable durumuna geçer.
+
+Contract-unavailable:
+
+Başlık: “Takip Ettiklerim”.
+
+Açıklama: “Bu akış şu anda kullanılamıyor.”
+
+Birincil CTA yoktur.
+
+Mevcut “Tümü” akışı çalışmaya devam eder.
+
+Contract desteği geldiğinde aynı yüzey loading, success, empty ve error state'lerini kullanır.
+
+Loading sırasında seçili filtre korunur.
+
+Empty state kayıt-yok durumudur; network/5xx hatası empty state'e çevrilmez.
+
+401 merkezi login akışına gider.
+
+Profil ilişki göstergeleri — contract-gated
+
+Başka kullanıcı profillerinde ilişki metadata alanı aşağıdaki kabul yüzeylerini destekler:
+
+“Seni takip ediyor”.
+
+“Karşılıklı takip”.
+
+Bu etiketler yalnız canonical profile/relationship response gerekli ilişki bilgisini açıkça verdiğinde gösterilir.
+
+“Seni takip ediyor”, canonical veri görüntülenen kullanıcının current user'ı takip ettiğini doğruladığında gösterilir.
+
+“Karşılıklı takip”, canonical veri iki yönlü takip ilişkisini doğruladığında gösterilir.
+
+“Karşılıklı takip” gösterildiğinde aynı anda ikinci bir “Seni takip ediyor” etiketi tekrarlanmaz.
+
+Follow/unfollow CTA state'i bu göstergelerin yerine kullanılmaz; CTA current user → profile ilişkisini, göstergeler profile → current user veya karşılıklı ilişkiyi temsil eder.
+
+Canonical contract ters yön ilişki veya karşılıklılık bilgisini henüz sağlamıyorsa UI boolean tahmin etmez, followers/following listelerini client-side çaprazlayarak ilişki üretmez ve sahte etiketi göstermez.
+
+Bu durumda ilişki göstergesi yüzeyi kapsamdan çıkarılmaz; contract-unavailable state olarak ayrılmış metadata alanı kullanılır.
+
+Contract-unavailable:
+
+İlişki iddiası taşıyan “Seni takip ediyor” veya “Karşılıklı takip” etiketi gösterilmez.
+
+Profilin mevcut follow/unfollow CTA'sı canonical state ile çalışmaya devam eder.
+
+Yeni endpoint, query parametresi veya response alanı üretilmez.
+
 Components
 
 Profil sosyal sayaçları
