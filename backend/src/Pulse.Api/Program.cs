@@ -235,21 +235,6 @@ app.MapFeedEndpoints();
 app.MapMeEndpoints();
 app.MapProfileEndpoints();
 app.MapFollowEndpoints();
-
-app.MapGet(
-        "/api/v1/profiles/{username}/block",
-        GetProfileBlockCompatibilityAsync)
-    .Produces(StatusCodes.Status405MethodNotAllowed)
-    .RequireAuthorization()
-    .WithName("GetProfileBlockCompatibility");
-
-app.MapGet(
-        "/api/v1/profiles/{username}/follow",
-        GetProfileFollowCompatibilityAsync)
-    .Produces(StatusCodes.Status405MethodNotAllowed)
-    .RequireAuthorization()
-    .WithName("GetProfileFollowCompatibility");
-
 app.MapSecurityModerationEndpoints();
 app.MapAccountExportEndpoints();
 
