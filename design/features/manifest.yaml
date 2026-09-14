@@ -36,3 +36,7 @@ features:
   file: priority-2-social-experience.md
   title: Öncelik 2 sosyal deneyim akışları
   api_contract_refs: []
+- id: extended-flow-state
+  file: extended-flow-state.md
+  title: Genişletilmiş ürün akışları ve durum davranışları
+  api_contract_refs: []

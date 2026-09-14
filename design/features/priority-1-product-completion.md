@@ -129,8 +129,9 @@ SearchPage
                     ├── empty
                     ├── error
                     └── result list
-
-Kurallar:
+                    ```
+                    
+                    Kurallar:
 
 Sorgu canonical arama parametresine map edilir.
 
