@@ -313,20 +313,6 @@ PostEndpoints.CreatePostAsync)
 
 .WithName("CreatePost");
 
-app.MapGet(
-
-"/api/v1/posts/{postId}",
-
-GetPostAsync)
-
-.Produces<PostResponse>(StatusCodes.Status200OK)
-
-.Produces(StatusCodes.Status404NotFound)
-
-.RequireAuthorization()
-
-.WithName("GetPost");
-
 app.MapDelete(
 
 "/api/v1/posts/{postId}",
@@ -422,30 +408,6 @@ GetProfileFollowCompatibilityAsync)
 .WithName("GetProfileFollowCompatibility");
 
 app.MapSecurityModerationEndpoints();
-
-app.MapGet(
-
-"/api/v1/moderation/reports/{reportId}/resolve",
-
-GetResolveReportCompatibilityAsync)
-
-.Produces(StatusCodes.Status405MethodNotAllowed)
-
-.RequireAuthorization()
-
-.WithName("GetResolveReportCompatibility");
-
-app.MapGet(
-
-"/api/v1/moderation/reports/{reportId}/dismiss",
-
-GetDismissReportCompatibilityAsync)
-
-.Produces(StatusCodes.Status405MethodNotAllowed)
-
-.RequireAuthorization()
-
-.WithName("GetDismissReportCompatibility");
 
 app.MapAccountExportEndpoints();
 
