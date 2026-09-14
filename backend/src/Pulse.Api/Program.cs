@@ -1,3 +1,5 @@
+using System.Security.Claims;
+
 using System.Text;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -7,6 +9,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 using Pulse.Api.Auth;
+
+using Pulse.Api.Contracts;
 
 using Pulse.Api.Data;
 
@@ -299,7 +303,29 @@ app.MapPost(
 
 PostEndpoints.CreatePostAsync)
 
-.RequireAuthorization();
+.Accepts<CreatePostRequest>("application/json")
+
+.Produces<PostResponse>(StatusCodes.Status201Created)
+
+.Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+
+.RequireAuthorization()
+
+.WithName("CreatePost");
+
+app.MapGet(
+
+"/api/v1/posts/{postId}",
+
+GetPostAsync)
+
+.Produces<PostResponse>(StatusCodes.Status200OK)
+
+.Produces(StatusCodes.Status404NotFound)
+
+.RequireAuthorization()
+
+.WithName("GetPost");
 
 app.MapDelete(
 
@@ -315,7 +341,15 @@ app.MapPost(
 
 PostEndpoints.CreateReplyAsync)
 
-.RequireAuthorization();
+.Accepts<CreateReplyRequest>("application/json")
+
+.Produces<PostResponse>(StatusCodes.Status201Created)
+
+.Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+
+.RequireAuthorization()
+
+.WithName("CreatePostReply");
 
 app.MapGet(
 
@@ -333,6 +367,20 @@ PostEndpoints.LikePostAsync)
 
 .RequireAuthorization();
 
+app.MapGet(
+
+"/api/v1/posts/{postId}/likes",
+
+GetPostLikesAsync)
+
+.Produces<LikeResponse>(StatusCodes.Status200OK)
+
+.Produces(StatusCodes.Status404NotFound)
+
+.RequireAuthorization()
+
+.WithName("GetPostLikes");
+
 app.MapDelete(
 
 "/api/v1/posts/{postId}/likes",
@@ -349,11 +397,221 @@ app.MapProfileEndpoints();
 
 app.MapFollowEndpoints();
 
+app.MapGet(
+
+"/api/v1/profiles/{username}/block",
+
+GetProfileBlockCompatibilityAsync)
+
+.Produces(StatusCodes.Status405MethodNotAllowed)
+
+.RequireAuthorization()
+
+.WithName("GetProfileBlockCompatibility");
+
+app.MapGet(
+
+"/api/v1/profiles/{username}/follow",
+
+GetProfileFollowCompatibilityAsync)
+
+.Produces(StatusCodes.Status405MethodNotAllowed)
+
+.RequireAuthorization()
+
+.WithName("GetProfileFollowCompatibility");
+
 app.MapSecurityModerationEndpoints();
+
+app.MapGet(
+
+"/api/v1/moderation/reports/{reportId}/resolve",
+
+GetResolveReportCompatibilityAsync)
+
+.Produces(StatusCodes.Status405MethodNotAllowed)
+
+.RequireAuthorization()
+
+.WithName("GetResolveReportCompatibility");
+
+app.MapGet(
+
+"/api/v1/moderation/reports/{reportId}/dismiss",
+
+GetDismissReportCompatibilityAsync)
+
+.Produces(StatusCodes.Status405MethodNotAllowed)
+
+.RequireAuthorization()
+
+.WithName("GetDismissReportCompatibility");
 
 app.MapAccountExportEndpoints();
 
 app.Run();
+
+static async Task<IResult> GetPostAsync(
+
+int postId,
+
+ClaimsPrincipal principal,
+
+PulseDbContext dbContext,
+
+CancellationToken cancellationToken)
+
+{
+
+if (!PostEndpoints.TryGetUserId(
+
+principal,
+
+out var userId))
+
+{
+
+return Results.Unauthorized();
+
+}
+
+var post = await dbContext.Posts
+    .AsNoTracking()
+    .Include(candidate => candidate.Author)
+    .SingleOrDefaultAsync(
+        candidate =>
+            candidate.Id == postId
+            && candidate.DeletedAt == null,
+        cancellationToken);
+
+if (post is null)
+{
+    return Results.NotFound();
+}
+
+return Results.Ok(
+    await PostEndpoints.ToResponseAsync(
+        dbContext,
+        post,
+        userId,
+        cancellationToken));
+
+}
+
+static async Task<IResult> GetPostLikesAsync(
+
+int postId,
+
+ClaimsPrincipal principal,
+
+PulseDbContext dbContext,
+
+CancellationToken cancellationToken)
+
+{
+
+if (!PostEndpoints.TryGetUserId(
+
+principal,
+
+out var userId))
+
+{
+
+return Results.Unauthorized();
+
+}
+
+var postExists = await dbContext.Posts
+    .AsNoTracking()
+    .AnyAsync(
+        post =>
+            post.Id == postId
+            && post.DeletedAt == null,
+        cancellationToken);
+
+if (!postExists)
+{
+    return Results.NotFound();
+}
+
+var likeCount = await dbContext.PostLikes
+    .AsNoTracking()
+    .CountAsync(
+        like => like.PostId == postId,
+        cancellationToken);
+
+var isLiked = await dbContext.PostLikes
+    .AsNoTracking()
+    .AnyAsync(
+        like =>
+            like.PostId == postId
+            && like.UserId == userId,
+        cancellationToken);
+
+return Results.Ok(
+    new LikeResponse(
+        postId,
+        isLiked,
+        likeCount));
+
+}
+
+static Task<IResult> GetProfileBlockCompatibilityAsync(
+
+string username)
+
+{
+
+return Task.FromResult<IResult>(
+
+Results.StatusCode(
+
+StatusCodes.Status405MethodNotAllowed));
+
+}
+
+static Task<IResult> GetProfileFollowCompatibilityAsync(
+
+string username)
+
+{
+
+return Task.FromResult<IResult>(
+
+Results.StatusCode(
+
+StatusCodes.Status405MethodNotAllowed));
+
+}
+
+static Task<IResult> GetResolveReportCompatibilityAsync(
+
+int reportId)
+
+{
+
+return Task.FromResult<IResult>(
+
+Results.StatusCode(
+
+StatusCodes.Status405MethodNotAllowed));
+
+}
+
+static Task<IResult> GetDismissReportCompatibilityAsync(
+
+int reportId)
+
+{
+
+return Task.FromResult<IResult>(
+
+Results.StatusCode(
+
+StatusCodes.Status405MethodNotAllowed));
+
+}
 
 public partial class Program
 

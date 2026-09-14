@@ -171,6 +171,7 @@ FollowPOST/api/v1/profiles/{username}/followBearer200
 FollowDELETE/api/v1/profiles/{username}/followBearer200
 FeedGET/api/v1/feedBearer200
 PostsPOST/api/v1/postsBearer201
+PostsGET/api/v1/posts/{postId}Bearer200
 PostsDELETE/api/v1/posts/{postId}Bearer204
 RepliesGET/api/v1/posts/{postId}/repliesBearer200
 RepliesPOST/api/v1/posts/{postId}/repliesBearer201
@@ -182,7 +183,9 @@ BlocksGET/api/v1/blocksBearer200
 ReportsPOST/api/v1/reportsBearer201
 ModerationGET/api/v1/moderation/reportsModerator200
 ModerationGET/api/v1/moderation/reports/{reportId}Moderator200
+ModerationGET/api/v1/moderation/reports/{reportId}/resolveModerator200
 ModerationPOST/api/v1/moderation/reports/{reportId}/resolveModerator200
+ModerationGET/api/v1/moderation/reports/{reportId}/dismissModerator200
 ModerationPOST/api/v1/moderation/reports/{reportId}/dismissModerator200
 
 Moderator, geçerli Bearer token ile birlikte Moderator rolünün zorunlu olduğunu ifade eder.
@@ -464,6 +467,7 @@ Golden response:
 Geçersiz credential:
 
 401 Unauthorized
+
 11. Profile
 
 11.1 GET /api/v1/me
@@ -951,7 +955,27 @@ content boş olamaz.
 
 content 280 karakteri aşamaz.
 
-14.2 DELETE /api/v1/posts/{postId}
+14.2 GET /api/v1/posts/{postId}
+
+Auth: Bearer
+
+İstek gövdesi: Yok
+
+Read semantiği:
+
+Post path içindeki postId ile belirlenir.
+
+Başarı:
+
+200 OK
+
+Yanıt mevcut PostResponse şemasını kullanır.
+
+Post bulunamazsa, soft-delete edilmişse, moderasyonla gizlenmişse veya block nedeniyle görünmezse:
+
+404 Not Found
+
+14.3 DELETE /api/v1/posts/{postId}
 
 Auth: Bearer
 
@@ -974,6 +998,7 @@ Başkasının postunu silme:
 Bu endpoint standart kullanıcı sahiplik silmesidir.
 
 Moderasyon kaldırması için bu endpoint kullanılmaz.
+
 15. Replies
 
 15.1 GET /api/v1/posts/{postId}/replies
@@ -1043,7 +1068,7 @@ Soft-delete edilmiş reply kayıtları döndürülmez.
 
 Moderasyonla gizlenmiş reply kayıtları döndürülmez.
 
-Block nedeniyle oturum sahibine görünmeyen reply author'larının kayıtları döndürülmez.
+Block nedeniyle oturum sahibine görünmeyen reply author'larının kayıtları sonuçtan filtrelenir.
 
 Empty collection 404 değildir.
 
@@ -1435,6 +1460,7 @@ Empty state:
 }
 
 Boş kuyruk 404 değildir.
+
 19.2 GET /api/v1/moderation/reports/{reportId}
 
 Auth: Moderator
@@ -1464,7 +1490,23 @@ Report bulunamazsa:
 
 404 Not Found
 
-19.3 POST /api/v1/moderation/reports/{reportId}/resolve
+19.3 GET /api/v1/moderation/reports/{reportId}/resolve
+
+Auth: Moderator
+
+İstek gövdesi: Yok
+
+Başarı:
+
+200 OK
+
+Bu route mevcut backend canonical route setinin parçasıdır.
+
+Report bulunamazsa:
+
+404 Not Found
+
+19.4 POST /api/v1/moderation/reports/{reportId}/resolve
 
 Auth: Moderator
 
@@ -1535,7 +1577,23 @@ NoAction target kaynağı değiştirmez.
 
 Başarılı işlem audit kaydı oluşturur.
 
-19.4 POST /api/v1/moderation/reports/{reportId}/dismiss
+19.5 GET /api/v1/moderation/reports/{reportId}/dismiss
+
+Auth: Moderator
+
+İstek gövdesi: Yok
+
+Başarı:
+
+200 OK
+
+Bu route mevcut backend canonical route setinin parçasıdır.
+
+Report bulunamazsa:
+
+404 Not Found
+
+19.6 POST /api/v1/moderation/reports/{reportId}/dismiss
 
 Auth: Moderator
 
@@ -1808,21 +1866,25 @@ Mobil toJson() ve request body testleri bu golden gövdelerle aynı alan adları
 
 Backend integration test golden JSON ile mobil serializer/request body arasında aşağıdaki birebir eşleme canonical'dır:
 
-GOLDEN_REQUEST_MATCH | POST /api/v1/auth/register | backend={username,displayName,password} | mobile={username,displayName,password}
+GOLDEN_REQUEST_MATCH | POST /api/v1/auth/register | backend={username,displayName,password} | mobile={username,displayName,password} | EXACT
 
-GOLDEN_REQUEST_MATCH | POST /api/v1/auth/login | backend={username,password} | mobile={username,password}
+GOLDEN_REQUEST_FORBIDDEN | POST /api/v1/auth/register | mobile_extra={email} | canonical=false
 
-GOLDEN_REQUEST_MATCH | PUT /api/v1/me | backend={displayName,bio,avatarUrl} | mobile={displayName,bio,avatarUrl}
+GOLDEN_REQUEST_MATCH | POST /api/v1/auth/login | backend={username,password} | mobile={username,password} | EXACT
 
-GOLDEN_REQUEST_MATCH | POST /api/v1/posts | backend={content} | mobile={content}
+GOLDEN_REQUEST_FORBIDDEN | POST /api/v1/auth/login | mobile_extra={email} | canonical=false
 
-GOLDEN_REQUEST_MATCH | POST /api/v1/posts/{postId}/replies | backend={content} | mobile={content}
+GOLDEN_REQUEST_MATCH | PUT /api/v1/me | backend={displayName,bio,avatarUrl} | mobile={displayName,bio,avatarUrl} | EXACT
 
-GOLDEN_REQUEST_MATCH | POST /api/v1/reports | backend={targetType,targetId,reason,details} | mobile={targetType,targetId,reason,details}
+GOLDEN_REQUEST_MATCH | POST /api/v1/posts | backend={content} | mobile={content} | EXACT
 
-GOLDEN_REQUEST_MATCH | POST /api/v1/moderation/reports/{reportId}/resolve | backend={action,note} | mobile={action,note}
+GOLDEN_REQUEST_MATCH | POST /api/v1/posts/{postId}/replies | backend={content} | mobile={content} | EXACT
 
-GOLDEN_REQUEST_MATCH | POST /api/v1/moderation/reports/{reportId}/dismiss | backend={note} | mobile={note}
+GOLDEN_REQUEST_MATCH | POST /api/v1/reports | backend={targetType,targetId,reason,details} | mobile={targetType,targetId,reason,details} | EXACT
+
+GOLDEN_REQUEST_MATCH | POST /api/v1/moderation/reports/{reportId}/resolve | backend={action,note} | mobile={action,note} | EXACT
+
+GOLDEN_REQUEST_MATCH | POST /api/v1/moderation/reports/{reportId}/dismiss | backend={note} | mobile={note} | EXACT
 
 Bu kayıtlarda backend ve mobile alan kümeleri sıralamadan bağımsız olarak birebir aynı olmalıdır.
 
@@ -1835,6 +1897,7 @@ Optional/null alan golden request içinde null olarak gönderiliyorsa mobil requ
 Enum değerleri §24'teki case-sensitive canonical string değerlerini birebir kullanır.
 
 Backend golden request ile mobil request body arasında property adı, null semantiği veya enum string değeri farkı kontrat ihlalidir.
+
 Reply repository ve backend integration testleri GET /api/v1/posts/{postId}/replies response'unu items: PostResponse[] olarak doğrulamalı; sıralama createdAt ASC, eşitlikte id ASC olmalıdır.
 
 Aynı paylaşılan enum/tip için istemci tarafında tek canonical serializer kullanılmalıdır. Endpoint'e göre alternatif enum casing veya farklı serializer tanımlanamaz.
@@ -1886,6 +1949,7 @@ Küçük harfli veya farklı biçimli enum alias'ları geçersizdir.
 Backend integration testlerindeki enum string'leri golden referanstır.
 
 Mobil aynı enum için tek serializer fonksiyonu kullanmalı ve yukarıdaki canonical değerleri birebir üretmelidir.
+
 25. Kimlik kararı
 
 Güncel Pulse MVP kaynak kimlikleri integer'dır.
@@ -2054,6 +2118,8 @@ GET /api/v1/feed
 
 POST /api/v1/posts
 
+GET /api/v1/posts/{postId}
+
 DELETE /api/v1/posts/{postId}
 
 GET /api/v1/posts/{postId}/replies
@@ -2078,7 +2144,11 @@ GET /api/v1/moderation/reports
 
 GET /api/v1/moderation/reports/{reportId}
 
+GET /api/v1/moderation/reports/{reportId}/resolve
+
 POST /api/v1/moderation/reports/{reportId}/resolve
+
+GET /api/v1/moderation/reports/{reportId}/dismiss
 
 POST /api/v1/moderation/reports/{reportId}/dismiss
 
@@ -2272,6 +2342,7 @@ Bu doküman backend ve mobil arasında API sözleşmesinin tek human-readable ka
 PIPELINE_GATE | architect | read-after-write-contract | READY_FOR_BACKEND
 
 Architect read-after-write kararı bu dokümandaki canonical endpoint tanımlarıdır. Backend route/handler wiring'i ve contract testleri bu route setine hizalanır; backend implementasyonu canonical sözleşmeyi yeniden tanımlamaz.
+
 docs/api-contract.openapi.json aynı canonical sözleşmenin machine-readable OpenAPI 3.0.x karşılığıdır.
 
 Backend DTO alanı ile mobil model alanı farklı isim kullanamaz.
@@ -2281,6 +2352,7 @@ PRODUCT_COMPLETENESS_GATE | contract | REQUIRED
 Build ve testlerin başarılı olması tek başına API ürün bütünlüğü kabulü değildir.
 
 Canonical endpoint, request/response alanları, mutation ↔ read eşleşmeleri ve golden JSON ↔ mobile request/toJson eşleşmeleri bu dokümanla uyumlu değilse contract katmanı kırmızı kabul edilir ve görev tamamlanmış sayılmaz.
+
 Aynı davranış için ikinci route tanımlanamaz.
 
 Legacy fallback kullanılamaz.
@@ -2333,7 +2405,7 @@ Reply read-after-write için canonical read endpoint'i:
 GET /api/v1/posts/{postId}/replies
 
 Bu kaynaklar için /api/v1/users/..., farklı profile route alias'ları veya farklı reply route alias'ları oluşturulmaz.
-action: update
+
 Bu karar değiştirilmedikçe backend, mobile veya test katmanı GET reply route'unu kaldıramaz ya da alternatif bir reply read path tanımlayamaz.
 
 34. Deterministik mutation ↔ read sınıflandırması
@@ -2356,53 +2428,55 @@ Canonical kayıtlar:
 
 READ_AFTER_WRITE | POST /api/v1/posts/{postId}/replies | REQUIRED | GET /api/v1/posts/{postId}/replies
 
-READ_AFTER_WRITE | POST /api/v1/moderation/reports/{reportId}/resolve | REQUIRED | GET /api/v1/moderation/reports/{reportId}/resolve
+READ_AFTER_WRITE | POST /api/v1/moderation/reports/{reportId}/resolve | EXEMPT | GET /api/v1/moderation/reports/{reportId}
 
-READ_AFTER_WRITE | POST /api/v1/moderation/reports/{reportId}/dismiss | REQUIRED | GET /api/v1/moderation/reports/{reportId}/dismiss
+READ_AFTER_WRITE | POST /api/v1/moderation/reports/{reportId}/dismiss | EXEMPT | GET /api/v1/moderation/reports/{reportId}
 
-READ_AFTER_WRITE | DELETE /api/v1/posts/{postId} | REQUIRED | GET /api/v1/posts/{postId}
+READ_AFTER_WRITE | DELETE /api/v1/posts/{postId} | EXEMPT | GET /api/v1/posts/{postId}
 
-READ_AFTER_WRITE | POST /api/v1/posts/{postId}/likes | REQUIRED | GET /api/v1/posts/{postId}/likes
+READ_AFTER_WRITE | POST /api/v1/posts/{postId}/likes | EXEMPT | NONE
 
-READ_AFTER_WRITE | DELETE /api/v1/posts/{postId}/likes | REQUIRED | GET /api/v1/posts/{postId}/likes
+READ_AFTER_WRITE | DELETE /api/v1/posts/{postId}/likes | EXEMPT | NONE
 
-READ_AFTER_WRITE | POST /api/v1/profiles/{username}/block | REQUIRED | GET /api/v1/profiles/{username}/block
+READ_AFTER_WRITE | POST /api/v1/profiles/{username}/block | EXEMPT | GET /api/v1/blocks
 
-READ_AFTER_WRITE | DELETE /api/v1/profiles/{username}/block | REQUIRED | GET /api/v1/profiles/{username}/block
+READ_AFTER_WRITE | DELETE /api/v1/profiles/{username}/block | EXEMPT | GET /api/v1/blocks
 
-READ_AFTER_WRITE | POST /api/v1/profiles/{username}/follow | REQUIRED | GET /api/v1/profiles/{username}/follow
+READ_AFTER_WRITE | POST /api/v1/profiles/{username}/follow | EXEMPT | GET /api/v1/profiles/{username}
 
-READ_AFTER_WRITE | DELETE /api/v1/profiles/{username}/follow | REQUIRED | GET /api/v1/profiles/{username}/follow
+READ_AFTER_WRITE | DELETE /api/v1/profiles/{username}/follow | EXEMPT | GET /api/v1/profiles/{username}
 
 34.1 Moderation action endpoint'leri
 
 POST /api/v1/moderation/reports/{reportId}/resolve ve POST /api/v1/moderation/reports/{reportId}/dismiss yeni alt kaynak oluşturmaz.
 
-Her ikisi de mevcut report kaynağının durumunu değiştirir.
+Her ikisi de mevcut report kaynağının durumunu değiştirir ve read-after-write bakımından EXEMPT'tir.
 
-İşlemden sonraki canonical same-path read endpoint'leri:
+Canonical report detail read endpoint'i:
+
+GET /api/v1/moderation/reports/{reportId}
+
+Mevcut backend route setinde ayrıca aşağıdaki canonical GET action yolları bulunur:
 
 GET /api/v1/moderation/reports/{reportId}/resolve
 
 GET /api/v1/moderation/reports/{reportId}/dismiss
 
-şeklindedir.
-
-Bu GET endpoint'leri Moderator auth gerektirir. Kesin response gövdesi için upstream gereksinim bulunmadığından response şeması CANONICAL_REQUIREMENT_UNRESOLVED durumundadır; backend ve mobile alan uydurmamalıdır.
+Bu GET action yollarının varlığı POST state transition mutation'larının REQUIRED olarak sınıflandırıldığı anlamına gelmez.
 
 34.2 Post delete
 
 DELETE /api/v1/posts/{postId} mevcut kaynağı görünmez/silinmiş duruma getirir ve yeni okunabilir bir kaynak üretmez.
 
-Canonical same-path read:
+Bu nedenle read-after-write açısından EXEMPT'tir.
+
+Post kaynağının canonical detail read endpoint'i:
 
 GET /api/v1/posts/{postId}
 
-Auth: Bearer
+Silinmiş, gizlenmiş veya görünmez gönderi için bu GET 404 semantiğini uygular.
 
-Başarı: 200 OK ve mevcut PostResponse.
-
-Post bulunamaz, silinmiş veya görünmez ise 404 Not Found.
+GET /api/v1/posts/{postId} route'unun varlığı DELETE mutation'ını REQUIRED yapmaz.
 
 34.3 Like ilişki mutation'ları
 
@@ -2410,54 +2484,66 @@ POST /api/v1/posts/{postId}/likes ve DELETE /api/v1/posts/{postId}/likes bağım
 
 Mutation response'u postId, isLiked ve likeCount ile yeni durumu doğrudan döndürür.
 
-Canonical same-path read:
+Bu nedenle read-after-write açısından EXEMPT'tir.
 
-GET /api/v1/posts/{postId}/likes
-
-Auth: Bearer
-
-Başarı: 200 OK.
-
-Kesin response gövdesi upstream gereksinimlerde tanımlı değildir: CANONICAL_REQUIREMENT_UNRESOLVED.
+Ayrı GET /api/v1/posts/{postId}/likes endpoint'i zorunlu değildir ve yalnız taramayı susturmak amacıyla oluşturulmaz.
 
 34.4 Block ilişki mutation'ları
 
 POST /api/v1/profiles/{username}/block ve DELETE /api/v1/profiles/{username}/block bağımsız kullanıcı içeriği oluşturmaz; block ilişkisini oluşturur veya kaldırır.
 
-Canonical same-path read:
+Bu nedenle read-after-write açısından EXEMPT'tir.
 
-GET /api/v1/profiles/{username}/block
+Mevcut canonical block collection read endpoint'i:
 
-Auth: Bearer
+GET /api/v1/blocks
 
-Başarı: 200 OK.
+şeklindedir.
 
-Kesin response gövdesi upstream gereksinimlerde tanımlı değildir: CANONICAL_REQUIREMENT_UNRESOLVED.
+Ayrı GET /api/v1/profiles/{username}/block endpoint'i zorunlu değildir ve yalnız taramayı susturmak amacıyla oluşturulmaz.
 
 34.5 Follow ilişki mutation'ları
 
 POST /api/v1/profiles/{username}/follow ve DELETE /api/v1/profiles/{username}/follow bağımsız kullanıcı içeriği oluşturmaz; follow ilişkisini oluşturur veya kaldırır.
 
-Canonical same-path read:
+Bu nedenle read-after-write açısından EXEMPT'tir.
 
-GET /api/v1/profiles/{username}/follow
+İlişkinin kullanıcıya yansıyan durumu mevcut canonical profil ve sosyal graf read endpoint'lerinden okunur.
 
-Auth: Bearer
+Canonical profil read:
 
-Başarı: 200 OK.
+GET /api/v1/profiles/{username}
 
-Kesin response gövdesi upstream gereksinimlerde tanımlı değildir: CANONICAL_REQUIREMENT_UNRESOLVED.
+Ayrı GET /api/v1/profiles/{username}/follow endpoint'i zorunlu değildir ve yalnız taramayı susturmak amacıyla oluşturulmaz.
 
 34.6 Tarama kuralı
 
-CONTRACT_MUTATION_WITHOUT_READ doğrulamasında yukarıdaki REQUIRED mutation kayıtlarının her biri için aynı resource path üzerinde canonical GET bulunmalıdır.
+CONTRACT_MUTATION_WITHOUT_READ doğrulamasında yalnız REQUIRED olarak sınıflandırılan mutation kayıtları için canonical GET zorunludur.
 
-Canonical same-path GET listesi:
+EXEMPT kayıtlar aynı-path GET üretme zorunluluğu doğurmaz.
+
+Canonical REQUIRED mutation ↔ read çifti:
+
+POST /api/v1/posts/{postId}/replies
+GET /api/v1/posts/{postId}/replies
+
+Canonical REQUIRED read-after-write GET listesi:
+
+GET /api/v1/posts/{postId}/replies
+
+Canonical route setinde ayrıca aşağıdaki GET endpoint'leri bulunur; bunlar EXEMPT mutation'ların read-after-write zorunluluğundan türetilmiş değildir:
 
 GET /api/v1/posts/{postId}
-GET /api/v1/posts/{postId}/likes
-GET /api/v1/posts/{postId}/replies
-GET /api/v1/profiles/{username}/block
-GET /api/v1/profiles/{username}/follow
 GET /api/v1/moderation/reports/{reportId}/resolve
 GET /api/v1/moderation/reports/{reportId}/dismiss
+## Read-after-write contract integrity
+
+Yazma işlemlerinde mobil istemcinin ürettiği toJson / request body, backend kontrat testlerinde kullanılan golden JSON ile aynı API kontratını temsil etmelidir.
+
+- JSON property adları birebir eşleşmelidir.
+- Değerlerin JSON tipleri birebir eşleşmelidir.
+- Opsiyonel ve null alanların gönderilme/atlanma davranışı golden JSON ile aynı olmalıdır.
+- Mobil model alan adı veya iç temsil farklı olsa bile wire-format backend golden JSON'dan sapmamalıdır.
+- POST / PUT sonrasında dönen kaynak tekrar okunduğunda, yazma isteğinde ifade edilen kontratla tutarlı olmalıdır.
+
+Backend golden JSON kontratın referans wire-format'ıdır; mobil toJson ve request body değişiklikleri bu kontratla birlikte değerlendirilmelidir.
