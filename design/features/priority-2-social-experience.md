@@ -30,6 +30,42 @@ UI hiçbir zaman sözleşmede bulunmayan endpoint, query parametresi, response a
 
 “Takip Ettiklerim” ve ilişki göstergeleri kabul kapsamının zorunlu yüzeyleridir. Canonical contract desteğinin bulunmaması bu yüzeyleri tasarım kapsamından çıkarmaz; bunun yerine her yüzey için açık bir contract-unavailable durumu tanımlanır.
 
+### Zorunlu acceptance yüzeyi — Takip Ettiklerim
+
+Feed filtre kontrolünde “Tümü” ve “Takip Ettiklerim” seçenekleri birlikte görünür.
+
+“Takip Ettiklerim” seçeneği canonical contract desteği bulunmadığında gizlenmez, kaldırılmaz veya kapsam dışı sayılmaz.
+
+Contract mevcutsa yalnız canonical endpoint/query/response kullanılır ve seçili “Takip Ettiklerim” yüzeyi loading, success, empty ve error state'lerini gösterir.
+
+Contract henüz mevcut değilse seçili “Takip Ettiklerim” yüzeyi contract-unavailable state gösterir:
+
+- Başlık: “Takip Ettiklerim”.
+- Açıklama: “Bu akış şu anda kullanılamıyor.”
+- Yeni endpoint, query parametresi veya client-side takip listesi birleştirmesi üretilmez.
+- Kullanıcı “Tümü” seçeneğine geri dönebilir.
+
+Contract-unavailable, empty state değildir; takip edilen kullanıcı olmadığı anlamına gelmez.
+
+### Zorunlu acceptance yüzeyi — Profil ilişki göstergeleri
+
+Başka kullanıcı profili tasarımında iki ayrı ilişki göstergesi yüzeyi bulunur:
+
+- “Seni takip ediyor”.
+- “Karşılıklı takip”.
+
+Canonical relationship metadata bu durumları desteklediğinde etiketler yalnız backend tarafından doğrulanan ilişki state'ine göre gösterilir.
+
+“Seni takip ediyor”, görüntülenen kullanıcının current user'ı takip ettiği canonical state'i temsil eder.
+
+“Karşılıklı takip”, iki yönlü takip ilişkisinin canonical olarak doğrulandığı state'i temsil eder.
+
+Canonical contract bu ilişki metadata'sını henüz sağlamıyorsa bu acceptance yüzeyleri tasarımdan çıkarılmaz. Profil içinde relationship metadata alanı korunur ve contract-unavailable davranışı tanımlanır; tahmini “Seni takip ediyor” veya “Karşılıklı takip” etiketi üretilmez.
+
+Contract desteği geldiğinde aynı relationship metadata alanı gerçek canonical state ile güncellenir; yeni ve paralel bir UI yüzeyi oluşturulmaz.
+
+Follow/unfollow CTA state'i ile “Seni takip ediyor” / “Karşılıklı takip” metadata state'i birbirinin yerine kullanılmaz.
+
 Bu iki acceptance yüzeyi contract desteği bulunmadığı gerekçesiyle gizlenemez, kaldırılamaz veya sonraki faza ertelenmiş sayılmaz.
 
 “Takip Ettiklerim” yüzeyi contract-unavailable durumda da kullanıcı tarafından görülebilir kalır; yalnız veri isteği üretilmez.
