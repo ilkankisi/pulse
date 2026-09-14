@@ -30,7 +30,7 @@ UI hiçbir zaman sözleşmede bulunmayan endpoint, query parametresi, response a
 
 “Takip Ettiklerim” ve ilişki göstergeleri kabul kapsamının zorunlu yüzeyleridir. Canonical contract desteğinin bulunmaması bu yüzeyleri tasarım kapsamından çıkarmaz; bunun yerine her yüzey için açık bir contract-unavailable durumu tanımlanır.
 
-### Zorunlu acceptance yüzeyi — Takip Ettiklerim
+### Takip Ettiklerim feed filtresi — contract-gated
 
 Feed filtre kontrolünde “Tümü” ve “Takip Ettiklerim” seçenekleri birlikte görünür.
 
@@ -47,7 +47,7 @@ Contract henüz mevcut değilse seçili “Takip Ettiklerim” yüzeyi contract-
 
 Contract-unavailable, empty state değildir; takip edilen kullanıcı olmadığı anlamına gelmez.
 
-### Zorunlu acceptance yüzeyi — Profil ilişki göstergeleri
+### Profil ilişki göstergeleri — contract-gated
 
 Başka kullanıcı profili tasarımında iki ayrı ilişki göstergesi yüzeyi bulunur:
 
