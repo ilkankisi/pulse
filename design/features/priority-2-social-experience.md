@@ -261,26 +261,16 @@ Token: {components.social-summary-card}
 Widget hierarchy:
 
 Card
-
 └── Padding
-
-└── Row
-
-├── InkWell
-
-│   └── Column
-
-│       ├── Text(followerCount)
-
-│       └── Text("Takipçi")
-
-└── InkWell
-
-└── Column
-
-├── Text(followingCount)
-
-└── Text("Takip")
+    └── Row
+        ├── InkWell
+        │   └── Column
+        │       ├── Text(followerCount)
+        │       └── Text("Takipçi")
+        └── InkWell
+            └── Column
+                ├── Text(followingCount)
+                └── Text("Takip")
 
 fluttertemplates: Social Profile — /widgets/social
 
@@ -301,38 +291,22 @@ Token: {components.social-graph-list}
 Widget hierarchy:
 
 Scaffold
-
 ├── AppBar
-
 │   └── Text("Takipçiler" | "Takip Edilenler")
-
 └── body
-
-└── state
-
-├── loading: ListView
-
-│   └── shimmer rows
-
-├── success: ListView
-
-│   └── user row
-
-│       ├── CircleAvatar
-
-│       ├── Column
-
-│       │   ├── Text(displayName if available)
-
-│       │   └── Text("@username")
-
-│       └── optional canonical relationship action
-
-├── empty: EmptyState
-
-└── error: ErrorState
-
-└── FilledButton("Yeniden Dene")
+    └── state
+        ├── loading: ListView
+        │   └── shimmer rows
+        ├── success: ListView
+        │   └── user row
+        │       ├── CircleAvatar
+        │       ├── Column
+        │       │   ├── Text(displayName if available)
+        │       │   └── Text("@username")
+        │       └── optional canonical relationship action
+        ├── empty: EmptyState
+        └── error: ErrorState
+            └── FilledButton("Yeniden Dene")
 
 fluttertemplates: User Search / Social Profile — /widgets/social
 
@@ -353,16 +327,11 @@ Token: {components.relationship-action}
 Widget hierarchy:
 
 FilledButton | OutlinedButton
-
 ├── state: idle
-
 │   └── Text("Takip Et" | "Takibi Bırak")
-
 └── state: loading
-
-└── SizedBox
-
-└── CircularProgressIndicator
+    └── SizedBox
+        └── CircularProgressIndicator
 
 fluttertemplates: Social Profile — /widgets/social
 
@@ -389,36 +358,21 @@ Canonical feed contract takip edilen hesaplarla sınırlı bir feed scope/filter
 Widget hierarchy:
 
 FeedPage
-
 ├── AppBar
-
 └── body
-
-└── Column
-
-├── feed filter region
-
-│   └── SegmentedButton | FilterChip row
-
-│       ├── canonical default feed option
-
-│       └── option: Text("Takip Ettiklerim")
-
-└── Expanded
-
-└── feed state
-
-├── loading: feed skeleton
-
-├── success: ListView
-
-│   └── PostCard*
-
-├── empty: EmptyState
-
-└── error: ErrorState
-
-└── FilledButton("Yeniden Dene")
+    └── Column
+        ├── feed filter region
+        │   └── SegmentedButton | FilterChip row
+        │       ├── canonical default feed option
+        │       └── option: Text("Takip Ettiklerim")
+        └── Expanded
+            └── feed state
+                ├── loading: feed skeleton
+                ├── success: ListView
+                │   └── PostCard*
+                ├── empty: EmptyState
+                └── error: ErrorState
+                    └── FilledButton("Yeniden Dene")
 
 fluttertemplates: Activity Feed — /widgets/social
 
@@ -447,26 +401,16 @@ Canonical feed contract takip edilen hesaplarla sınırlı bir request mapping'i
 Widget hierarchy:
 
 FeedPage
-
 ├── AppBar
-
 └── body
-
-└── Column
-
-├── feed filter region
-
-│   └── Tooltip / helper region
-
-│       └── disabled FilterChip
-
-│           └── Text("Takip Ettiklerim")
-
-├── Text("Takip Ettiklerim görünümü şu anda kullanılamıyor.")
-
-└── Expanded
-
-└── canonical default feed
+    └── Column
+        ├── feed filter region
+        │   └── Tooltip / helper region
+        │       └── disabled FilterChip
+        │           └── Text("Takip Ettiklerim")
+        ├── Text("Takip Ettiklerim görünümü şu anda kullanılamıyor.")
+        └── Expanded
+            └── canonical default feed
 
 Kurallar:
 
@@ -493,34 +437,20 @@ Canonical profile/relationship response gerekli ilişki bilgisini güvenilir bi�
 Widget hierarchy:
 
 ProfileHeader
-
 └── Column
-
-├── identity row
-
-│   ├── CircleAvatar
-
-│   └── Column
-
-│       ├── Text(displayName)
-
-│       └── Text("@username")
-
-├── relationship indicator region
-
-│   └── Wrap
-
-│       ├── optional AssistChip
-
-│       │   └── Text("Seni takip ediyor")
-
-│       └── optional AssistChip
-
-│           └── Text("Karşılıklı takip")
-
-└── relationship CTA
-
-└── FilledButton | OutlinedButton
+    ├── identity row
+    │   ├── CircleAvatar
+    │   └── Column
+    │       ├── Text(displayName)
+    │       └── Text("@username")
+    ├── relationship indicator region
+    │   └── Wrap
+    │       ├── optional AssistChip
+    │       │   └── Text("Seni takip ediyor")
+    │       └── optional AssistChip
+    │           └── Text("Karşılıklı takip")
+    └── relationship CTA
+        └── FilledButton | OutlinedButton
 
 fluttertemplates: Social Profile — /widgets/social
 
@@ -545,16 +475,11 @@ Canonical response gerekli ilişki bilgisini sağlamıyorsa kabul yüzeyi tasar�
 Widget hierarchy:
 
 ProfileHeader
-
 └── Column
-
-├── identity row
-
-├── relationship indicator region
-
-│   └── Text("İlişki bilgisi kullanılamıyor")
-
-└── canonical relationship CTA, available ise
+    ├── identity row
+    ├── relationship indicator region
+    │   └── Text("İlişki bilgisi kullanılamıyor")
+    └── canonical relationship CTA, available ise
 
 Kurallar:
 
@@ -704,7 +629,7 @@ Route username hiçbir durumda current-user username ile sessizce değiştirilme
 
 Do's and Don'ts
 
-Do:
+Do
 
 Canonical contract tarafından sağlanan relationship state'i kullan.
 
@@ -718,7 +643,7 @@ Sayaçlardan gerçek liste ekranlarına navigasyon sağla.
 
 Retry sırasında mevcut route ve filtre bağlamını koru.
 
-Don't:
+Don't
 
 “Takip Ettiklerim” kriterini canonical destek yok diye tasarım kapsamından çıkarma.
 

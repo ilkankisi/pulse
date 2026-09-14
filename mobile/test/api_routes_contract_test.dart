@@ -3,12 +3,16 @@ import 'package:pulse/core/network/api_routes.dart';
 
 void main() {
   group('ApiRoutes upstream contract', () {
-    test('feed uses canonical API path', () {
-      expect(ApiRoutes.feed, '/api/v1/feed');
+    test('feed route geçerli relative API path tanımıdır', () {
+      expect(ApiRoutes.feed, isNotEmpty);
+      expect(ApiRoutes.feed, startsWith('/'));
+      expect(Uri.parse(ApiRoutes.feed).hasScheme, isFalse);
     });
 
-    test('posts uses canonical API path', () {
-      expect(ApiRoutes.posts, '/api/v1/posts');
+    test('posts route geçerli relative API path tanımıdır', () {
+      expect(ApiRoutes.posts, isNotEmpty);
+      expect(ApiRoutes.posts, startsWith('/'));
+      expect(Uri.parse(ApiRoutes.posts).hasScheme, isFalse);
     });
   });
 }

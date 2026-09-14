@@ -36,6 +36,10 @@ features:
   file: priority-2-social-experience.md
   title: Öncelik 2 sosyal deneyim akışları
   api_contract_refs: []
+- id: priority-2-social-experience-contract-gates
+  file: priority-2-social-experience-contract-gates.md
+  title: Öncelik 2 sosyal deneyim kontrat kapıları
+  api_contract_refs: []
 - id: priority-3-security-management
   file: priority-3-security-management.md
   title: Öncelik 3 hesap güvenliği ve yönetim deneyimi

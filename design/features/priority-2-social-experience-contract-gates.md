@@ -1,141 +1,102 @@
-Öncelik 2 — Contract-gated sosyal deneyim yüzeyleri
+Öncelik 2 Sosyal Deneyim Kontrat Kapıları
 
 Scope
+Bu feature, Öncelik 2 sosyal deneyim akışlarının ürün ve API kontratıyla uyumlu çalışması için gerekli tasarım kapılarını tanımlar.
+Amaçları:
+Sosyal deneyim ekranlarında yalnızca desteklenen davranışların kullanıcıya sunulması.
+Veri bekleme, boş sonuç, hata ve başarılı veri durumlarının açık biçimde tasarlanması.
+Liste, detay ve profil geçişlerinin tutarlı navigasyon davranışı göstermesi.
+API tarafından desteklenmeyen bir davranışın yalnızca arayüz seviyesinde varmış gibi gösterilmemesi.
+Kullanıcının yaptığı sosyal aksiyonlardan sonra ekrandaki durumun güncel sonucu açık biçimde yansıtması.
+### Request body kontrat kapısı
 
-Bu kaynak, Öncelik 2 sosyal deneyim kapsamındaki iki zorunlu kabul yüzeyini tanımlar:
+- Mobil toJson çıktısı ve HTTP request body yapısı backend testlerinde doğrulanan golden JSON ile birebir aynı alan adlarını ve değer semantiğini kullanır.
+- UI veya repository katmanı kontratta bulunmayan ek request alanı üretmez.
+- Alan adları istemci tarafında yeniden adlandırılmaz; backend golden JSON hangi JSON key'i tanımlıyorsa mobil aynı key'i gönderir.
+- Enum/string değerleri UI metinlerinden türetilmez; canonical kontratta tanımlanan wire değerleri kullanılır.
+- null, boş string ve alanın hiç gönderilmemesi birbirinin yerine kullanılmaz; backend golden JSON ve canonical API kontratındaki semantik korunur.
+- Collection create işlemleri yalnız endpoint matrisindeki POST sözleşmesini, güncelleme işlemleri ise yalnız tanımlı update method/path sözleşmesini kullanır; istemci farklı method veya payload şekli tahmin etmez.
+### Takip edilenler akışı kontrat kapısı
 
-Feed üzerinde Tümü / Takip Ettiklerim filtresi.
+- Boss kapsamındaki Tümü ve Takip Ettiklerim ayrımı ürün hedefidir.
+- Güncel backend endpoint matrisinde akış için yalnızca GET /api/v1/feed tanımlıdır.
+- Takip Ettiklerim için ayrı endpoint, query parametresi veya filtre sözleşmesi tanımlı değilse mobil katman bunlardan birini tahmin ederek üretmez.
+- Kontrat desteği bulunmadığı sürece Takip Ettiklerim sekmesi gerçek veri kaynağı varmış gibi aktif bir akış yüzeyi olarak sunulmaz.
+- Kontrat bu ayrımı destekleyecek şekilde güncellendiğinde iki görünüm de aynı durum modelini kullanır: loading, empty, error ve success.
+- Akışın kronolojik sıralaması backend kontratından gelir; istemci ek bir sıralama semantiği uydurmaz.
 
-Profil üzerinde Seni takip ediyor / Karşılıklı takip ilişki göstergeleri.
+Components
 
-Bu yüzeyler canonical API contract desteği henüz bulunmasa bile tasarım kapsamından çıkarılmaz. UI sözleşmede bulunmayan endpoint, query parametresi, response alanı veya ilişki durumu üretmez.
+Sosyal deneyim akışlarında ihtiyaç oldukça aşağıdaki bileşenler kullanılır:
 
-Takip Ettiklerim feed filtresi — contract-gated
+Kullanıcı satırı veya kullanıcı kartı.
 
-Feed sosyal deneyim yüzeyinde iki seçenek bulunur:
+Avatar, görünen ad ve @username kimlik alanları.
 
-Tümü
+Sosyal ilişki durumunu gösteren aksiyon alanı.
 
-Takip Ettiklerim
+Gönderi kartı.
 
-Tümü, canonical feed davranışını kullanır.
+Liste bölümü ve bölüm başlığı.
 
-Takip Ettiklerim, kabul kapsamının kalıcı bir parçasıdır. Canonical API contract bu filtre için gerekli endpoint veya filtre parametresini tanımladığında yalnız sözleşmede belirtilen istek ve response davranışı kullanılır.
+Yükleniyor göstergesi.
 
-Canonical contract desteği henüz yoksa:
+Boş durum bileşeni.
 
-Takip Ettiklerim seçeneği UI'dan kaldırılmaz.
+Hata mesajı ve tekrar deneme aksiyonu.
 
-Yeni endpoint veya query parametresi uydurulmaz.
+Sayfa veya liste yenileme davranışı.
 
-Followers/following listeleri kullanılarak client-side feed üretilmez.
+Navigasyon için dokunulabilir kullanıcı ve gönderi yüzeyleri.
 
-Seçenek contract-unavailable durumuna geçer.
+Aynı sosyal aksiyon birden fazla ekranda bulunuyorsa etiket, durum ve geri bildirim davranışı tutarlı olmalıdır.
 
-Tümü akışı çalışmaya devam eder.
+Screen states
 
-Widget hierarchy
+Her veri kullanan sosyal deneyim yüzeyi aşağıdaki durumları ayırt eder:
 
-FeedPage
-└── Column
-    ├── SegmentedButton
-    │   ├── Segment("Tümü")
-    │   └── Segment("Takip Ettiklerim")
-    └── state
-        ├── all-selected
-        │   └── canonical feed content
-        └── following-selected
-            ├── loading
-            │   └── feed loading state
-            ├── success
-            │   └── chronological post list
-            ├── empty
-            │   └── EmptyState
-            ├── error
-            │   └── ErrorState
-            └── contract-unavailable
-                └── StatePanel
-                    ├── Text("Takip Ettiklerim")
-                    └── Text("Bu akış şu anda kullanılamıyor.")
+Loading
 
-Kurallar
+İlk veri yüklenirken kullanıcıya yükleme durumu gösterilir.
 
-Filtre değişiminde seçili segment görsel olarak belirgindir.
+Henüz veri alınmamışken yanlış bir boş durum gösterilmez.
 
-Loading sırasında seçili filtre korunur.
+Mevcut veri yenilenirken içerik gereksiz yere kaybolmamalıdır.
 
-Empty state yalnız kayıt-yok durumudur.
+Empty
 
-Network ve 5xx hataları empty state'e çevrilmez.
+İstek başarıyla tamamlanmış ancak gösterilecek veri yoksa açık bir boş durum gösterilir.
 
-401 merkezi login akışına gider.
+Boş durum hata gibi sunulmaz.
 
-Contract-unavailable state bir hata response'u gibi sunulmaz.
+Kullanıcının yapabileceği anlamlı bir sonraki aksiyon varsa boş durum içinde gösterilebilir.
 
-Contract-unavailable state içinde birincil CTA gösterilmez.
+Error
 
-Backend contract desteği gelmeden Mobile herhangi bir alternatif route veya filtre semantiği üretmez.
+İstek başarısız olduğunda kullanıcıya anlaşılır bir hata durumu gösterilir.
 
-Profil ilişki göstergeleri — contract-gated
+Tekrar denenebilen okuma işlemlerinde tekrar deneme aksiyonu sağlanır.
 
-Başka kullanıcı profillerindeki ilişki metadata yüzeyi aşağıdaki kabul durumlarını destekler:
+Başarısız sosyal aksiyonlar başarılıymış gibi kalıcı biçimde gösterilmez.
 
-Seni takip ediyor
+Success
 
-Karşılıklı takip
+Başarılı veri yüklemesinde gerçek içerik gösterilir.
 
-Bu etiketler yalnız canonical profile veya relationship response gerekli ilişki bilgisini açıkça verdiğinde gösterilir.
+Kullanıcı tarafından gerçekleştirilen başarılı sosyal aksiyon sonrasında ilgili görsel durum güncellenir.
 
-Seni takip ediyor, canonical veri görüntülenen kullanıcının current user'ı takip ettiğini doğruladığında gösterilir.
+Sayaç, durum etiketi veya aksiyon metni kullanılıyorsa ekrandaki yeni durumla tutarlı kalır.
 
-Karşılıklı takip, canonical veri iki yönlü takip ilişkisini doğruladığında gösterilir.
+Navigation
 
-Karşılıklı takip gösterildiğinde aynı anda ikinci bir Seni takip ediyor etiketi tekrarlanmaz.
+Kullanıcı adı, avatar veya kullanıcıyı temsil eden dokunulabilir alan profil ekranına yönlendirir.
 
-Follow/unfollow CTA ile bu göstergeler aynı semantiği taşımaz:
+Gönderiyi temsil eden dokunulabilir alan, detay akışı destekleniyorsa gönderi detayına yönlendirir.
 
-Follow/unfollow CTA: current user → görüntülenen profil ilişkisi.
+Alt sayfadan geri dönüldüğünde kullanıcı mümkün olduğunca önceki sosyal bağlamına geri döner.
 
-Seni takip ediyor: görüntülenen profil → current user ilişkisi.
+Aynı hedefe giden farklı sosyal yüzeyler tutarlı navigasyon davranışı kullanır.
 
-Karşılıklı takip: iki yönlü ilişkinin doğrulanmış hali.
+Sadece navigasyon amacıyla ikinci ve bağımsız bir ana uygulama kabuğu oluşturulmaz.
 
-Canonical contract ters yön veya karşılıklı ilişki bilgisini henüz vermiyorsa:
-
-Boolean ilişki tahmini yapılmaz.
-
-Followers/following listeleri client-side çaprazlanarak ilişki üretilmez.
-
-Sahte Seni takip ediyor veya Karşılıklı takip etiketi gösterilmez.
-
-İlişki metadata yüzeyi contract-unavailable durumda kalır.
-
-Mevcut canonical follow/unfollow CTA davranışı etkilenmez.
-
-Widget hierarchy
-
-ProfilePage
-└── ProfileHeader
-    ├── Avatar
-    ├── IdentityColumn
-    │   ├── Text(displayName)
-    │   ├── Text("@username")
-    │   └── relationship metadata
-    │       ├── Text("Seni takip ediyor")
-    │       ├── Text("Karşılıklı takip")
-    │       └── contract-unavailable: no relationship claim
-    └── canonical follow/unfollow CTA
-
-Kurallar
-
-İlişki göstergeleri yalnız doğrulanmış canonical state üzerinden render edilir.
-
-Karşılıklı takip, daha güçlü birleşik durumdur ve Seni takip ediyor etiketini tekrar ettirmez.
-
-Contract-unavailable durumda ilişki iddiası taşıyan etiket gösterilmez.
-
-Contract-unavailable, bu yüzeyi ürün kapsamından kaldırmaz.
-
-Canonical contract gerekli alanları tanımladığında aynı metadata alanı gerçek ilişki durumunu gösterir.
-
-UI yeni endpoint, query parametresi veya response field üretmez.
+Navigasyon hedefi ürün veya kontrat kapsamında desteklenmiyorsa kullanıcıya çalışmayan bir geçiş sunulmaz.

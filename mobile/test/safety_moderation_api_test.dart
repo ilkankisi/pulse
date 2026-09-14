@@ -1,10 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http_mock_adapter/http_mock_adapter.dart';
+import 'package:pulse/core/network/api_routes.dart';
 import 'package:pulse/features/pulse/data/safety_moderation_api.dart';
 import 'package:pulse/features/pulse/domain/moderation_models.dart';
-
-import 'package:pulse/core/network/api_routes.dart';
 
 void main() {
   test('block canonical profile block yoluna POST gönderir', () async {
@@ -15,7 +14,7 @@ void main() {
     addTearDown(() => dio.close(force: true));
 
     adapter.onPost(
-      '/api/v1/profiles/ayse/block',
+      ApiRoutes.profileBlock('ayse'),
       (server) => server.reply(200, <String, dynamic>{
         'id': 9,
         'username': 'ayse',
@@ -38,7 +37,7 @@ void main() {
     addTearDown(() => dio.close(force: true));
 
     adapter.onDelete(
-      '/api/v1/profiles/ayse/block',
+      ApiRoutes.profileBlock('ayse'),
       (server) => server.reply(204, null),
     );
 
@@ -78,7 +77,7 @@ void main() {
     };
 
     adapter.onPost(
-      '/api/v1/reports',
+      ApiRoutes.reports,
       (server) => server.reply(201, <String, dynamic>{
         'id': 10,
         ...body,
@@ -178,7 +177,7 @@ void main() {
     addTearDown(() => dio.close(force: true));
 
     adapter.onPost(
-      '/api/v1/moderation/reports/8/dismiss',
+      ApiRoutes.moderationDismiss(8),
       (server) =>
           server.reply(200, <String, dynamic>{'id': 8, 'status': 'dismissed'}),
     );

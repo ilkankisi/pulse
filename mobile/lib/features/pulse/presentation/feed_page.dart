@@ -1,32 +1,22 @@
 import 'package:dio/dio.dart';
-
 import 'package:flutter/material.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/domain/auth_models.dart';
-
 import '../data/pulse_repository.dart';
-
 import '../domain/pulse_models.dart';
-
 import 'composer_sheet.dart';
-
 import 'post_detail_page.dart';
-
 import 'profile_page.dart';
 
 class FeedPage extends ConsumerStatefulWidget {
   const FeedPage({
     required this.currentUser,
-
     required this.onUnauthorized,
-
     super.key,
   });
 
   final AuthUser currentUser;
-
   final Future<void> Function() onUnauthorized;
 
   @override
@@ -35,34 +25,26 @@ class FeedPage extends ConsumerStatefulWidget {
 
 class _FeedPageState extends ConsumerState<FeedPage> {
   static const int _initialChildCount = 39;
-
   static const int _scrollChunk = 40;
 
   final ScrollController _scrollController = ScrollController();
 
   List<PulsePost> _posts = const <PulsePost>[];
-
   bool _isLoading = true;
-
   String? _errorMessage;
-
   int _renderedChildCount = _initialChildCount;
-
   int _feedRequestGeneration = 0;
 
   @override
   void initState() {
     super.initState();
-
     _scrollController.addListener(_maybeExpandRenderedWindow);
-
     Future<void>.microtask(_loadFeed);
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
-
     super.dispose();
   }
 
@@ -158,13 +140,9 @@ class _FeedPageState extends ConsumerState<FeedPage> {
   Future<void> _openComposer() async {
     final created = await showModalBottomSheet<bool>(
       context: context,
-
       isScrollControlled: true,
-
       useSafeArea: true,
-
       elevation: 3,
-
       builder: (context) =>
           ComposerSheet(onUnauthorized: widget.onUnauthorized),
     );
@@ -192,11 +170,8 @@ class _FeedPageState extends ConsumerState<FeedPage> {
       MaterialPageRoute<void>(
         builder: (context) => ProfilePage(
           username: post.author.username,
-
           isCurrentUser: post.author.id == widget.currentUser.id,
-
           showAppBar: true,
-
           onUnauthorized: widget.onUnauthorized,
         ),
       ),
@@ -259,22 +234,16 @@ class _FeedPageState extends ConsumerState<FeedPage> {
   Future<void> _deletePost(PulsePost post) async {
     final confirmed = await showDialog<bool>(
       context: context,
-
       builder: (context) => AlertDialog(
         title: const Text('Gönderi silinsin mi?'),
-
         content: const Text('Bu işlem geri alınamaz.'),
-
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-
             child: const Text('Vazgeç'),
           ),
-
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-
             child: const Text('Sil'),
           ),
         ],
@@ -324,23 +293,7 @@ class _FeedPageState extends ConsumerState<FeedPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Akış'),
-
-        actions: <Widget>[
-          IconButton(
-            tooltip: 'Yenile',
-
-            onPressed: _isLoading ? null : _loadFeed,
-
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
-      ),
-
-      body: _buildBody(),
-    );
+    return _buildBody();
   }
 
   Widget _buildBody() {
@@ -440,38 +393,25 @@ class _EmptyFeed extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
-
       child: Column(
         mainAxisSize: MainAxisSize.min,
-
         children: <Widget>[
           const Icon(Icons.forum_outlined, size: 48),
-
           const SizedBox(height: 16),
-
           const Text(
             'Akış henüz boş',
-
             textAlign: TextAlign.center,
-
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
           ),
-
           const SizedBox(height: 8),
-
           const Text(
             'İlk gönderini paylaşarak konuşmayı başlat.',
-
             textAlign: TextAlign.center,
           ),
-
           const SizedBox(height: 16),
-
           FilledButton.icon(
             onPressed: onCreate,
-
             icon: const Icon(Icons.edit_outlined),
-
             label: const Text('Gönderi Oluştur'),
           ),
         ],
@@ -483,20 +423,14 @@ class _EmptyFeed extends StatelessWidget {
 class _FeedMessage extends StatelessWidget {
   const _FeedMessage({
     required this.icon,
-
     required this.title,
-
     required this.actionLabel,
-
     required this.onAction,
   });
 
   final IconData icon;
-
   final String title;
-
   final String actionLabel;
-
   final VoidCallback onAction;
 
   @override
@@ -504,25 +438,17 @@ class _FeedMessage extends StatelessWidget {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
-
         child: Column(
           mainAxisSize: MainAxisSize.min,
-
           children: <Widget>[
             Icon(icon, size: 48),
-
             const SizedBox(height: 16),
-
             Text(
               title,
-
               textAlign: TextAlign.center,
-
               style: Theme.of(context).textTheme.titleMedium,
             ),
-
             const SizedBox(height: 16),
-
             FilledButton(onPressed: onAction, child: Text(actionLabel)),
           ],
         ),
@@ -534,28 +460,18 @@ class _FeedMessage extends StatelessWidget {
 class _PostCard extends StatelessWidget {
   const _PostCard({
     required this.post,
-
     required this.isCurrentUser,
-
     required this.onOpen,
-
     required this.onOpenProfile,
-
     required this.onToggleLike,
-
     required this.onDelete,
   });
 
   final PulsePost post;
-
   final bool isCurrentUser;
-
   final VoidCallback onOpen;
-
   final VoidCallback onOpenProfile;
-
   final VoidCallback onToggleLike;
-
   final VoidCallback? onDelete;
 
   @override
@@ -689,7 +605,6 @@ class _AuthorAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final avatarUrl = post.author.avatarUrl;
-
     final displayName = post.author.displayName.trim();
 
     final fallback = displayName.isNotEmpty
@@ -709,46 +624,32 @@ class _AuthorAvatar extends StatelessWidget {
 class _ActionButton extends StatelessWidget {
   const _ActionButton({
     required this.tooltip,
-
     required this.icon,
-
     required this.count,
-
     required this.onPressed,
   });
 
   final String tooltip;
-
   final IconData icon;
-
   final int count;
-
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-
       label: tooltip,
-
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-
         onTap: onPressed,
-
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-
           child: Row(
             mainAxisSize: MainAxisSize.min,
-
             children: <Widget>[
               Icon(icon, size: 19),
-
               if (count > 0) ...<Widget>[
                 const SizedBox(width: 5),
-
                 Text('$count'),
               ],
             ],
@@ -761,9 +662,7 @@ class _ActionButton extends StatelessWidget {
 
 String _relativeTime(DateTime value) {
   final now = DateTime.now();
-
   final localValue = value.toLocal();
-
   final difference = now.difference(localValue);
 
   if (difference.isNegative || difference.inSeconds < 60) {
@@ -783,9 +682,7 @@ String _relativeTime(DateTime value) {
   }
 
   final day = localValue.day.toString().padLeft(2, '0');
-
   final month = localValue.month.toString().padLeft(2, '0');
-
   final year = localValue.year;
 
   if (year == now.year) {
