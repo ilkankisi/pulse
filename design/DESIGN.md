@@ -2780,15 +2780,31 @@ Başka profil route'unu current-user username ile değiştirme.
 
 Scope
 Bu feature, Öncelik 2 sosyal deneyim akışlarının ürün ve API kontratıyla uyumlu çalışması için gerekli tasarım kapılarını tanımlar.
+
+### Modular design ve doğrulama kabul kapısı
+Bu dosya design/features/manifest.yaml içindeki features listesinde benzersiz id, file, title ve api_contract_refs alanlarıyla kayıtlı olmalıdır.
+Manifest kaydı olmadan bu feature tamamlanmış kabul edilmez; orphan feature design auto_verify hatasıdır.
+Modular compile sonucunda bu feature içeriği üretilen design/DESIGN.md kapsamına dahil olmalıdır.
+design/DESIGN.md doğrudan düzenlenmez; doğruluk kaynağı bu feature dosyası ve manifest kaydıdır.
+- Uygulama build veya testlerinin başarılı olması design katmanının geçtiği anlamına gelmez.
+- Design kabulü için manifest bütünlüğü, modular compile ve bu feature'daki design kontrat kapıları ayrı olarak başarılı olmalıdır.
+
+- Bu dosya design/features/manifest.yaml içindeki features listesinde benzersiz id, file, title ve api_contract_refs alanlarıyla kayıtlı olmalıdır.
+- Manifest kaydı olmadan bu feature tamamlanmış kabul edilmez; orphan feature design auto_verify hatasıdır.
+- Modular compile sonucunda bu feature içeriği üretilen design/DESIGN.md kapsamına dahil olmalıdır.
+- design/DESIGN.md doğrudan düzenlenmez; doğruluk kaynağı bu feature dosyası ve manifest kaydıdır.
 Amaçları:
 Sosyal deneyim ekranlarında yalnızca desteklenen davranışların kullanıcıya sunulması.
 Veri bekleme, boş sonuç, hata ve başarılı veri durumlarının açık biçimde tasarlanması.
 Liste, detay ve profil geçişlerinin tutarlı navigasyon davranışı göstermesi.
 API tarafından desteklenmeyen bir davranışın yalnızca arayüz seviyesinde varmış gibi gösterilmemesi.
 Kullanıcının yaptığı sosyal aksiyonlardan sonra ekrandaki durumun güncel sonucu açık biçimde yansıtması.
-### Request body kontrat kapısı
+### Backend golden JSON ↔ mobil request body kontrat kapısı
 
-- Mobil toJson çıktısı ve HTTP request body yapısı backend testlerinde doğrulanan golden JSON ile birebir aynı alan adlarını ve değer semantiğini kullanır.
+- Mobil toJson çıktısı ve gönderilen HTTP request body, ilgili backend contract/golden JSON ile birebir aynı JSON alan adlarını, wire değerlerini ve null/omitted semantiğini kullanmalıdır.
+- Backend golden JSON'da bulunmayan alan mobil tarafından eklenmez; golden JSON'da zorunlu olan alan farklı adla veya farklı veri tipiyle gönderilmez.
+- UI etiketi, enum gösterim metni veya istemci modeli doğrudan wire değeri kabul edilmez; request body yalnız canonical API kontratındaki serialization değerlerinden oluşturulur.
+- Backend golden JSON ile mobil request body arasında fark varsa build/test sonucu bağımsız olarak design/API kontrat kapısı kırmızı kabul edilir.
 - UI veya repository katmanı kontratta bulunmayan ek request alanı üretmez.
 - Alan adları istemci tarafında yeniden adlandırılmaz; backend golden JSON hangi JSON key'i tanımlıyorsa mobil aynı key'i gönderir.
 - Enum/string değerleri UI metinlerinden türetilmez; canonical kontratta tanımlanan wire değerleri kullanılır.
