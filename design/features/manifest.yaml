@@ -36,6 +36,14 @@ features:
   file: priority-2-social-experience.md
   title: Öncelik 2 sosyal deneyim akışları
   api_contract_refs: []
+- id: priority-3-security-management
+  file: priority-3-security-management.md
+  title: Öncelik 3 hesap güvenliği ve yönetim deneyimi
+  api_contract_refs: []
+- id: priority-3-safety-management
+  file: priority-3-safety-management.md
+  title: Öncelik 3 güvenlik ve moderasyon deneyimi
+  api_contract_refs: []
 - id: extended-flow-state
   file: extended-flow-state.md
   title: Genişletilmiş ürün akışları ve durum davranışları
