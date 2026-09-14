@@ -2147,6 +2147,12 @@ UI hiçbir zaman sözleşmede bulunmayan endpoint, query parametresi, response a
 
 “Takip Ettiklerim” ve ilişki göstergeleri kabul kapsamının zorunlu yüzeyleridir. Canonical contract desteğinin bulunmaması bu yüzeyleri tasarım kapsamından çıkarmaz; bunun yerine her yüzey için açık bir contract-unavailable durumu tanımlanır.
 
+Bu iki acceptance yüzeyi contract desteği bulunmadığı gerekçesiyle gizlenemez, kaldırılamaz veya sonraki faza ertelenmiş sayılmaz.
+
+“Takip Ettiklerim” yüzeyi contract-unavailable durumda da kullanıcı tarafından görülebilir kalır; yalnız veri isteği üretilmez.
+
+“Seni takip ediyor” ve “Karşılıklı takip” yüzeyleri için contract-unavailable durumunun tasarlanması zorunludur; canonical ilişki verisi bulunmadan tahmini ilişki etiketi üretilmez.
+
 User flows
 
 Profil → sosyal graf
