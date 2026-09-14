@@ -15,12 +15,6 @@ public static class PostEndpointRoutes
             .RequireAuthorization()
             .WithName("CreatePost");
 
-        app.MapGet(
-                "/api/v1/posts/{postId}",
-                PostEndpoints.GetPostAsync)
-            .RequireAuthorization()
-            .WithName("GetPost");
-
         app.MapDelete(
                 "/api/v1/posts/{postId}",
                 PostEndpoints.DeletePostAsync)
@@ -52,24 +46,6 @@ public static class PostEndpointRoutes
             .WithName("UnlikePost");
 
         app.MapGet(
-                "/api/v1/posts/{postId}/likes",
-                PostEndpoints.GetPostLikesAsync)
-            .RequireAuthorization()
-            .WithName("GetPostLikes");
-
-        app.MapGet(
-                "/api/v1/profiles/{username}/block",
-                GetBlockCompatibility)
-            .RequireAuthorization()
-            .WithName("GetProfileBlockCompatibility");
-
-        app.MapGet(
-                "/api/v1/profiles/{username}/follow",
-                GetFollowCompatibility)
-            .RequireAuthorization()
-            .WithName("GetProfileFollowCompatibility");
-
-        app.MapGet(
                 "/api/v1/moderation/reports/{reportId}/resolve",
                 GetResolveCompatibility)
             .RequireAuthorization()
@@ -84,27 +60,17 @@ public static class PostEndpointRoutes
         return app;
     }
 
-    private static IResult GetBlockCompatibility(string username)
-    {
-        _ = username;
-        return Results.StatusCode(StatusCodes.Status405MethodNotAllowed);
-    }
-
-    private static IResult GetFollowCompatibility(string username)
-    {
-        _ = username;
-        return Results.StatusCode(StatusCodes.Status405MethodNotAllowed);
-    }
-
     private static IResult GetResolveCompatibility(string reportId)
     {
         _ = reportId;
-        return Results.StatusCode(StatusCodes.Status405MethodNotAllowed);
+        return Results.StatusCode(
+            StatusCodes.Status405MethodNotAllowed);
     }
 
     private static IResult GetDismissCompatibility(string reportId)
     {
         _ = reportId;
-        return Results.StatusCode(StatusCodes.Status405MethodNotAllowed);
+        return Results.StatusCode(
+            StatusCodes.Status405MethodNotAllowed);
     }
 }
