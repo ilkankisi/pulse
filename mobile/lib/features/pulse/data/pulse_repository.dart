@@ -130,19 +130,35 @@ class PulseRepository {
   }
 
   Future<List<PulseSocialGraphUser>> getFollowers(String username) async {
-    final response = await _dio.get<dynamic>(
-      ApiRoutes.profileFollowers(username),
-    );
+    try {
+      final response = await _dio.get<dynamic>(
+        ApiRoutes.profileFollowers(username),
+      );
 
-    return _socialGraphUsers(response.data);
+      return _socialGraphUsers(response.data);
+    } on DioException catch (error) {
+      if (_isNotFound(error)) {
+        return const <PulseSocialGraphUser>[];
+      }
+
+      rethrow;
+    }
   }
 
   Future<List<PulseSocialGraphUser>> getFollowing(String username) async {
-    final response = await _dio.get<dynamic>(
-      ApiRoutes.profileFollowing(username),
-    );
+    try {
+      final response = await _dio.get<dynamic>(
+        ApiRoutes.profileFollowing(username),
+      );
 
-    return _socialGraphUsers(response.data);
+      return _socialGraphUsers(response.data);
+    } on DioException catch (error) {
+      if (_isNotFound(error)) {
+        return const <PulseSocialGraphUser>[];
+      }
+
+      rethrow;
+    }
   }
 
   static bool _isNotFound(DioException error) {
