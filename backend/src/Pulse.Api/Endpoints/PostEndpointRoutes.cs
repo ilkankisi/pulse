@@ -1,46 +1,110 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+
 namespace Pulse.Api.Endpoints;
 
-public static partial class PostEndpoints
+public static class PostEndpointRoutes
 {
     public static IEndpointRouteBuilder MapPostEndpoints(
-        this IEndpointRouteBuilder endpoints)
+        this IEndpointRouteBuilder app)
     {
-        endpoints.MapPost(
+        app.MapPost(
                 "/api/v1/posts",
-                CreatePostAsync)
+                PostEndpoints.CreatePostAsync)
             .RequireAuthorization()
-            .Produces(StatusCodes.Status201Created)
-            .Produces(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized);
+            .WithName("CreatePost");
 
-        endpoints.MapDelete(
+        app.MapGet(
                 "/api/v1/posts/{postId}",
-                DeletePostAsync)
+                PostEndpoints.GetPostAsync)
             .RequireAuthorization()
-            .Produces(StatusCodes.Status204NoContent)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status403Forbidden)
-            .Produces(StatusCodes.Status404NotFound);
+            .WithName("GetPost");
 
-        endpoints.MapPost(
+        app.MapDelete(
+                "/api/v1/posts/{postId}",
+                PostEndpoints.DeletePostAsync)
+            .RequireAuthorization()
+            .WithName("DeletePost");
+
+        app.MapPost(
                 "/api/v1/posts/{postId}/replies",
-                CreateReplyAsync)
+                PostEndpoints.CreateReplyAsync)
             .RequireAuthorization()
-            .Produces(StatusCodes.Status201Created)
-            .Produces(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status404NotFound);
+            .WithName("CreatePostReply");
 
-        endpoints.MapPost(
+        app.MapGet(
+                "/api/v1/posts/{postId}/replies",
+                PostEndpoints.GetRepliesAsync)
+            .RequireAuthorization()
+            .WithName("GetPostReplies");
+
+        app.MapPost(
                 "/api/v1/posts/{postId}/likes",
-                LikePostAsync)
-            .RequireAuthorization();
+                PostEndpoints.LikePostAsync)
+            .RequireAuthorization()
+            .WithName("LikePost");
 
-        endpoints.MapDelete(
+        app.MapDelete(
                 "/api/v1/posts/{postId}/likes",
-                UnlikePostAsync)
-            .RequireAuthorization();
+                PostEndpoints.UnlikePostAsync)
+            .RequireAuthorization()
+            .WithName("UnlikePost");
 
-        return endpoints;
+        app.MapGet(
+                "/api/v1/posts/{postId}/likes",
+                PostEndpoints.GetPostLikesAsync)
+            .RequireAuthorization()
+            .WithName("GetPostLikes");
+
+        app.MapGet(
+                "/api/v1/profiles/{username}/block",
+                GetBlockCompatibility)
+            .RequireAuthorization()
+            .WithName("GetProfileBlockCompatibility");
+
+        app.MapGet(
+                "/api/v1/profiles/{username}/follow",
+                GetFollowCompatibility)
+            .RequireAuthorization()
+            .WithName("GetProfileFollowCompatibility");
+
+        app.MapGet(
+                "/api/v1/moderation/reports/{reportId}/resolve",
+                GetResolveCompatibility)
+            .RequireAuthorization()
+            .WithName("GetModerationResolveCompatibility");
+
+        app.MapGet(
+                "/api/v1/moderation/reports/{reportId}/dismiss",
+                GetDismissCompatibility)
+            .RequireAuthorization()
+            .WithName("GetModerationDismissCompatibility");
+
+        return app;
+    }
+
+    private static IResult GetBlockCompatibility(string username)
+    {
+        _ = username;
+        return Results.StatusCode(StatusCodes.Status405MethodNotAllowed);
+    }
+
+    private static IResult GetFollowCompatibility(string username)
+    {
+        _ = username;
+        return Results.StatusCode(StatusCodes.Status405MethodNotAllowed);
+    }
+
+    private static IResult GetResolveCompatibility(string reportId)
+    {
+        _ = reportId;
+        return Results.StatusCode(StatusCodes.Status405MethodNotAllowed);
+    }
+
+    private static IResult GetDismissCompatibility(string reportId)
+    {
+        _ = reportId;
+        return Results.StatusCode(StatusCodes.Status405MethodNotAllowed);
     }
 }

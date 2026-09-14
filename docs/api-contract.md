@@ -17,8 +17,11 @@ Bu katmanlardan herhangi birinde alan adı, JSON tipi, null/omission davranış�
 - Read-after-write kontrolünde yalnızca HTTP başarı kodu veya geçen build/test sonucu yeterli değildir: mobil toJson / gerçek request body ile gönderilen değer, backend'de kalıcı hale gelen state ve sonraki GET response içinde gözlenen değer aynı kontrat semantiğini taşımalıdır.
 - Bu üç katmandan herhangi biri diğerlerinden sapıyorsa ürün bütünlüğü kırmızı kabul edilir; testlerin yeşil olması bu uyumsuzluğu geçerli kılmaz.
 - Backend'in kabul edip normalize ettiği alanlar varsa normalizasyon davranışı kontratta açık olmalı; mobil taraf yeniden okunan normalize edilmiş değeri geçerli canonical state olarak kabul etmelidir.
-Backend testlerinde kullanılan golden JSON canonical wire-format kaynağıdır. Mobil toJson çıktısı ve HTTP'ye gönderilen gerçek request body, golden JSON ile property adı, JSON tipi ve null/omission semantiğinde birebir eşleşmelidir. toJson doğru olsa bile gönderim katmanında anahtar ekleme, silme, yeniden adlandırma veya değer tipini dönüştürme kontrat ihlalidir.
+Backend testlerinde kullanılan golden JSON canonical wire-format kaynağıdır. Mobil toJson çıktısı ve HTTP'ye gönderilen gerçek request body, golden JSON ile property adı, JSON tipi ve null/omission semantiğinde birebir eşleşmelidir. Golden JSON'da bulunmayan alanın eklenmesi, bulunan alanın atlanması, anahtarın yeniden adlandırılması veya değer tipinin dönüştürülmesi hem serializer hem de request katmanında kontrat ihlalidir.
 GET /api/v1/profiles/{username}
 GET /api/v1/profiles/{username}/followers
 GET /api/v1/profiles/{username}/following
 GET /api/v1/profiles/{username}/posts
+Bu üç katmandan herhangi biri diğerlerinden sapıyorsa ürün bütünlüğü kırmızı kabul edilir; testlerin yeşil olması bu uyumsuzluğu geçerli kılmaz.
+- Katman kontrolü mobil toJson, HTTP'ye çıkan gerçek request body, backend persisted state ve read-after-write GET response için ayrı ayrı uygulanmalıdır; bu katmanlardan tek birinin bile canonical wire-format veya beklenen semantikten sapması, build ve testler geçse dahi bütünlük hatasıdır.
+- Orchestrator pipeline_gate backend katmanı için engel raporlamasa bile canonical kontrat ile mobil serialization/request body arasındaki read-after-write uyumu architect katmanında ayrıca sağlanmalıdır; pipeline geçişi bu kontrat doğrulamasının yerine geçmez.
