@@ -107,12 +107,32 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
     });
 
     try {
-      await ref
-          .read(pulseRepositoryProvider)
-          .createReply(
-            postId: _post.id,
-            request: CreateReplyRequest(content: _replyController.text),
-          );
+      final repository = ref.read(pulseRepositoryProvider);
+
+      await repository.createReply(
+        postId: _post.id,
+        request: CreateReplyRequest(content: _replyController.text),
+      );
+
+      PulsePost? canonicalPost;
+
+      try {
+        final canonicalFeed = await repository.getFeed();
+
+        for (final post in canonicalFeed) {
+          if (post.id == _post.id) {
+            canonicalPost = post;
+            break;
+          }
+        }
+      } on DioException catch (error) {
+        if (error.response?.statusCode == 401) {
+          await widget.onUnauthorized();
+          return;
+        }
+      } on FormatException {
+        canonicalPost = null;
+      }
 
       if (!mounted) {
         return;
@@ -121,7 +141,8 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
       _replyController.clear();
 
       setState(() {
-        _post = _post.copyWith(replyCount: _post.replyCount + 1);
+        _post =
+            canonicalPost ?? _post.copyWith(replyCount: _post.replyCount + 1);
         _replyCreated = true;
         _changed = true;
         _isSubmitting = false;
