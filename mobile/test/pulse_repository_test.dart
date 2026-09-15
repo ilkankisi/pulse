@@ -158,13 +158,12 @@ void main() {
   });
 
   test(
-    'profil gönderileri canonical feed üzerinden kullanıcıya göre süzülür',
+    'profil gönderileri GET /profiles/{username}/posts çağırır',
     () async {
       adapter.onGet(
-        ApiRoutes.feed,
+        ApiRoutes.profilePosts('ada'),
         (server) => server.reply(200, <String, dynamic>{
           'items': <Map<String, dynamic>>[
-            _postJson(),
             <String, dynamic>{
               ..._postJson(id: 12),
               'author': <String, dynamic>{
@@ -184,22 +183,60 @@ void main() {
 
       final request = requests.single;
       expect(request.method, 'GET');
-      expect(request.path, ApiRoutes.feed);
+      expect(request.path, ApiRoutes.profilePosts('ada'));
     },
   );
 
-  test('followers doc dışı endpoint çağrısı üretmez', () async {
+  test('followers GET /profiles/{username}/followers çağırır', () async {
+    adapter.onGet(
+      ApiRoutes.profileFollowers('ada'),
+      (server) => server.reply(200, <String, dynamic>{
+        'items': <Map<String, dynamic>>[
+          <String, dynamic>{
+            'id': 3,
+            'username': 'linus',
+            'displayName': 'Linus',
+            'isFollowedByCurrentUser': true,
+          },
+        ],
+      }),
+    );
+
     final users = await repository.getFollowers('ada');
 
-    expect(users, isEmpty);
-    expect(requests, isEmpty);
+    expect(users, hasLength(1));
+    expect(users.single.username, 'linus');
+    expect(users.single.isFollowing, isTrue);
+
+    final request = requests.single;
+    expect(request.method, 'GET');
+    expect(request.path, ApiRoutes.profileFollowers('ada'));
   });
 
-  test('following doc dışı endpoint çağrısı üretmez', () async {
+  test('following GET /profiles/{username}/following çağırır', () async {
+    adapter.onGet(
+      ApiRoutes.profileFollowing('ada'),
+      (server) => server.reply(200, <String, dynamic>{
+        'items': <Map<String, dynamic>>[
+          <String, dynamic>{
+            'id': 4,
+            'username': 'grace',
+            'displayName': 'Grace',
+            'isFollowedByCurrentUser': false,
+          },
+        ],
+      }),
+    );
+
     final users = await repository.getFollowing('ada');
 
-    expect(users, isEmpty);
-    expect(requests, isEmpty);
+    expect(users, hasLength(1));
+    expect(users.single.username, 'grace');
+    expect(users.single.isFollowing, isFalse);
+
+    final request = requests.single;
+    expect(request.method, 'GET');
+    expect(request.path, ApiRoutes.profileFollowing('ada'));
   });
 }
 

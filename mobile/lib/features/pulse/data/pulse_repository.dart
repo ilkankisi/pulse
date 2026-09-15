@@ -93,20 +93,25 @@ class PulseRepository {
   }
 
   Future<List<PulsePost>> getProfilePosts(String username) async {
-    final normalizedUsername = username.trim().toLowerCase();
+    final normalizedUsername = username.trim();
 
     if (normalizedUsername.isEmpty) {
       return const <PulsePost>[];
     }
 
-    final posts = await getFeed();
+    try {
+      final response = await _dio.get<dynamic>(
+        ApiRoutes.profilePosts(normalizedUsername),
+      );
 
-    return List<PulsePost>.unmodifiable(
-      posts.where(
-        (post) =>
-            post.author.username.trim().toLowerCase() == normalizedUsername,
-      ),
-    );
+      return PulseFeed.fromJson(response.data).posts;
+    } on DioException catch (error) {
+      if (_isNotFound(error)) {
+        return const <PulsePost>[];
+      }
+
+      rethrow;
+    }
   }
 
   Future<PulseProfile> updateMyProfile(UpdateProfileRequest request) async {
@@ -127,11 +132,51 @@ class PulseRepository {
   }
 
   Future<List<PulseSocialGraphUser>> getFollowers(String username) async {
-    return const <PulseSocialGraphUser>[];
+    return _getSocialGraph(ApiRoutes.profileFollowers(username));
   }
 
   Future<List<PulseSocialGraphUser>> getFollowing(String username) async {
-    return const <PulseSocialGraphUser>[];
+    return _getSocialGraph(ApiRoutes.profileFollowing(username));
+  }
+
+  Future<List<PulseSocialGraphUser>> _getSocialGraph(String path) async {
+    try {
+      final response = await _dio.get<dynamic>(path);
+
+      return _socialGraphFromJson(response.data);
+    } on DioException catch (error) {
+      if (_isNotFound(error)) {
+        return const <PulseSocialGraphUser>[];
+      }
+
+      rethrow;
+    }
+  }
+
+  static List<PulseSocialGraphUser> _socialGraphFromJson(dynamic data) {
+    dynamic items = data;
+
+    if (data is Map) {
+      items = Map<String, dynamic>.from(data)['items'];
+    }
+
+    if (items is! List) {
+      throw const FormatException('Sosyal grafik yanıtı geçerli değil.');
+    }
+
+    final users = <PulseSocialGraphUser>[];
+
+    for (final item in items) {
+      if (item is! Map) {
+        throw const FormatException('Sosyal grafik kullanıcısı geçerli değil.');
+      }
+
+      users.add(
+        PulseSocialGraphUser.fromJson(Map<String, dynamic>.from(item)),
+      );
+    }
+
+    return List<PulseSocialGraphUser>.unmodifiable(users);
   }
 
   static bool _isNotFound(DioException error) {

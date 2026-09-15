@@ -17,6 +17,15 @@ abstract final class ApiRoutes {
   static String profile(String username) =>
       '/api/v1/profiles/${Uri.encodeComponent(username)}';
 
+  static String profilePosts(String username) =>
+      '${profile(username)}/posts';
+
+  static String profileFollowers(String username) =>
+      '${profile(username)}/followers';
+
+  static String profileFollowing(String username) =>
+      '${profile(username)}/following';
+
   static String profileFollow(String username) =>
       '/api/v1/profiles/${Uri.encodeComponent(username)}/follow';
 
