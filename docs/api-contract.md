@@ -1,5 +1,9 @@
 POST /api/v1/posts/{postId}/likes
 DELETE /api/v1/posts/{postId}/likes
+Like mutation read-after-write kontratı:
+- POST /api/v1/posts/{postId}/likes request body taşımaz. Başarılı mutation sonrasında aynı post canonical olarak yeniden okunduğunda isLiked=true olmalı ve kullanıcının like'ı daha önce yoksa likeCount önceki canonical değere göre tam +1 değişmelidir.
+- DELETE /api/v1/posts/{postId}/likes request body taşımaz. Başarılı mutation sonrasında aynı post canonical olarak yeniden okunduğunda isLiked=false olmalı ve kullanıcının like'ı daha önce varsa likeCount önceki canonical değere göre tam -1 değişmelidir.
+- Like/unlike başarısı yalnızca mutation HTTP sonucuyla doğrulanmaz; persisted like ilişkisi ile yeniden okunan post'un isLiked ve likeCount alanları aynı state'i göstermelidir. Sayaç hiçbir durumda aynı kullanıcı için yinelenen mutation nedeniyle ikinci kez artırılıp azaltılmamalıdır.
 POST / PUT sonrasında dönen kaynak tekrar okunduğunda, yazma isteğinde ifade edilen kontratla tutarlı olmalıdır.
 - Build ve testlerin geçmesi tek başına read-after-write bütünlüğü için yeterli kabul edilmez; backend wire contract, mobil toJson / request body ve yazma sonrası yeniden okunan response aynı alan semantiğini korumalıdır.
 - Bu katmanlardan herhangi birinde alan adı, JSON tipi, null/omission davranışı veya yazılan değerin yeniden okunması farklıysa kontrat kırılmış kabul edilir.
