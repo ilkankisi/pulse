@@ -261,16 +261,11 @@ class _FeedPageState extends ConsumerState<FeedPage> {
         return;
       }
 
-      setState(() {
-        _posts = _posts
-            .where((item) => item.id != post.id)
-            .toList(growable: false);
+      await _loadFeed();
 
-        final maxChildCount = _maxChildCount();
-        if (_renderedChildCount > maxChildCount) {
-          _renderedChildCount = maxChildCount;
-        }
-      });
+      if (!mounted) {
+        return;
+      }
 
       ScaffoldMessenger.of(
         context,
