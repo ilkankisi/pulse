@@ -4,7 +4,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:http_mock_adapter/http_mock_adapter.dart';
 import 'package:pulse/features/pulse/data/pulse_repository.dart';
 import 'package:pulse/features/pulse/domain/pulse_models.dart';
 import 'package:pulse/features/pulse/presentation/profile_page.dart';
@@ -26,51 +25,28 @@ void main() {
   testWidgets('profil ekranı kullanıcının gönderilerini listeler', (
     tester,
   ) async {
-    final dio = Dio(BaseOptions(baseUrl: 'http://127.0.0.1:5000'));
-    final adapter = DioAdapter(dio: dio);
-    final repository = PulseRepository(dio: dio);
+    final repository = _ProfilePostsRepository((username) async {
+      expect(username, 'ilkan');
 
-    addTearDown(() => dio.close(force: true));
-
-    const postsPath = '/api/v1/profiles/ilkan/posts';
-
-    adapter.onGet(
-      postsPath,
-      (server) => server.reply(200, <String, dynamic>{
-        'items': <Map<String, dynamic>>[
-          <String, dynamic>{
-            'id': 12,
-            'content': 'İkinci profil gönderisi',
-            'createdAt': '2026-08-07T12:00:00Z',
-            'author': <String, dynamic>{
-              'id': 1,
-              'username': 'ilkan',
-              'displayName': 'İlkan',
-              'avatarUrl': null,
-            },
-            'likeCount': 4,
-            'replyCount': 1,
-            'isLikedByMe': true,
-            'parentPostId': null,
-          },
-          <String, dynamic>{
-            'id': 11,
-            'content': 'İlk profil gönderisi',
-            'createdAt': '2026-08-07T11:00:00Z',
-            'author': <String, dynamic>{
-              'id': 1,
-              'username': 'ilkan',
-              'displayName': 'İlkan',
-              'avatarUrl': null,
-            },
-            'likeCount': 2,
-            'replyCount': 0,
-            'isLikedByMe': false,
-            'parentPostId': null,
-          },
-        ],
-      }),
-    );
+      return <PulsePost>[
+        _post(
+          id: 12,
+          username: 'ilkan',
+          displayName: 'İlkan',
+          content: 'İkinci profil gönderisi',
+          likeCount: 4,
+          replyCount: 1,
+          isLiked: true,
+        ),
+        _post(
+          id: 11,
+          username: 'ilkan',
+          displayName: 'İlkan',
+          content: 'İlk profil gönderisi',
+          likeCount: 2,
+        ),
+      ];
+    });
 
     await tester.pumpWidget(
       ProviderScope(
@@ -114,36 +90,21 @@ void main() {
       isCurrentUser: false,
     );
 
-    final dio = Dio(BaseOptions(baseUrl: 'http://127.0.0.1:5000'));
-    final adapter = DioAdapter(dio: dio);
-    final repository = PulseRepository(dio: dio);
+    final repository = _ProfilePostsRepository((username) async {
+      expect(username, 'ayse');
 
-    addTearDown(() => dio.close(force: true));
-
-    const postsPath = '/api/v1/profiles/ayse/posts';
-
-    adapter.onGet(
-      postsPath,
-      (server) => server.reply(200, <String, dynamic>{
-        'items': <Map<String, dynamic>>[
-          <String, dynamic>{
-            'id': 21,
-            'content': 'Ayşe profil gönderisi',
-            'createdAt': '2026-08-07T13:00:00Z',
-            'author': <String, dynamic>{
-              'id': 9,
-              'username': 'ayse',
-              'displayName': 'Ayşe',
-              'avatarUrl': null,
-            },
-            'likeCount': 1,
-            'replyCount': 2,
-            'isLikedByMe': false,
-            'parentPostId': null,
-          },
-        ],
-      }),
-    );
+      return <PulsePost>[
+        _post(
+          id: 21,
+          authorId: 9,
+          username: 'ayse',
+          displayName: 'Ayşe',
+          content: 'Ayşe profil gönderisi',
+          likeCount: 1,
+          replyCount: 2,
+        ),
+      ];
+    });
 
     await tester.pumpWidget(
       ProviderScope(
@@ -183,17 +144,8 @@ void main() {
       isCurrentUser: true,
     );
 
-    final dio = Dio(BaseOptions(baseUrl: 'http://127.0.0.1:5000'));
-    final adapter = DioAdapter(dio: dio);
-    final repository = PulseRepository(dio: dio);
-
-    addTearDown(() => dio.close(force: true));
-
-    adapter.onGet(
-      '/api/v1/profiles/ilkan/posts',
-      (server) => server.reply(200, <String, dynamic>{
-        'items': <Map<String, dynamic>>[],
-      }),
+    final repository = _ProfilePostsRepository(
+      (_) async => const <PulsePost>[],
     );
 
     await tester.pumpWidget(
@@ -223,54 +175,23 @@ void main() {
   testWidgets('pull-to-refresh profil ve gönderileri birlikte yeniler', (
     tester,
   ) async {
-    final dio = Dio(BaseOptions(baseUrl: 'http://127.0.0.1:5000'));
-    final repository = PulseRepository(dio: dio);
-
-    addTearDown(() => dio.close(force: true));
-
     var profileLoadCount = 0;
     var postsLoadCount = 0;
 
-    dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) {
-          if (options.path != '/api/v1/profiles/ilkan/posts') {
-            handler.next(options);
-            return;
-          }
+    final repository = _ProfilePostsRepository((username) async {
+      expect(username, 'ilkan');
 
-          postsLoadCount++;
+      postsLoadCount++;
 
-          handler.resolve(
-            Response<dynamic>(
-              requestOptions: options,
-              statusCode: 200,
-              data: <String, dynamic>{
-                'items': <Map<String, dynamic>>[
-                  <String, dynamic>{
-                    'id': postsLoadCount,
-                    'content': postsLoadCount == 1
-                        ? 'İlk yükleme'
-                        : 'Yenilenmiş gönderi',
-                    'createdAt': '2026-08-07T12:00:00Z',
-                    'author': <String, dynamic>{
-                      'id': 1,
-                      'username': 'ilkan',
-                      'displayName': 'İlkan',
-                      'avatarUrl': null,
-                    },
-                    'likeCount': 0,
-                    'replyCount': 0,
-                    'isLikedByMe': false,
-                    'parentPostId': null,
-                  },
-                ],
-              },
-            ),
-          );
-        },
-      ),
-    );
+      return <PulsePost>[
+        _post(
+          id: postsLoadCount,
+          username: 'ilkan',
+          displayName: 'İlkan',
+          content: postsLoadCount == 1 ? 'İlk yükleme' : 'Yenilenmiş gönderi',
+        ),
+      ];
+    });
 
     Future<PulseProfile> loadProfile() async {
       profileLoadCount++;
@@ -309,11 +230,8 @@ void main() {
       find.byType(RefreshIndicator),
     );
 
-    unawaited(refreshIndicator.onRefresh());
-
-    for (var i = 0; i < 40 && postsLoadCount < 2; i++) {
-      await tester.pump(const Duration(milliseconds: 50));
-    }
+    await refreshIndicator.onRefresh();
+    await tester.pump();
 
     for (
       var i = 0;
@@ -333,71 +251,26 @@ void main() {
   testWidgets('profil gönderileri yüklenemezse retry state gösterilir', (
     tester,
   ) async {
-    final dio = Dio(BaseOptions(baseUrl: 'http://127.0.0.1:5000'));
-    final repository = PulseRepository(dio: dio);
-
-    addTearDown(() => dio.close(force: true));
-
     var postsLoadCount = 0;
 
-    dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) {
-          if (options.path != '/api/v1/profiles/ilkan/posts') {
-            handler.next(options);
-            return;
-          }
+    final repository = _ProfilePostsRepository((username) async {
+      expect(username, 'ilkan');
 
-          postsLoadCount++;
+      postsLoadCount++;
 
-          if (postsLoadCount == 1) {
-            final response = Response<dynamic>(
-              requestOptions: options,
-              statusCode: 500,
-              data: <String, dynamic>{
-                'error': 'Gönderiler yüklenemedi.',
-                'field': null,
-              },
-            );
+      if (postsLoadCount == 1) {
+        throw StateError('Gönderiler yüklenemedi.');
+      }
 
-            handler.reject(
-              DioException(
-                requestOptions: options,
-                response: response,
-                type: DioExceptionType.badResponse,
-              ),
-            );
-            return;
-          }
-
-          handler.resolve(
-            Response<dynamic>(
-              requestOptions: options,
-              statusCode: 200,
-              data: <String, dynamic>{
-                'items': <Map<String, dynamic>>[
-                  <String, dynamic>{
-                    'id': 31,
-                    'content': 'Tekrar deneme başarılı',
-                    'createdAt': '2026-08-07T14:00:00Z',
-                    'author': <String, dynamic>{
-                      'id': 1,
-                      'username': 'ilkan',
-                      'displayName': 'İlkan',
-                      'avatarUrl': null,
-                    },
-                    'likeCount': 0,
-                    'replyCount': 0,
-                    'isLikedByMe': false,
-                    'parentPostId': null,
-                  },
-                ],
-              },
-            ),
-          );
-        },
-      ),
-    );
+      return <PulsePost>[
+        _post(
+          id: 31,
+          username: 'ilkan',
+          displayName: 'İlkan',
+          content: 'Tekrar deneme başarılı',
+        ),
+      ];
+    });
 
     await tester.pumpWidget(
       ProviderScope(
@@ -456,34 +329,13 @@ void main() {
   testWidgets('profil düzenleme dialogu güvenle kapanır ve snackbar gösterir', (
     tester,
   ) async {
-    final dio = Dio(BaseOptions(baseUrl: 'http://127.0.0.1:5000'));
-    final repository = PulseRepository(dio: dio);
-
-    addTearDown(() => dio.close(force: true));
+    final repository = _ProfilePostsRepository(
+      (_) async => const <PulsePost>[],
+    );
 
     final saveStarted = Completer<void>();
     final allowSaveToFinish = Completer<void>();
     Map<String, dynamic>? capturedUpdateBody;
-
-    dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) {
-          if (options.method == 'GET' &&
-              options.path == '/api/v1/profiles/ilkan/posts') {
-            handler.resolve(
-              Response<dynamic>(
-                requestOptions: options,
-                statusCode: 200,
-                data: <String, dynamic>{'items': <Map<String, dynamic>>[]},
-              ),
-            );
-            return;
-          }
-
-          handler.next(options);
-        },
-      ),
-    );
 
     await tester.pumpWidget(
       ProviderScope(
@@ -583,5 +435,43 @@ void main() {
     expect(dialogSaveButton, findsNothing);
     expect(find.text('Profil güncellendi.'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+}
+
+class _ProfilePostsRepository extends PulseRepository {
+  _ProfilePostsRepository(this._loadPosts) : super(dio: Dio());
+
+  final Future<List<PulsePost>> Function(String username) _loadPosts;
+
+  @override
+  Future<List<PulsePost>> getProfilePosts(String username) {
+    return _loadPosts(username);
+  }
+}
+
+PulsePost _post({
+  required int id,
+  int authorId = 1,
+  required String username,
+  required String displayName,
+  required String content,
+  int likeCount = 0,
+  int replyCount = 0,
+  bool isLiked = false,
+}) {
+  return PulsePost.fromJson(<String, dynamic>{
+    'id': id,
+    'content': content,
+    'createdAt': '2026-08-07T12:00:00Z',
+    'author': <String, dynamic>{
+      'id': authorId,
+      'username': username,
+      'displayName': displayName,
+      'avatarUrl': null,
+    },
+    'likeCount': likeCount,
+    'replyCount': replyCount,
+    'isLikedByMe': isLiked,
+    'parentPostId': null,
   });
 }

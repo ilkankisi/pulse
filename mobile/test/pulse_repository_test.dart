@@ -94,7 +94,6 @@ void main() {
     final request = requests.single;
     expect(request.method, 'PUT');
     expect(request.path, ApiRoutes.me);
-    // api-contract.md golden request: avatarUrl zorunlu alandır, boşsa null.
     expect(request.data, <String, dynamic>{
       'displayName': 'İlkan',
       'bio': 'Flutter geliştirici',
@@ -159,72 +158,49 @@ void main() {
   });
 
   test(
-    'followers exact canonical GET /api/v1/profiles/{username}/followers yolunu kullanır',
+    'profil gönderileri canonical feed üzerinden kullanıcıya göre süzülür',
     () async {
-      const path = '/api/v1/profiles/ada/followers';
-
       adapter.onGet(
-        path,
+        ApiRoutes.feed,
         (server) => server.reply(200, <String, dynamic>{
           'items': <Map<String, dynamic>>[
+            _postJson(),
             <String, dynamic>{
-              'id': 3,
-              'username': 'deniz',
-              'displayName': 'Deniz',
-              'avatarUrl': null,
-              'isFollowedByCurrentUser': true,
+              ..._postJson(id: 12),
+              'author': <String, dynamic>{
+                'id': 8,
+                'username': 'ada',
+                'displayName': 'Ada',
+              },
             },
           ],
         }),
       );
 
-      final users = await repository.getFollowers('ada');
+      final posts = await repository.getProfilePosts('ada');
 
-      expect(users, hasLength(1));
-      expect(users.single.username, 'deniz');
-      expect(users.single.isFollowing, isTrue);
+      expect(posts, hasLength(1));
+      expect(posts.single.author.username, 'ada');
 
       final request = requests.single;
-
       expect(request.method, 'GET');
-      expect(request.path, '/api/v1/profiles/ada/followers');
-      expect(request.queryParameters, isEmpty);
+      expect(request.path, ApiRoutes.feed);
     },
   );
 
-  test(
-    'following exact canonical GET /api/v1/profiles/{username}/following yolunu kullanır',
-    () async {
-      const path = '/api/v1/profiles/ada/following';
+  test('followers doc dışı endpoint çağrısı üretmez', () async {
+    final users = await repository.getFollowers('ada');
 
-      adapter.onGet(
-        path,
-        (server) => server.reply(200, <String, dynamic>{
-          'items': <Map<String, dynamic>>[
-            <String, dynamic>{
-              'id': 4,
-              'username': 'ece',
-              'displayName': 'Ece',
-              'avatarUrl': null,
-              'isFollowedByCurrentUser': false,
-            },
-          ],
-        }),
-      );
+    expect(users, isEmpty);
+    expect(requests, isEmpty);
+  });
 
-      final users = await repository.getFollowing('ada');
+  test('following doc dışı endpoint çağrısı üretmez', () async {
+    final users = await repository.getFollowing('ada');
 
-      expect(users, hasLength(1));
-      expect(users.single.username, 'ece');
-      expect(users.single.isFollowing, isFalse);
-
-      final request = requests.single;
-
-      expect(request.method, 'GET');
-      expect(request.path, '/api/v1/profiles/ada/following');
-      expect(request.queryParameters, isEmpty);
-    },
-  );
+    expect(users, isEmpty);
+    expect(requests, isEmpty);
+  });
 }
 
 Map<String, dynamic> _postJson({int id = 10, int? replyToPostId}) {
