@@ -2,6 +2,7 @@ Pulse API sözleşmesi
 
 Parse edilebilir endpoint matrisi. Orchestrator ürün semantiği uydurmaz; mutation/read ve istemci kuralları bu dosyadaki satırlardır.
 
+METHOD Path
 POST /api/v1/auth/register
 POST /api/v1/auth/login
 GET /api/v1/feed
