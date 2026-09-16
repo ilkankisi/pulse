@@ -59,11 +59,11 @@ READ_AFTER_WRITE | POST /api/v1/auth/login | EXEMPT | NONE
 
 CLIENT_*
 
-Hedefler mevcut PulseRepository metotlarıdır. getReplies yok; yanıt sonrası canonical okuma getFeed.
+CLIENT_WRITE_READ hedefleri ilgili READ_AFTER_WRITE canonical GET hedefiyle aynı olmalıdır.
 
 CLIENT_WRITE_READ | createPost | REQUIRED | getFeed
 
-CLIENT_WRITE_READ | createReply | REQUIRED | getFeed
+CLIENT_WRITE_READ | createReply | REQUIRED | GET /api/v1/posts/{postId}/replies
 
 CLIENT_WRITE_READ | deletePost | REQUIRED | getFeed
 
@@ -77,4 +77,4 @@ CLIENT_WRITE_READ | likePost | REQUIRED | getFeed
 
 CLIENT_WRITE_READ | unlikePost | REQUIRED | getFeed
 
-Request body taşıyan mutation'larda backend integration testlerinde kullanılan golden JSON canonical wire-format kaynağıdır. Her mutation için mobil toJson çıktısı backend golden JSON ile ve transport katmanında HTTP'ye gerçekten gönderilen request body backend golden JSON ile bağımsız olarak JSON nesnesi semantiğinde eşleşmek zorundadır; yalnızca toJson ile gerçek request body'nin birbirleriyle eşleşmesi yeterli değildir. Eşitlik property adını, JSON değer tipini, null/omission semantiğini ve enum string değerini kapsar; property sırası ile anlamsız whitespace/formatlama farkları dikkate alınmaz. Bu iki bağımsız karşılaştırmadan herhangi birinin başarısız olması kontrat ihlalidir. Canonical kontratta request body taşımadığı belirtilen mutation'larda mobil istemci JSON/request body üretmemelidir; bu endpoint'lerde golden request-body eşitliği aranmaz.
+Request body taşıyan mutation'larda backend integration testlerinde kullanılan golden JSON tek canonical wire-format kaynağıdır. Her mutation için iki bağımsız kontrat kontrolü zorunludur: (1) mobil toJson çıktısı ile backend golden JSON eşleşmelidir; (2) transport katmanında HTTP'ye gerçekten gönderilen request body ile aynı backend golden JSON eşleşmelidir. Yalnızca toJson ile gerçek request body'nin birbirleriyle eşleşmesi kontratı sağlamaz. Eşitlik property adını, JSON değer tipini, null/omission semantiğini ve enum string değerini kapsar; property sırası ile anlamsız whitespace/formatlama farkları dikkate alınmaz. İki bağımsız karşılaştırmadan herhangi birinin başarısız olması kontrat ihlalidir. Canonical kontratta request body taşımadığı belirtilen mutation'larda mobil istemci JSON/request body üretmemelidir; bu endpoint'lerde golden request-body eşitliği aranmaz.
