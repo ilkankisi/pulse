@@ -157,35 +157,32 @@ void main() {
     expect(requests[1].path, ApiRoutes.profileFollow('ada'));
   });
 
-  test(
-    'profil gönderileri GET /profiles/{username}/posts çağırır',
-    () async {
-      adapter.onGet(
-        ApiRoutes.profilePosts('ada'),
-        (server) => server.reply(200, <String, dynamic>{
-          'items': <Map<String, dynamic>>[
-            <String, dynamic>{
-              ..._postJson(id: 12),
-              'author': <String, dynamic>{
-                'id': 8,
-                'username': 'ada',
-                'displayName': 'Ada',
-              },
+  test('profil gönderileri GET /profiles/{username}/posts çağırır', () async {
+    adapter.onGet(
+      ApiRoutes.profilePosts('ada'),
+      (server) => server.reply(200, <String, dynamic>{
+        'items': <Map<String, dynamic>>[
+          <String, dynamic>{
+            ..._postJson(id: 12),
+            'author': <String, dynamic>{
+              'id': 8,
+              'username': 'ada',
+              'displayName': 'Ada',
             },
-          ],
-        }),
-      );
+          },
+        ],
+      }),
+    );
 
-      final posts = await repository.getProfilePosts('ada');
+    final posts = await repository.getProfilePosts('ada');
 
-      expect(posts, hasLength(1));
-      expect(posts.single.author.username, 'ada');
+    expect(posts, hasLength(1));
+    expect(posts.single.author.username, 'ada');
 
-      final request = requests.single;
-      expect(request.method, 'GET');
-      expect(request.path, ApiRoutes.profilePosts('ada'));
-    },
-  );
+    final request = requests.single;
+    expect(request.method, 'GET');
+    expect(request.path, ApiRoutes.profilePosts('ada'));
+  });
 
   test('followers GET /profiles/{username}/followers çağırır', () async {
     adapter.onGet(

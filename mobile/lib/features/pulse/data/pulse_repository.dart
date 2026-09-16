@@ -171,9 +171,7 @@ class PulseRepository {
         throw const FormatException('Sosyal grafik kullanıcısı geçerli değil.');
       }
 
-      users.add(
-        PulseSocialGraphUser.fromJson(Map<String, dynamic>.from(item)),
-      );
+      users.add(PulseSocialGraphUser.fromJson(Map<String, dynamic>.from(item)));
     }
 
     return List<PulseSocialGraphUser>.unmodifiable(users);
