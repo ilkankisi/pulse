@@ -4,6 +4,7 @@ import '../../auth/domain/auth_models.dart';
 import 'composer_sheet.dart';
 import 'feed_page.dart';
 import 'profile_page.dart';
+import 'search_page.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({
@@ -59,6 +60,10 @@ class _AppShellState extends State<AppShell> {
       children: <Widget>[
         FeedPage(
           key: ValueKey<int>(_feedRevision),
+          currentUser: widget.currentUser,
+          onUnauthorized: widget.onUnauthorized,
+        ),
+        SearchPage(
           currentUser: widget.currentUser,
           onUnauthorized: widget.onUnauthorized,
         ),
@@ -139,6 +144,11 @@ class _AppShellState extends State<AppShell> {
                       label: Text('Ana Akış'),
                     ),
                     NavigationDrawerDestination(
+                      icon: Icon(Icons.search_outlined),
+                      selectedIcon: Icon(Icons.search),
+                      label: Text('Ara'),
+                    ),
+                    NavigationDrawerDestination(
                       icon: Icon(Icons.person_outline),
                       selectedIcon: Icon(Icons.person),
                       label: Text('Profil'),
@@ -159,6 +169,17 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
+  String _pageTitle() {
+    switch (_selectedIndex) {
+      case 0:
+        return 'Ana Akış';
+      case 1:
+        return 'Ara';
+      default:
+        return 'Profil';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -167,11 +188,7 @@ class _AppShellState extends State<AppShell> {
         final expanded = constraints.maxWidth >= 1024;
 
         final contentScaffold = Scaffold(
-          appBar: expanded
-              ? null
-              : AppBar(
-                  title: Text(_selectedIndex == 0 ? 'Ana Akış' : 'Profil'),
-                ),
+          appBar: expanded ? null : AppBar(title: Text(_pageTitle())),
           drawer: compact
               ? Drawer(
                   width: 300,
@@ -188,6 +205,11 @@ class _AppShellState extends State<AppShell> {
                       icon: Icon(Icons.home_outlined),
                       selectedIcon: Icon(Icons.home),
                       label: 'Ana Akış',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.search_outlined),
+                      selectedIcon: Icon(Icons.search),
+                      label: 'Ara',
                     ),
                     NavigationDestination(
                       icon: Icon(Icons.person_outline),
@@ -243,6 +265,11 @@ class _AppShellState extends State<AppShell> {
                   icon: Icon(Icons.home_outlined),
                   selectedIcon: Icon(Icons.home),
                   label: Text('Ana Akış'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.search_outlined),
+                  selectedIcon: Icon(Icons.search),
+                  label: Text('Ara'),
                 ),
                 NavigationRailDestination(
                   icon: Icon(Icons.person_outline),

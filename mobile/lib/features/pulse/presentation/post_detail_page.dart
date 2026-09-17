@@ -27,15 +27,18 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
   final _replyFocusNode = FocusNode();
 
   late PulsePost _post;
+  List<PulsePost> _replies = const <PulsePost>[];
   bool _isSubmitting = false;
-  bool _replyCreated = false;
+  bool _isLoadingReplies = true;
   bool _changed = false;
   String? _errorMessage;
+  String? _repliesError;
 
   @override
   void initState() {
     super.initState();
     _post = widget.post;
+    Future<void>.microtask(_loadReplies);
   }
 
   @override
@@ -94,6 +97,50 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
     }
   }
 
+  Future<void> _loadReplies() async {
+    if (mounted) {
+      setState(() {
+        _isLoadingReplies = true;
+        _repliesError = null;
+      });
+    }
+
+    try {
+      final replies = await ref
+          .read(pulseRepositoryProvider)
+          .getReplies(_post.id);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _replies = replies;
+        _post = _post.copyWith(replyCount: replies.length);
+        _isLoadingReplies = false;
+      });
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 401) {
+        await widget.onUnauthorized();
+        return;
+      }
+
+      if (mounted) {
+        setState(() {
+          _isLoadingReplies = false;
+          _repliesError = _readError(error, 'Yanıtlar yüklenemedi.');
+        });
+      }
+    } on FormatException {
+      if (mounted) {
+        setState(() {
+          _isLoadingReplies = false;
+          _repliesError = 'Yanıtlar okunamadı.';
+        });
+      }
+    }
+  }
+
   Future<void> _submitReply() async {
     FocusScope.of(context).unfocus();
 
@@ -114,24 +161,17 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
         request: CreateReplyRequest(content: _replyController.text),
       );
 
-      PulsePost? canonicalPost;
+      List<PulsePost> replies = const <PulsePost>[];
 
       try {
-        final canonicalFeed = await repository.getFeed();
-
-        for (final post in canonicalFeed) {
-          if (post.id == _post.id) {
-            canonicalPost = post;
-            break;
-          }
-        }
+        replies = await repository.getReplies(_post.id);
       } on DioException catch (error) {
         if (error.response?.statusCode == 401) {
           await widget.onUnauthorized();
           return;
         }
       } on FormatException {
-        canonicalPost = null;
+        replies = const <PulsePost>[];
       }
 
       if (!mounted) {
@@ -141,9 +181,8 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
       _replyController.clear();
 
       setState(() {
-        _post =
-            canonicalPost ?? _post.copyWith(replyCount: _post.replyCount + 1);
-        _replyCreated = true;
+        _replies = replies;
+        _post = _post.copyWith(replyCount: replies.length);
         _changed = true;
         _isSubmitting = false;
       });
@@ -383,35 +422,81 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
                     ),
                   ),
                 ),
-                if (!_replyCreated)
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            Icon(
-                              Icons.chat_bubble_outline,
-                              size: 48,
-                              color: theme.colorScheme.primary,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Henüz yanıt yok',
-                              style: theme.textTheme.titleLarge,
-                            ),
-                            const SizedBox(height: 8),
-                            const Text('İlk yanıtı sen yaz.'),
-                            const SizedBox(height: 16),
-                            FilledButton(
-                              onPressed: () => _replyFocusNode.requestFocus(),
-                              child: const Text('Yanıtla'),
-                            ),
-                          ],
-                        ),
+                if (_isLoadingReplies)
+                  const SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  )
+                else if (_repliesError != null)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                      child: Column(
+                        children: <Widget>[
+                          Icon(
+                            Icons.wifi_off_outlined,
+                            size: 48,
+                            color: theme.colorScheme.error,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            _repliesError!,
+                            style: theme.textTheme.titleMedium,
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          FilledButton(
+                            onPressed: _loadReplies,
+                            child: const Text('Tekrar Dene'),
+                          ),
+                        ],
                       ),
+                    ),
+                  )
+                else if (_replies.isEmpty)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                      child: Column(
+                        children: <Widget>[
+                          Icon(
+                            Icons.chat_bubble_outline,
+                            size: 48,
+                            color: theme.colorScheme.primary,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Henüz yanıt yok',
+                            style: theme.textTheme.titleLarge,
+                          ),
+                          const SizedBox(height: 8),
+                          const Text('İlk yanıtı sen yaz.'),
+                          const SizedBox(height: 16),
+                          FilledButton(
+                            onPressed: () => _replyFocusNode.requestFocus(),
+                            child: const Text('Yanıtla'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final reply = _replies[index];
+
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: ListTile(
+                            title: Text(reply.author.displayName),
+                            subtitle: Text(reply.content),
+                          ),
+                        );
+                      }, childCount: _replies.length),
                     ),
                   ),
               ],

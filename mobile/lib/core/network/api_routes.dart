@@ -4,6 +4,9 @@ abstract final class ApiRoutes {
   static const String posts = '/api/v1/posts';
   static const String blocks = '/api/v1/blocks';
   static const String reports = '/api/v1/reports';
+  static const String searchUsers = '/api/v1/search/users';
+  static const String searchPosts = '/api/v1/search/posts';
+  static const String searchMentions = '/api/v1/search/mentions';
   static const String authLogin = '/api/v1/auth/login';
   static const String authRegister = '/api/v1/auth/register';
   static const String moderationReports = '/api/v1/moderation/reports';

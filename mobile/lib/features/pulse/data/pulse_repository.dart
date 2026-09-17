@@ -31,6 +31,52 @@ class PulseRepository {
     }
   }
 
+  Future<List<PulseProfile>> searchUsers(String query) async {
+    final normalizedQuery = query.trim();
+
+    if (normalizedQuery.isEmpty) {
+      return const <PulseProfile>[];
+    }
+
+    try {
+      final response = await _dio.get<dynamic>(
+        ApiRoutes.searchUsers,
+        queryParameters: <String, dynamic>{'q': normalizedQuery},
+      );
+
+      return _profilesFromJson(response.data);
+    } on DioException catch (error) {
+      if (_isNotFound(error)) {
+        return const <PulseProfile>[];
+      }
+
+      rethrow;
+    }
+  }
+
+  Future<List<PulsePost>> searchPosts(String query) async {
+    final normalizedQuery = query.trim();
+
+    if (normalizedQuery.isEmpty) {
+      return const <PulsePost>[];
+    }
+
+    try {
+      final response = await _dio.get<dynamic>(
+        ApiRoutes.searchPosts,
+        queryParameters: <String, dynamic>{'q': normalizedQuery},
+      );
+
+      return PulseFeed.fromJson(response.data).posts;
+    } on DioException catch (error) {
+      if (_isNotFound(error)) {
+        return const <PulsePost>[];
+      }
+
+      rethrow;
+    }
+  }
+
   Future<PulsePost> createPost(CreatePostRequest request) async {
     final response = await _dio.post<dynamic>(
       ApiRoutes.posts,
@@ -53,7 +99,49 @@ class PulseRepository {
       data: request.toJson(),
     );
 
-    return PulsePost.fromJson(_asJsonMap(response.data));
+    final createdReply = PulsePost.fromJson(_asJsonMap(response.data));
+
+    try {
+      final canonicalReplies = await getPostReplies(postId);
+
+      for (final reply in canonicalReplies) {
+        if (reply.id == createdReply.id) {
+          return reply;
+        }
+      }
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 401) {
+        rethrow;
+      }
+
+      return createdReply;
+    } catch (_) {
+      return createdReply;
+    }
+
+    return createdReply;
+  }
+
+  /// CLIENT_WRITE_READ createReply → GET /api/v1/posts/{postId}/replies
+  static const String repliesReadAfterWrite =
+      'GET /api/v1/posts/{postId}/replies';
+
+  Future<List<PulsePost>> getPostReplies(int postId) async {
+    try {
+      final response = await _dio.get<dynamic>(ApiRoutes.postReplies(postId));
+
+      return PulseFeed.fromJson(response.data).posts;
+    } on DioException catch (error) {
+      if (_isNotFound(error)) {
+        return const <PulsePost>[];
+      }
+
+      rethrow;
+    }
+  }
+
+  Future<List<PulsePost>> getReplies(int postId) {
+    return getPostReplies(postId);
   }
 
   Future<void> likePost(int postId) async {
@@ -175,6 +263,31 @@ class PulseRepository {
     }
 
     return List<PulseSocialGraphUser>.unmodifiable(users);
+  }
+
+  static List<PulseProfile> _profilesFromJson(dynamic data) {
+    dynamic items = data;
+
+    if (data is Map) {
+      final json = Map<String, dynamic>.from(data);
+      items = json['items'] ?? json['users'] ?? json['data'];
+    }
+
+    if (items is! List) {
+      throw const FormatException('Kullanıcı arama yanıtı geçerli değil.');
+    }
+
+    final profiles = <PulseProfile>[];
+
+    for (final item in items) {
+      if (item is! Map) {
+        throw const FormatException('Kullanıcı arama sonucu geçerli değil.');
+      }
+
+      profiles.add(PulseProfile.fromJson(Map<String, dynamic>.from(item)));
+    }
+
+    return List<PulseProfile>.unmodifiable(profiles);
   }
 
   static bool _isNotFound(DioException error) {
