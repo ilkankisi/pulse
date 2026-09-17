@@ -58,12 +58,11 @@ READ_AFTER_WRITE | POST /api/v1/auth/register | EXEMPT | NONE
 READ_AFTER_WRITE | POST /api/v1/auth/login | EXEMPT | NONE
 
 CLIENT_*
-
 CLIENT_WRITE_READ hedefleri ilgili READ_AFTER_WRITE canonical GET hedefiyle aynı olmalıdır.
 
 CLIENT_WRITE_READ | createPost | REQUIRED | getFeed
 
-CLIENT_WRITE_READ | createReply | REQUIRED | GET /api/v1/posts/{postId}/replies
+CLIENT_WRITE_READ | createReply | REQUIRED | /api/v1/posts/{postId}/replies
 
 CLIENT_WRITE_READ | deletePost | REQUIRED | getFeed
 
@@ -77,4 +76,11 @@ CLIENT_WRITE_READ | likePost | REQUIRED | getFeed
 
 CLIENT_WRITE_READ | unlikePost | REQUIRED | getFeed
 
-Request body taşıyan mutation'larda backend integration testlerinde kullanılan golden JSON tek canonical wire-format kaynağıdır. Her mutation için iki bağımsız kontrat kontrolü zorunludur: (1) mobil toJson çıktısı ile backend golden JSON eşleşmelidir; (2) transport katmanında HTTP'ye gerçekten gönderilen request body ile aynı backend golden JSON eşleşmelidir. Yalnızca toJson ile gerçek request body'nin birbirleriyle eşleşmesi kontratı sağlamaz. Eşitlik property adını, JSON değer tipini, null/omission semantiğini ve enum string değerini kapsar; property sırası ile anlamsız whitespace/formatlama farkları dikkate alınmaz. İki bağımsız karşılaştırmadan herhangi birinin başarısız olması kontrat ihlalidir. Canonical kontratta request body taşımadığı belirtilen mutation'larda mobil istemci JSON/request body üretmemelidir; bu endpoint'lerde golden request-body eşitliği aranmaz.
+CLIENT_COUNT_LIST | getFollowers | REQUIRED | GET /api/v1/profiles/{username}/followers
+CLIENT_COUNT_LIST | getFollowing | REQUIRED | GET /api/v1/profiles/{username}/following
+CLIENT_FALSE_EMPTY | getBlocks | REQUIRED | GET /api/v1/blocks
+REQUEST_BODY_GOLDEN | toJson | REQUIRED | backend-integration-test-golden-json
+REQUEST_BODY_GOLDEN | transport-request-body | REQUIRED | backend-integration-test-golden-json
+REQUEST_BODY_NONE | canonical-no-body-mutation | REQUIRED | no-json-request-body
+
+Request body taşıyan mutation'larda backend integration testlerinde kullanılan golden JSON tek canonical wire-format kaynağıdır. Mobil toJson çıktısı ve transport katmanında HTTP'ye gerçekten gönderilen request body, backend golden JSON ile birbirinden bağımsız olarak JSON nesnesi semantiğinde eşleşmelidir; yalnızca birbirleriyle eşleşmeleri yeterli değildir. Eşitlik property adını, JSON değer tipini, null/omission semantiğini ve enum string değerini kapsar; property sırası ile anlamsız whitespace/formatlama farkları dikkate alınmaz. İki bağımsız karşılaştırmadan herhangi birinin başarısız olması kontrat ihlalidir. Canonical kontratta request body taşımadığı belirtilen mutation'larda mobil istemci JSON/request body üretmemelidir; bu endpoint'lerde golden request-body eşitliği aranmaz.

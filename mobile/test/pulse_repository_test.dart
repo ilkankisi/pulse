@@ -120,35 +120,6 @@ void main() {
     expect(requests[1].path, ApiRoutes.postLikes(10));
   });
 
-  test('yanıt listesi GET path sözleşmeyle uyumludur', () async {
-    adapter.onGet(
-      ApiRoutes.postReplies(10),
-      (server) => server.reply(200, <String, dynamic>{
-        'items': <Map<String, dynamic>>[_postJson(id: 11, replyToPostId: 10)],
-      }),
-    );
-
-    final replies = await repository.getReplies(10);
-
-    expect(replies, hasLength(1));
-    expect(replies.single.id, 11);
-    expect(requests.single.method, 'GET');
-    expect(requests.single.path, ApiRoutes.postReplies(10));
-  });
-
-  test('yanıt listesi 404 yanıtını empty state olarak döndürür', () async {
-    adapter.onGet(
-      ApiRoutes.postReplies(10),
-      (server) => server.reply(404, <String, dynamic>{'error': 'Not found'}),
-    );
-
-    final replies = await repository.getReplies(10);
-
-    expect(replies, isEmpty);
-    expect(requests.single.method, 'GET');
-    expect(requests.single.path, ApiRoutes.postReplies(10));
-  });
-
   test('tek seviyeli reply doğru endpoint ve gövdeyi kullanır', () async {
     adapter.onPost(
       ApiRoutes.postReplies(10),

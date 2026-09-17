@@ -1,11 +1,8 @@
 import 'package:dio/dio.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
-
 import '../../../core/network/api_routes.dart';
-
 import '../domain/pulse_models.dart';
 
 final pulseRepositoryProvider = Provider<PulseRepository>((ref) {
@@ -90,6 +87,26 @@ class PulseRepository {
     await _dio.delete<void>(ApiRoutes.post(postId));
   }
 
+  Future<List<PulsePost>> getReplies(int postId) async {
+    try {
+      final response = await _dio.get<dynamic>(
+        '/api/v1/posts/$postId/replies',
+      );
+
+      return PulseFeed.fromJson(response.data).posts;
+    } on DioException catch (error) {
+      if (_isNotFound(error)) {
+        return const <PulsePost>[];
+      }
+
+      rethrow;
+    }
+  }
+
+  Future<List<PulsePost>> getPostReplies(int postId) {
+    return getReplies(postId);
+  }
+
   Future<PulsePost> createReply({
     required int postId,
     required CreateReplyRequest request,
@@ -102,7 +119,7 @@ class PulseRepository {
     final createdReply = PulsePost.fromJson(_asJsonMap(response.data));
 
     try {
-      final canonicalReplies = await getPostReplies(postId);
+      final canonicalReplies = await getReplies(postId);
 
       for (final reply in canonicalReplies) {
         if (reply.id == createdReply.id) {
@@ -115,33 +132,11 @@ class PulseRepository {
       }
 
       return createdReply;
-    } catch (_) {
+    } on FormatException {
       return createdReply;
     }
 
     return createdReply;
-  }
-
-  /// CLIENT_WRITE_READ createReply → GET /api/v1/posts/{postId}/replies
-  static const String repliesReadAfterWrite =
-      'GET /api/v1/posts/{postId}/replies';
-
-  Future<List<PulsePost>> getPostReplies(int postId) async {
-    try {
-      final response = await _dio.get<dynamic>(ApiRoutes.postReplies(postId));
-
-      return PulseFeed.fromJson(response.data).posts;
-    } on DioException catch (error) {
-      if (_isNotFound(error)) {
-        return const <PulsePost>[];
-      }
-
-      rethrow;
-    }
-  }
-
-  Future<List<PulsePost>> getReplies(int postId) {
-    return getPostReplies(postId);
   }
 
   Future<void> likePost(int postId) async {

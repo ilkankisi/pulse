@@ -15,7 +15,7 @@ abstract final class ApiRoutes {
 
   static String postLikes(int postId) => '/api/v1/posts/$postId/likes';
 
-  static String postReplies(int postId) => '/api/v1/posts/$postId/replies';
+  static String postReplies(int postId) => '/api/v1/posts/${postId}/replies';
 
   static String profile(String username) =>
       '/api/v1/profiles/${Uri.encodeComponent(username)}';
