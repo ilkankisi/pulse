@@ -10,6 +10,15 @@ enum SocialGraphKind { followers, following }
 
 typedef SocialGraphUser = PulseSocialGraphUser;
 
+typedef SocialGraphListBuilder =
+    Widget Function(
+      BuildContext context,
+      List<SocialGraphUser> users,
+      Set<String> removingUsers,
+      ValueChanged<SocialGraphUser> onOpenProfile,
+      ValueChanged<SocialGraphUser>? onRemoveFollower,
+    );
+
 class SocialGraphPage extends StatefulWidget {
   const SocialGraphPage({
     super.key,
@@ -18,6 +27,7 @@ class SocialGraphPage extends StatefulWidget {
     required this.isCurrentUser,
     required this.loadUsers,
     this.removeFollower,
+    this.listBuilder,
   });
 
   final String username;
@@ -25,6 +35,7 @@ class SocialGraphPage extends StatefulWidget {
   final bool isCurrentUser;
   final Future<List<SocialGraphUser>> Function() loadUsers;
   final Future<void> Function(String username)? removeFollower;
+  final SocialGraphListBuilder? listBuilder;
 
   @override
   State<SocialGraphPage> createState() => _SocialGraphPageState();
@@ -210,6 +221,18 @@ class _SocialGraphPageState extends State<SocialGraphPage> {
 
     if (_users.isEmpty) {
       return const Center(child: Text('Henüz kimse yok'));
+    }
+
+    final listBuilder = widget.listBuilder;
+
+    if (listBuilder != null) {
+      return listBuilder(
+        context,
+        _users,
+        _removingUsers,
+        _openProfile,
+        widget.removeFollower == null ? null : _removeFollower,
+      );
     }
 
     return ListView.separated(

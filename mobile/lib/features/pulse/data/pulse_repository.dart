@@ -89,9 +89,7 @@ class PulseRepository {
 
   Future<List<PulsePost>> getReplies(int postId) async {
     try {
-      final response = await _dio.get<dynamic>(
-        '/api/v1/posts/$postId/replies',
-      );
+      final response = await _dio.get<dynamic>('/api/v1/posts/$postId/replies');
 
       return PulseFeed.fromJson(response.data).posts;
     } on DioException catch (error) {
@@ -111,9 +109,11 @@ class PulseRepository {
     required int postId,
     required CreateReplyRequest request,
   }) async {
+    final requestBody = request.toJson();
+
     final response = await _dio.post<dynamic>(
-      ApiRoutes.postReplies(postId),
-      data: request.toJson(),
+      '/api/v1/posts/$postId/replies',
+      data: requestBody,
     );
 
     final createdReply = PulsePost.fromJson(_asJsonMap(response.data));
