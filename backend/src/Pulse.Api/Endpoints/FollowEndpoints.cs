@@ -199,11 +199,21 @@ public static class FollowEndpoints
 
         foreach (var follow in followers)
         {
-            items.Add(
-                await ToSocialGraphUserAsync(
+            if (!IsProfileActive(follow.Follower)
+                || await HasBlockAsync(
                     db,
-                    follow.Follower,
                     currentUserId,
+                    follow.Follower.Id,
+                    cancellationToken))
+            {
+                continue;
+            }
+        
+        items.Add(
+        await ToSocialGraphUserAsync(
+        db,
+        follow.Follower,
+        currentUserId,
                     cancellationToken));
         }
 
@@ -270,11 +280,21 @@ public static class FollowEndpoints
 
         foreach (var follow in following)
         {
-            items.Add(
-                await ToSocialGraphUserAsync(
+            if (!IsProfileActive(follow.FollowingUser)
+                || await HasBlockAsync(
                     db,
-                    follow.FollowingUser,
                     currentUserId,
+                    follow.FollowingUser.Id,
+                    cancellationToken))
+            {
+                continue;
+            }
+        
+        items.Add(
+        await ToSocialGraphUserAsync(
+        db,
+        follow.FollowingUser,
+        currentUserId,
                     cancellationToken));
         }
 
@@ -295,12 +315,68 @@ public static class FollowEndpoints
                 .Trim()
                 .ToUpperInvariant();
 
-        return await db.Users
-            .AsNoTracking()
-            .SingleOrDefaultAsync(
-                user =>
-                    user.NormalizedUsername == normalized,
-                cancellationToken);
+        var user = await db.Users
+        .AsNoTracking()
+        .SingleOrDefaultAsync(
+        user =>
+        user.NormalizedUsername == normalized,
+        cancellationToken);
+        
+        return user is not null && IsProfileActive(user)
+            ? user
+            : null;
+        }
+        
+    private static bool IsProfileActive(User user)
+    {
+        var type = user.GetType();
+        
+        var isActive = type.GetProperty("IsActive");
+        if (isActive?.PropertyType == typeof(bool)
+            && isActive.GetValue(user) is bool active
+            && !active)
+        {
+            return false;
+        }
+        
+        foreach (var propertyName in new[] { "IsDisabled", "IsDeleted" })
+        {
+            var property = type.GetProperty(propertyName);
+            if (property?.PropertyType == typeof(bool)
+                && property.GetValue(user) is bool value
+                && value)
+            {
+                return false;
+            }
+        }
+        
+        foreach (var propertyName in new[]
+                 {
+                     "DeactivatedAtUtc",
+                     "DeactivatedAt",
+                     "DeletedAtUtc",
+                     "DeletedAt",
+                 })
+        {
+            var property = type.GetProperty(propertyName);
+            if (property is not null
+                && property.GetValue(user) is not null)
+            {
+                return false;
+            }
+        }
+        
+        var status = type.GetProperty("Status")?.GetValue(user)?.ToString();
+        if (status is not null
+            && (status.Equals("Inactive", StringComparison.OrdinalIgnoreCase)
+                || status.Equals("Disabled", StringComparison.OrdinalIgnoreCase)
+                || status.Equals("Deactivated", StringComparison.OrdinalIgnoreCase)
+                || status.Equals("Deleted", StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+        
+        return true;
     }
 
     private static async Task<bool> HasBlockAsync(

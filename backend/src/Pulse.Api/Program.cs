@@ -149,12 +149,18 @@ builder.Services.AddCors(
     });
 
 builder.Services.AddEndpointsApiExplorer();
-
-builder.Services.AddSwaggerGen(
+builder.Services.ConfigureHttpJsonOptions(
     options =>
     {
-        options.OperationFilter<AuthorizeOperationFilter>();
+        options.SerializerOptions.ReferenceHandler =
+            System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
+
+builder.Services.AddSwaggerGen(
+options =>
+{
+options.OperationFilter<AuthorizeOperationFilter>();
+});
 
 var app = builder.Build();
 
@@ -208,23 +214,21 @@ app.MapDelete(
     .RequireAuthorization();
 
 app.MapPost(
-        "/api/v1/posts/{postId}/replies",
-        PostEndpoints.CreateReplyAsync)
-    .Accepts<CreateReplyRequest>("application/json")
-    .Produces<PostResponse>(StatusCodes.Status201Created)
-    .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
-    .RequireAuthorization()
-    .WithName("CreatePostReply");
-
+"/api/v1/posts/{postId}/replies",
+PostEndpoints.CreateReplyAsync)
+.Accepts<CreateReplyRequest>("application/json")
+.Produces<PostResponse>(StatusCodes.Status201Created)
+.Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+.RequireAuthorization()
+.WithName("CreatePostReply");
 app.MapGet(
-        "/api/v1/posts/{postId}/replies",
-        PostEndpoints.GetRepliesAsync)
-    .RequireAuthorization();
-
+"/api/v1/posts/{postId}/replies",
+PostEndpoints.GetRepliesAsync)
+.RequireAuthorization();
 app.MapPost(
-        "/api/v1/posts/{postId}/likes",
-        PostEndpoints.LikePostAsync)
-    .RequireAuthorization();
+"/api/v1/posts/{postId}/likes",
+PostEndpoints.LikePostAsync)
+.RequireAuthorization();
 
 app.MapDelete(
         "/api/v1/posts/{postId}/likes",
