@@ -76,8 +76,8 @@ CLIENT_WRITE_READ | likePost | REQUIRED | getFeed
 
 CLIENT_WRITE_READ | unlikePost | REQUIRED | getFeed
 
-CLIENT_COUNT_LIST | getFollowers | REQUIRED | GET /api/v1/profiles/{username}/followers
-CLIENT_COUNT_LIST | getFollowing | REQUIRED | GET /api/v1/profiles/{username}/following
+CLIENT_COUNT_LIST | getFollowers | REQUIRED | ListView
+CLIENT_COUNT_LIST | getFollowing | REQUIRED | ListView
 CLIENT_FALSE_EMPTY | getBlocks | REQUIRED | GET /api/v1/blocks
 REQUEST_BODY_GOLDEN | toJson | REQUIRED | backend-integration-test-golden-json
 REQUEST_BODY_GOLDEN | transport-request-body | REQUIRED | backend-integration-test-golden-json
