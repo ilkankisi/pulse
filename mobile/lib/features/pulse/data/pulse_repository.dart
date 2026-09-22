@@ -1,8 +1,11 @@
 import 'package:dio/dio.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
+
 import '../../../core/network/api_routes.dart';
+
 import '../domain/pulse_models.dart';
 
 final pulseRepositoryProvider = Provider<PulseRepository>((ref) {
@@ -77,6 +80,7 @@ class PulseRepository {
   Future<PulsePost> createPost(CreatePostRequest request) async {
     final response = await _dio.post<dynamic>(
       ApiRoutes.posts,
+
       data: request.toJson(),
     );
 
@@ -89,7 +93,7 @@ class PulseRepository {
 
   Future<List<PulsePost>> getReplies(int postId) async {
     try {
-      final response = await _dio.get<dynamic>('/api/v1/posts/$postId/replies');
+      final response = await _dio.get<dynamic>(ApiRoutes.postReplies(postId));
 
       return PulseFeed.fromJson(response.data).posts;
     } on DioException catch (error) {
@@ -107,19 +111,24 @@ class PulseRepository {
 
   Future<PulsePost> createReply({
     required int postId,
+
     required CreateReplyRequest request,
   }) async {
     final requestBody = request.toJson();
 
     final response = await _dio.post<dynamic>(
-      '/api/v1/posts/$postId/replies',
+      ApiRoutes.postReplies(postId),
       data: requestBody,
     );
 
     final createdReply = PulsePost.fromJson(_asJsonMap(response.data));
 
     try {
-      final canonicalReplies = await getReplies(postId);
+      final canonicalResponse = await _dio.get<dynamic>(
+        '/api/v1/posts/$postId/replies',
+      );
+
+      final canonicalReplies = PulseFeed.fromJson(canonicalResponse.data).posts;
 
       for (final reply in canonicalReplies) {
         if (reply.id == createdReply.id) {
@@ -200,6 +209,7 @@ class PulseRepository {
   Future<PulseProfile> updateMyProfile(UpdateProfileRequest request) async {
     final response = await _dio.put<dynamic>(
       ApiRoutes.me,
+
       data: request.toJson(),
     );
 

@@ -51,18 +51,16 @@ void main() {
     expect(wrappedFeed.posts.single.id, 2);
   });
 
-  test('gönderi oluşturma gövdesi trimlenmiş content gönderir', () {
-    final request = CreatePostRequest(content: '  Merhaba Pulse  ');
+  test('gönderi oluşturma gövdesi backend golden JSON ile eşleşir', () {
+    final request = CreatePostRequest(content: '  Merhaba Pulse.  ');
 
-    expect(request.toJson(), <String, dynamic>{'content': 'Merhaba Pulse'});
+    expect(request.toJson(), <String, dynamic>{'content': 'Merhaba Pulse.'});
   });
 
-  test('yanıt oluşturma gövdesi yalnızca content gönderir', () {
-    final request = CreateReplyRequest(content: '  Tek seviyeli yanıt  ');
+  test('yanıt oluşturma gövdesi backend golden JSON ile eşleşir', () {
+    final request = CreateReplyRequest(content: '  Katılıyorum.  ');
 
-    expect(request.toJson(), <String, dynamic>{
-      'content': 'Tek seviyeli yanıt',
-    });
+    expect(request.toJson(), <String, dynamic>{'content': 'Katılıyorum.'});
   });
 
   test('profil güncelleme gövdesi boş avatar alanını null gönderir', () {
