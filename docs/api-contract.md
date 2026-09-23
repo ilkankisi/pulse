@@ -97,7 +97,7 @@ CLIENT_WRITE_READ hedefleri ilgili READ_AFTER_WRITE canonical GET hedefiyle aynÄ
 
 CLIENT_WRITE_READ | createPost | REQUIRED | getFeed
 
-CLIENT_WRITE_READ | createReply | REQUIRED | /api/v1/posts/{postId}/replies
+CLIENT_WRITE_READ | createReply | REQUIRED | GET /api/v1/posts/{postId}/replies
 
 CLIENT_WRITE_READ | deletePost | REQUIRED | getFeed
 
@@ -108,8 +108,10 @@ CLIENT_WRITE_READ | followUser | REQUIRED | getProfile
 CLIENT_WRITE_READ | unfollowUser | REQUIRED | getProfile
 
 CLIENT_WRITE_READ | likePost | REQUIRED | GET /api/v1/posts/{postId}/likes
-
 CLIENT_WRITE_READ | unlikePost | REQUIRED | GET /api/v1/posts/{postId}/likes
+CLIENT_COUNT_LIST | replyCount | REQUIRED | ListView
+
+CLIENT_COUNT_LIST | likeCount | REQUIRED | ListView
 
 CLIENT_COUNT_LIST | getFollowers | REQUIRED | ListView
 
