@@ -230,14 +230,72 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       ValueChanged<SocialGraphUser> onOpenProfile,
                       ValueChanged<SocialGraphUser>? onRemoveFollower,
                     ) {
-                      return _buildFollowersList(
-                        users: users,
-                        removingUsers: removingUsers,
-                        onOpenProfile: onOpenProfile,
-                        onRemoveFollower: onRemoveFollower,
+                      return ListView.builder(
+                        key: const ValueKey<String>('profile-followers-list'),
+                        itemCount: users.length,
+                        itemBuilder: (context, index) {
+                          final user = users[index];
+                          final avatarUrl = user.avatarUrl?.trim();
+                          final isRemoving = removingUsers.contains(
+                            user.username,
+                          );
+
+                          return Column(
+                            children: [
+                              ListTile(
+                                key: ValueKey<String>(
+                                  'social-user-${user.username}',
+                                ),
+                                leading: CircleAvatar(
+                                  backgroundImage:
+                                      avatarUrl != null && avatarUrl.isNotEmpty
+                                      ? NetworkImage(avatarUrl)
+                                      : null,
+                                  child: avatarUrl == null || avatarUrl.isEmpty
+                                      ? Text(
+                                          user.displayName.isEmpty
+                                              ? '?'
+                                              : user
+                                                    .displayName
+                                                    .characters
+                                                    .first
+                                                    .toUpperCase(),
+                                        )
+                                      : null,
+                                ),
+                                title: Text(user.displayName),
+                                subtitle: Text('@${user.username}'),
+                                onTap: () => onOpenProfile(user),
+                                trailing:
+                                    _isOwnProfile && onRemoveFollower != null
+                                    ? TextButton(
+                                        key: ValueKey<String>(
+                                          'remove-follower-${user.username}',
+                                        ),
+                                        onPressed: isRemoving
+                                            ? null
+                                            : () => onRemoveFollower(user),
+                                        child: isRemoving
+                                            ? const SizedBox.square(
+                                                dimension: 18,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                    ),
+                                              )
+                                            : const Text('Kaldır'),
+                                      )
+                                    : null,
+                              ),
+                              if (index < users.length - 1)
+                                const Divider(height: 1),
+                            ],
+                          );
+                        },
                       );
                     },
               );
+
             case SocialGraphKind.following:
               return SocialGraphPage(
                 username: username,
@@ -252,108 +310,51 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       ValueChanged<SocialGraphUser> onOpenProfile,
                       ValueChanged<SocialGraphUser>? onRemoveFollower,
                     ) {
-                      return _buildFollowingList(
-                        users: users,
-                        onOpenProfile: onOpenProfile,
+                      return ListView.builder(
+                        key: const ValueKey<String>('profile-following-list'),
+                        itemCount: users.length,
+                        itemBuilder: (context, index) {
+                          final user = users[index];
+                          final avatarUrl = user.avatarUrl?.trim();
+
+                          return Column(
+                            children: [
+                              ListTile(
+                                key: ValueKey<String>(
+                                  'social-user-${user.username}',
+                                ),
+                                leading: CircleAvatar(
+                                  backgroundImage:
+                                      avatarUrl != null && avatarUrl.isNotEmpty
+                                      ? NetworkImage(avatarUrl)
+                                      : null,
+                                  child: avatarUrl == null || avatarUrl.isEmpty
+                                      ? Text(
+                                          user.displayName.isEmpty
+                                              ? '?'
+                                              : user
+                                                    .displayName
+                                                    .characters
+                                                    .first
+                                                    .toUpperCase(),
+                                        )
+                                      : null,
+                                ),
+                                title: Text(user.displayName),
+                                subtitle: Text('@${user.username}'),
+                                onTap: () => onOpenProfile(user),
+                              ),
+                              if (index < users.length - 1)
+                                const Divider(height: 1),
+                            ],
+                          );
+                        },
                       );
                     },
               );
           }
         },
       ),
-    );
-  }
-
-  Widget _buildFollowersList({
-    required List<SocialGraphUser> users,
-    required Set<String> removingUsers,
-    required ValueChanged<SocialGraphUser> onOpenProfile,
-    required ValueChanged<SocialGraphUser>? onRemoveFollower,
-  }) {
-    return ListView.builder(
-      key: const ValueKey<String>('profile-followers-list'),
-      itemCount: users.length,
-      itemBuilder: (context, index) {
-        final user = users[index];
-        final avatarUrl = user.avatarUrl?.trim();
-        final isRemoving = removingUsers.contains(user.username);
-
-        return Column(
-          children: [
-            ListTile(
-              key: ValueKey<String>('social-user-${user.username}'),
-              leading: CircleAvatar(
-                backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
-                    ? NetworkImage(avatarUrl)
-                    : null,
-                child: avatarUrl == null || avatarUrl.isEmpty
-                    ? Text(
-                        user.displayName.isEmpty
-                            ? '?'
-                            : user.displayName.characters.first.toUpperCase(),
-                      )
-                    : null,
-              ),
-              title: Text(user.displayName),
-              subtitle: Text('@${user.username}'),
-              onTap: () => onOpenProfile(user),
-              trailing: _isOwnProfile && onRemoveFollower != null
-                  ? TextButton(
-                      key: ValueKey<String>('remove-follower-${user.username}'),
-                      onPressed: isRemoving
-                          ? null
-                          : () => onRemoveFollower(user),
-                      child: isRemoving
-                          ? const SizedBox.square(
-                              dimension: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Kaldır'),
-                    )
-                  : null,
-            ),
-            if (index < users.length - 1) const Divider(height: 1),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildFollowingList({
-    required List<SocialGraphUser> users,
-    required ValueChanged<SocialGraphUser> onOpenProfile,
-  }) {
-    return ListView.builder(
-      key: const ValueKey<String>('profile-following-list'),
-      itemCount: users.length,
-      itemBuilder: (context, index) {
-        final user = users[index];
-        final avatarUrl = user.avatarUrl?.trim();
-
-        return Column(
-          children: [
-            ListTile(
-              key: ValueKey<String>('social-user-${user.username}'),
-              leading: CircleAvatar(
-                backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
-                    ? NetworkImage(avatarUrl)
-                    : null,
-                child: avatarUrl == null || avatarUrl.isEmpty
-                    ? Text(
-                        user.displayName.isEmpty
-                            ? '?'
-                            : user.displayName.characters.first.toUpperCase(),
-                      )
-                    : null,
-              ),
-              title: Text(user.displayName),
-              subtitle: Text('@${user.username}'),
-              onTap: () => onOpenProfile(user),
-            ),
-            if (index < users.length - 1) const Divider(height: 1),
-          ],
-        );
-      },
     );
   }
 
