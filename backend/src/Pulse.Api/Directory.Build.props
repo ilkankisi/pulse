@@ -1,0 +1,5 @@
+<Project>
+  <PropertyGroup Condition="'$(BuildingSolutionFile)' == 'true'">
+    <BaseOutputPath>bin-solution\</BaseOutputPath>
+</PropertyGroup>
+</Project>

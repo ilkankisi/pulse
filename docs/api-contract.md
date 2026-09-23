@@ -13,6 +13,7 @@ Parse edilebilir endpoint matrisi. Orchestrator ürün semantiği uydurmaz; muta
 | GET | /api/v1/posts/{postId}/replies |
 | POST | /api/v1/posts/{postId}/likes |
 | DELETE | /api/v1/posts/{postId}/likes |
+| GET | /api/v1/posts/{postId}/likes |
 | GET | /api/v1/me |
 | PUT | /api/v1/me |
 | GET | /api/v1/profiles/{username} |
@@ -29,7 +30,7 @@ Parse edilebilir endpoint matrisi. Orchestrator ürün semantiği uydurmaz; muta
 
 READ_AFTER_WRITE
 
-Yalnızca backend'de var olan GET. Sibling GET uydurulmaz.
+CONTRACT_MUTATION_WITHOUT_READ taramasında REQUIRED mutation'ın canonical GET hedefi endpoint matrisinde tanımlı olmalıdır. `POST /api/v1/posts/{postId}/likes` ve `DELETE /api/v1/posts/{postId}/likes` sonrasında persisted like state'in tek canonical read yüzeyi aynı-path `GET /api/v1/posts/{postId}/likes` endpoint'idir; sibling veya feed GET canonical read değildir. Bu doküman satırı kendi başına VERIFY kanıtı değildir: kabul için Orchestrator güncel workspace snapshot'ında route matrisini, iki mevcut READ_AFTER_WRITE kaydını, backend runtime GET route'unu ve iki mevcut CLIENT_WRITE_READ hedefini bu aynı GET literalıyla birebir doğrulamalı ve CONTRACT_MUTATION_WITHOUT_READ taramasında bu iki mutation için bulgu bulunmadığını göstermelidir.
 
 READ_AFTER_WRITE | POST /api/v1/posts | REQUIRED | GET /api/v1/feed
 
@@ -37,9 +38,39 @@ READ_AFTER_WRITE | DELETE /api/v1/posts/{postId} | EXEMPT | NONE
 
 READ_AFTER_WRITE | POST /api/v1/posts/{postId}/replies | REQUIRED | GET /api/v1/posts/{postId}/replies
 
-READ_AFTER_WRITE | POST /api/v1/posts/{postId}/likes | REQUIRED | GET /api/v1/feed
+READ_AFTER_WRITE | POST /api/v1/posts/{postId}/likes | REQUIRED | GET /api/v1/posts/{postId}/likes
+READ_AFTER_WRITE | DELETE /api/v1/posts/{postId}/likes | REQUIRED | GET /api/v1/posts/{postId}/likes
+LIKE_READ_AFTER_WRITE_ACCEPTANCE
 
-READ_AFTER_WRITE | DELETE /api/v1/posts/{postId}/likes | REQUIRED | GET /api/v1/feed
+Bu karar yalnız doküman veya Manager onayıyla doğrulanmış sayılmaz. Kabul için aynı güncel workspace snapshot'ına bağlı AUTHORITATIVE_CURRENT_VERIFICATION kaydı aşağıdaki koşulların tamamını doğrudan kanıtlamalıdır. Güncel VERIFY kaydı yoksa veya herhangi bir kriter `not_verified` ise kabul kapısı kapanmaz ve görev doğrulanmış sayılmaz.
+
+VERIFY_CRITERION | likeCanonicalRead | REQUIRED | workspace-current | route=GET /api/v1/posts/{postId}/likes; POST-read=GET /api/v1/posts/{postId}/likes; DELETE-read=GET /api/v1/posts/{postId}/likes
+VERIFY_CRITERION | likeBackendRuntime | REQUIRED | workspace-current | runtime GET /api/v1/posts/{postId}/likes equals canonical GET /api/v1/posts/{postId}/likes
+VERIFY_CRITERION | likeMobileRead | REQUIRED | workspace-current | likePost and unlikePost read target equals GET /api/v1/posts/{postId}/likes
+VERIFY_CRITERION | mutationWithoutRead | REQUIRED | workspace-current | CONTRACT_MUTATION_WITHOUT_READ absent for POST /api/v1/posts/{postId}/likes and DELETE /api/v1/posts/{postId}/likes
+VERIFY_GATE | likeReadAfterWrite | REQUIRED | AUTHORITATIVE_CURRENT_VERIFICATION[current-workspace-snapshot] | likeCanonicalRead=ok;likeBackendRuntime=ok;likeMobileRead=ok;mutationWithoutRead=ok
+VERIFY_GATE | likeReadAfterWrite | FAIL_CLOSED | no current AUTHORITATIVE_CURRENT_VERIFICATION record or any criterion missing/not_verified
+VERIFY_EVIDENCE_SOURCE | likeReadAfterWrite | REQUIRED | orchestrator-generated-current-run
+VERIFY_WORKSPACE_EXPECTATION | likeCanonicalRead | docs/api-contract.md | GET /api/v1/posts/{postId}/likes
+VERIFY_WORKSPACE_EXPECTATION | likePostReadAfterWrite | docs/api-contract.md | READ_AFTER_WRITE | POST /api/v1/posts/{postId}/likes | REQUIRED | GET /api/v1/posts/{postId}/likes
+VERIFY_WORKSPACE_EXPECTATION | likeDeleteReadAfterWrite | docs/api-contract.md | READ_AFTER_WRITE | DELETE /api/v1/posts/{postId}/likes | REQUIRED | GET /api/v1/posts/{postId}/likes
+VERIFY_WORKSPACE_EXPECTATION | likeBackendRuntime | backend | GET /api/v1/posts/{postId}/likes
+VERIFY_WORKSPACE_EXPECTATION | likeMobileRead | mobile | likePost,unlikePost -> GET /api/v1/posts/{postId}/likes
+VERIFY_WORKSPACE_EXPECTATION | mutationWithoutRead | verifier | CONTRACT_MUTATION_WITHOUT_READ=absent for POST,DELETE /api/v1/posts/{postId}/likes
+ACCEPTANCE_GATE | managerApprovalOnly | REJECTED | not-verification-evidence
+ACCEPTANCE_EVIDENCE | likeReadRoute | REQUIRED | GET /api/v1/posts/{postId}/likes endpoint matrisinde mevcut
+ACCEPTANCE_EVIDENCE | likePostReadAfterWrite | REQUIRED | POST /api/v1/posts/{postId}/likes -> GET /api/v1/posts/{postId}/likes
+ACCEPTANCE_EVIDENCE | likeDeleteReadAfterWrite | REQUIRED | DELETE /api/v1/posts/{postId}/likes -> GET /api/v1/posts/{postId}/likes
+ACCEPTANCE_EVIDENCE | backendRuntimeLikeRead | REQUIRED | runtime GET /api/v1/posts/{postId}/likes canonical route ile birebir eşleşir
+ACCEPTANCE_EVIDENCE | mobileLikeRead | REQUIRED | likePost,unlikePost -> getPostLikes -> GET /api/v1/posts/{postId}/likes
+ACCEPTANCE_EVIDENCE | CONTRACT_MUTATION_WITHOUT_READ | REQUIRED | PASS
+
+ACCEPTANCE_VERIFY | likeReadRoute | REQUIRED | AUTHORITATIVE_CURRENT_VERIFICATION
+ACCEPTANCE_VERIFY | likePostReadAfterWrite | REQUIRED | AUTHORITATIVE_CURRENT_VERIFICATION
+ACCEPTANCE_VERIFY | likeDeleteReadAfterWrite | REQUIRED | AUTHORITATIVE_CURRENT_VERIFICATION
+ACCEPTANCE_VERIFY | backendRuntimeLikeRead | REQUIRED | AUTHORITATIVE_CURRENT_VERIFICATION
+ACCEPTANCE_VERIFY | mobileLikeRead | REQUIRED | AUTHORITATIVE_CURRENT_VERIFICATION
+ACCEPTANCE_VERIFY | CONTRACT_MUTATION_WITHOUT_READ | REQUIRED | AUTHORITATIVE_CURRENT_VERIFICATION
 
 READ_AFTER_WRITE | PUT /api/v1/me | REQUIRED | GET /api/v1/me
 
@@ -72,9 +103,8 @@ CLIENT_WRITE_READ | followUser | REQUIRED | getProfile
 
 CLIENT_WRITE_READ | unfollowUser | REQUIRED | getProfile
 
-CLIENT_WRITE_READ | likePost | REQUIRED | getFeed
-
-CLIENT_WRITE_READ | unlikePost | REQUIRED | getFeed
+CLIENT_WRITE_READ | likePost | REQUIRED | GET /api/v1/posts/{postId}/likes
+CLIENT_WRITE_READ | unlikePost | REQUIRED | GET /api/v1/posts/{postId}/likes
 
 CLIENT_COUNT_LIST | getFollowers | REQUIRED | ListView
 CLIENT_COUNT_LIST | getFollowing | REQUIRED | ListView
