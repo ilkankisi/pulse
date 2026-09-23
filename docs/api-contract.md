@@ -30,7 +30,7 @@ Parse edilebilir endpoint matrisi. Orchestrator ürün semantiği uydurmaz; muta
 
 READ_AFTER_WRITE
 
-CONTRACT_MUTATION_WITHOUT_READ taramasında REQUIRED mutation'ın canonical GET hedefi endpoint matrisinde tanımlı olmalıdır. `POST /api/v1/posts/{postId}/likes` ve `DELETE /api/v1/posts/{postId}/likes` sonrasında persisted like state'in tek canonical read yüzeyi aynı-path `GET /api/v1/posts/{postId}/likes` endpoint'idir; sibling veya feed GET canonical read değildir. Bu doküman satırı kendi başına VERIFY kanıtı değildir: kabul için Orchestrator güncel workspace snapshot'ında route matrisini, iki mevcut READ_AFTER_WRITE kaydını, backend runtime GET route'unu ve iki mevcut CLIENT_WRITE_READ hedefini bu aynı GET literalıyla birebir doğrulamalı ve CONTRACT_MUTATION_WITHOUT_READ taramasında bu iki mutation için bulgu bulunmadığını göstermelidir.
+`POST /api/v1/posts/{postId}/likes` ve `DELETE /api/v1/posts/{postId}/likes` sonrasında persisted like state yalnız `GET /api/v1/posts/{postId}/likes` üzerinden okunur. Bu GET her iki mutation için canonical read-after-write yüzeyidir; `GET /api/v1/feed` veya başka bir sibling GET canonical read hedefi değildir. Bu nedenle her iki like mutation'ı da mevcut canonical GET ile read-after-write bakımından kapsanır ve `CONTRACT_MUTATION_WITHOUT_READ` olarak sınıflandırılmaz.
 
 READ_AFTER_WRITE | POST /api/v1/posts | REQUIRED | GET /api/v1/feed
 
