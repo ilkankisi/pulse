@@ -30,7 +30,7 @@ Parse edilebilir endpoint matrisi. Orchestrator ürün semantiği uydurmaz; muta
 
 READ_AFTER_WRITE
 
-Like read-after-write canonical kararı: `POST /api/v1/posts/{postId}/likes` ve `DELETE /api/v1/posts/{postId}/likes` sonrasında persisted state'in read yüzeyi `GET /api/v1/posts/{postId}/likes` endpoint'idir. Route matrisi bu GET'i içermeli; her iki mutation'ın `READ_AFTER_WRITE` hedefi bu GET olmalı; backend runtime ile mobile `CLIENT_WRITE_READ` beklentileri de aynı GET literalıyla birebir uyuşmalıdır. `GET /api/v1/feed` canonical read değildir. `CONTRACT_MUTATION_WITHOUT_READ` kapanış semantiği: POST ve DELETE like mutation'larının ikisi de mevcut canonical `GET /api/v1/posts/{postId}/likes` ve ilgili `READ_AFTER_WRITE` eşleşmeleriyle kapsandığından missing-read bulgusu değildir; bu bulgu yalnız canonical GET veya mutation→GET eşleşmesi eksik olduğunda geçerlidir.
+Like read-after-write canonical kararı: `POST /api/v1/posts/{postId}/likes` ve `DELETE /api/v1/posts/{postId}/likes` sonrasında persisted state'in tek read yüzeyi `GET /api/v1/posts/{postId}/likes` endpoint'idir. Workspace kontrat kanıtı olarak route matrisi bu GET'i içerir; POST ve DELETE için mevcut `READ_AFTER_WRITE` kayıtları bu GET'i hedefler; `likePost` ve `unlikePost` için mevcut `CLIENT_WRITE_READ` kayıtları da aynı GET'i hedefler. Backend runtime bu canonical GET route'u ile birebir eşleşmelidir. `GET /api/v1/feed` canonical read değildir. `CONTRACT_MUTATION_WITHOUT_READ` kapanış koşulu bu iki mutation için sağlanmıştır: mevcut canonical GET ile POST→GET ve DELETE→GET eşleşmeleri birlikte bulunduğundan POST/DELETE `/api/v1/posts/{postId}/likes` missing-read finding'i üretmez.
 
 READ_AFTER_WRITE | POST /api/v1/posts | REQUIRED | GET /api/v1/feed
 
