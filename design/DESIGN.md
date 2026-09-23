@@ -348,8 +348,8 @@ SliverList
                         │   └── PopupMenuButton
                         ├── Text(content)
                         └── Row
-                            ├── IconButton(reply) + replyCount
-                            └── IconButton(like) + likeCount
+                            ├── IconButton(reply) + InkWell(replyCount)
+                            └── IconButton(like) + InkWell(likeCount)
 ```
 
 fluttertemplates kaynağı: Core / Card — https://fluttertemplates.dev/widgets
@@ -363,6 +363,71 @@ Gönderinin sahibine silme aksiyonu gösterilebilir.
 Başkasının gönderisinde “Şikâyet Et” güvenlik aksiyonu bulunabilir.
 
 Like durumu API cevabıyla senkronize edilir.
+
+Gönderi Detayı'nda `replyCount` tıklanabilir sayaçtır; aynı route içindeki Yanıtlar koleksiyonuna scroll/focus yapar.
+
+Gönderi Detayı'nda `likeCount` tıklanabilir sayaçtır; Beğenenler koleksiyonunu açar.
+
+Yanıtlar koleksiyonu canonical `GET /api/v1/posts/{postId}/replies`, Beğenenler koleksiyonu canonical `GET /api/v1/posts/{postId}/likes` kontratını kullanır. Backend wiring eksikliği nedeniyle UI farklı endpoint üretmez.
+
+Sayaçların dokunma hedefi en az 44px olmalı; ikon ve sayı aynı semantik aksiyon grubunda okunmalıdır.
+
+PostDetail sayaç koleksiyonları
+
+Token: {components.post-card}, {components.state-panel}, {components.social-graph-list-item}
+
+Widget hierarchy:
+
+```
+PostDetailBody
+└── CustomScrollView
+    ├── SliverToBoxAdapter
+    │   └── PostCard
+    │       └── Row
+    │           ├── reply action + tappable replyCount
+    │           └── like action + tappable likeCount
+    ├── replies collection
+    │   ├── loading: SliverList(skeleton reply cards)
+    │   ├── success: SliverList
+    │   │   └── reply Card
+    │   │       └── Row
+    │   │           ├── CircleAvatar
+    │   │           └── Expanded
+    │   │               └── Column
+    │   │                   ├── Row(displayName, @username, createdAt)
+    │   │                   └── Text(content)
+    │   ├── empty: SliverToBoxAdapter > state panel
+    │   └── error: SliverToBoxAdapter > error state
+    └── likeCount tap
+        └── Beğenenler collection route
+            └── Scaffold
+                ├── AppBar(title: "Beğenenler")
+                └── body
+                    ├── loading: ListView(skeleton user rows)
+                    ├── success: ListView
+                    │   └── ListTile
+                    │       ├── leading: CircleAvatar
+                    │       ├── title: Text(displayName)
+                    │       └── subtitle: Text(@username)
+                    ├── empty: state panel
+                    └── error: error state + OutlinedButton("Tekrar Dene")
+```
+
+fluttertemplates kaynağı: Social / Comments Thread — https://fluttertemplates.dev/widgets/social
+
+fluttertemplates kaynağı: Social / User Search — https://fluttertemplates.dev/widgets/social
+
+Kurallar:
+
+Yanıt sayacı tap'i yeni PostDetail route'u oluşturmaz; mevcut Yanıtlar bölümünü görünür alana getirir.
+
+Yanıt koleksiyonu yüklenirken ana gönderi görünür kalır.
+
+Beğenenler koleksiyonundaki kullanıcı satırı profile gider.
+
+Boş başarılı koleksiyon veya kayıt-yok semantiğindeki 404 empty state'tir; ağ/5xx error state'tir.
+
+Alt koleksiyon hatası ana gönderiyi hata ekranıyla değiştirmez.
 
 Empty durumda boş SliverList yerine state panel gösterilir.
 
@@ -521,6 +586,32 @@ Açıklama: "İlk yanıtı sen yaz."
 
 CTA: "Yanıtla"
 
+Sayaç → koleksiyon
+
+Yanıt sayacı hedefi: "Yanıtlar"
+
+Yanıt koleksiyonu empty başlık: "Henüz yanıt yok"
+
+Yanıt koleksiyonu empty açıklama: "İlk yanıtı sen yaz."
+
+Yanıt koleksiyonu empty CTA: "Yanıtla"
+
+Yanıt koleksiyonu error başlık: "Yanıtlar yüklenemedi"
+
+Yanıt koleksiyonu error CTA: "Tekrar Dene"
+
+Beğeni sayacı hedefi: "Beğenenler"
+
+Beğenenler empty başlık: "Henüz beğeni yok"
+
+Beğenenler empty açıklama: "Bu gönderiyi henüz kimse beğenmedi."
+
+Beğenenler empty CTA: yok
+
+Beğenenler error başlık: "Beğenenler yüklenemedi"
+
+Beğenenler error CTA: "Tekrar Dene"
+
 Error state
 
 Ana gönderi bulunamazsa: "Gönderi bulunamadı"
@@ -541,6 +632,12 @@ App bar vs body CTA
 
 ## Navigation
 Ana Akış home; kart tap → Gönderi Detayı; FAB → composer.
+
+Gönderi Detayı `replyCount` tap → aynı route içindeki Yanıtlar koleksiyonuna scroll/focus.
+
+Gönderi Detayı `likeCount` tap → Beğenenler koleksiyonu.
+
+Beğenenler kullanıcı satırı tap → ilgili kullanıcı profili.
 
 ---
 
