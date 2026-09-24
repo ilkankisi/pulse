@@ -171,11 +171,7 @@ class PulseRepository {
   Future<void> unlikePost(int postId) async {
     await _dio.delete<void>('/api/v1/posts/$postId/likes');
 
-    final canonicalUnlikeLikesResponse = await _dio.get<dynamic>(
-      '/api/v1/posts/$postId/likes',
-    );
-
-    final canonicalUnlikeLikes = canonicalUnlikeLikesResponse.data;
+    final canonicalUnlikeLikes = await getPostLikes(postId);
 
     if (canonicalUnlikeLikes == null) {
       throw const FormatException('Beğeni listesi okunamadı.');
