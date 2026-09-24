@@ -169,7 +169,9 @@ class PulseRepository {
   Future<dynamic> unlikePost(int postId) async {
     await _dio.delete<void>('/api/v1/posts/$postId/likes');
 
-    return getPostLikes(postId);
+    final canonicalUnlikeLikes = await getPostLikes(postId);
+
+    return canonicalUnlikeLikes;
   }
 
   Future<PulseProfile?> getMyProfile() async {
