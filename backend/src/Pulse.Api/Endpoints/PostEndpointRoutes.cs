@@ -49,12 +49,12 @@ public static class PostEndpointRoutes
         "/api/v1/posts/{postId}/likes",
         GetPostLikesAsync)
         .RequireAuthorization()
-            .Produces<LikeResponse>(
-                StatusCodes.Status200OK,
-                contentType: "application/json")
-            .Produces(
-                StatusCodes.Status401Unauthorized)
-            .Produces(
+            .Produces<IReadOnlyList<PostLikeUserResponse>>(
+        StatusCodes.Status200OK,
+        contentType: "application/json")
+        .Produces(
+        StatusCodes.Status401Unauthorized)
+        .Produces(
                 StatusCodes.Status404NotFound)
         .WithName("GetPostLikes");
         
@@ -89,28 +89,88 @@ public static class PostEndpointRoutes
         
         if (!postExists)
         {
-            return Results.NotFound();
+        return Results.NotFound();
         }
         
-        var likeCount = await dbContext.PostLikes
-            .AsNoTracking()
-            .CountAsync(
-                like => like.PostId == postId,
+        var likerIds = await dbContext.PostLikes
+        .AsNoTracking()
+            .Where(like => like.PostId == postId)
+            .Select(like => like.UserId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        
+        var userEntityType = dbContext.Model
+            .GetEntityTypes()
+            .SingleOrDefault(
+                candidate => candidate.ClrType.Name == "User");
+        
+        var idProperty =
+            userEntityType?.FindPrimaryKey()?.Properties.SingleOrDefault();
+        var usernameProperty =
+            userEntityType?.FindProperty("Username");
+        
+        if (userEntityType is null
+            || idProperty is null
+            || usernameProperty is null)
+        {
+            return Results.StatusCode(
+                StatusCodes.Status500InternalServerError);
+        }
+        
+        var displayNameProperty =
+            userEntityType.FindProperty("DisplayName");
+        var avatarUrlProperty =
+            userEntityType.FindProperty("AvatarUrl");
+        
+        var users = new List<PostLikeUserResponse>();
+        
+        foreach (var likerId in likerIds)
+        {
+            var user = await dbContext.FindAsync(
+                userEntityType.ClrType,
+                new object?[] { likerId },
                 cancellationToken);
         
-        var isLiked = await dbContext.PostLikes
-            .AsNoTracking()
-            .AnyAsync(
-                like =>
-                    like.PostId == postId
-                    && like.UserId == userId,
-                cancellationToken);
+            if (user is null)
+            {
+                continue;
+            }
+        
+            var entry = dbContext.Entry(user);
+            var username = Convert.ToString(
+                entry.Property(usernameProperty.Name).CurrentValue);
+        
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                continue;
+            }
+        
+            users.Add(
+                new PostLikeUserResponse(
+                    Convert.ToInt32(
+                        entry.Property(idProperty.Name).CurrentValue),
+                    username,
+                    displayNameProperty is null
+                        ? null
+                        : Convert.ToString(
+                            entry.Property(displayNameProperty.Name)
+                                .CurrentValue),
+                    avatarUrlProperty is null
+                        ? null
+                        : Convert.ToString(
+                            entry.Property(avatarUrlProperty.Name)
+                                .CurrentValue)));
+        }
         
         return Results.Ok(
-            new LikeResponse(
-                postId,
-                isLiked,
-                likeCount));
-    }
+            users
+                .OrderBy(user => user.Username)
+                .ToArray());
+        }
+        }
         
-}
+        public sealed record PostLikeUserResponse(
+    int Id,
+    string Username,
+    string? DisplayName,
+    string? AvatarUrl);
