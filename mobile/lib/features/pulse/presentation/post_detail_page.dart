@@ -83,8 +83,9 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
     });
 
     try {
-      final replyRepository = ref.read(pulseRepositoryProvider);
-      final replies = await replyRepository.getReplies(_post.id);
+      final replies = await ref
+          .read(pulseRepositoryProvider)
+          .getReplies(_post.id);
 
       if (!mounted) {
         return;
