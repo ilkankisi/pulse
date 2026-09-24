@@ -56,18 +56,6 @@ public static class PostEndpointRoutes
         .RequireAuthorization()
         .WithName("UnlikePost");
 
-        app.MapGet(
-                "/api/v1/moderation/reports/{reportId}/resolve",
-                GetResolveCompatibility)
-            .RequireAuthorization()
-            .WithName("GetModerationResolveCompatibility");
-
-        app.MapGet(
-                "/api/v1/moderation/reports/{reportId}/dismiss",
-                GetDismissCompatibility)
-            .RequireAuthorization()
-            .WithName("GetModerationDismissCompatibility");
-
         return app;
         }
     private static async Task<IResult> GetPostLikesAsync(
@@ -119,17 +107,4 @@ public static class PostEndpointRoutes
                 likeCount));
     }
         
-        private static IResult GetResolveCompatibility(string reportId)
-        {
-        _ = reportId;
-        return Results.StatusCode(
-        StatusCodes.Status405MethodNotAllowed);
-    }
-
-    private static IResult GetDismissCompatibility(string reportId)
-    {
-        _ = reportId;
-        return Results.StatusCode(
-            StatusCodes.Status405MethodNotAllowed);
-    }
 }
