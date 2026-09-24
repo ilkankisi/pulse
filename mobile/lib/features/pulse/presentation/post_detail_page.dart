@@ -138,16 +138,41 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
         ),
       ),
     );
+
+    try {
+      final rawLikes = await repository.getPostLikes(_post.id);
+      final canonicalLikes = _PostLikeUser.fromResponse(rawLikes);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _post = _post.copyWith(likeCount: canonicalLikes.length);
+      });
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 401) {
+        await widget.onUnauthorized();
+      }
+    } on FormatException {
+      // Beğenenler koleksiyonu kendi hata durumunu gösterir.
+    }
   }
 
-  void _scrollToReplies() {
+  Future<void> _scrollToReplies() async {
+    await _loadReplies();
+
+    if (!mounted) {
+      return;
+    }
+
     final repliesContext = _repliesKey.currentContext;
 
     if (repliesContext == null) {
       return;
     }
 
-    Scrollable.ensureVisible(
+    await Scrollable.ensureVisible(
       repliesContext,
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeOut,
@@ -400,22 +425,26 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
                     ],
                   ),
                 ),
+                if (_post.canDelete)
+                  IconButton(
+                    tooltip: 'Gönderiyi sil',
+                    onPressed: _isSubmitting ? null : _deletePost,
+                    icon: const Icon(Icons.delete_outline),
+                  ),
               ],
             ),
             const SizedBox(height: 16),
-            Text(_post.content, style: theme.textTheme.bodyMedium),
-            const SizedBox(height: 16),
+            Text(_post.content, style: theme.textTheme.bodyLarge),
+            const SizedBox(height: 12),
             Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
               spacing: 4,
-              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: <Widget>[
                 IconButton(
                   tooltip: _post.isLiked ? 'Beğeniyi kaldır' : 'Beğen',
                   onPressed: _isSubmitting ? null : _toggleLike,
                   icon: Icon(
                     _post.isLiked ? Icons.favorite : Icons.favorite_border,
-                    color: _post.isLiked ? theme.colorScheme.tertiary : null,
                   ),
                 ),
                 TextButton(
@@ -424,9 +453,11 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  tooltip: 'Yanıtlara git',
-                  onPressed: _scrollToReplies,
-                  icon: const Icon(Icons.chat_bubble_outline, size: 20),
+                  tooltip: 'Yanıtla',
+                  onPressed: () {
+                    _replyFocusNode.requestFocus();
+                  },
+                  icon: const Icon(Icons.chat_bubble_outline),
                 ),
                 TextButton(
                   onPressed: _scrollToReplies,
@@ -438,9 +469,7 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
               const SizedBox(height: 8),
               Text(
                 _errorMessage!,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.error,
-                ),
+                style: TextStyle(color: theme.colorScheme.error),
               ),
             ],
           ],
@@ -450,77 +479,91 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
   }
 
   Widget _buildReplyForm(ThemeData theme) {
-    return Form(
-      key: _formKey,
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
 
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: Form(
+          key: _formKey,
 
-        children: <Widget>[
-          Text('Yanıtla', style: theme.textTheme.titleLarge),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
 
-          const SizedBox(height: 12),
+            children: <Widget>[
+              Text('Yanıt yaz', style: theme.textTheme.titleMedium),
 
-          TextFormField(
-            controller: _replyController,
+              const SizedBox(height: 12),
 
-            focusNode: _replyFocusNode,
+              TextFormField(
+                controller: _replyController,
 
-            enabled: !_isSubmitting,
+                focusNode: _replyFocusNode,
 
-            minLines: 3,
+                maxLength: _maxLength,
 
-            maxLines: 6,
+                maxLines: 4,
 
-            maxLength: _maxLength,
+                minLines: 2,
 
-            decoration: const InputDecoration(hintText: 'Yanıtını yaz'),
+                enabled: !_isSubmitting,
 
-            validator: (value) {
-              final content = value?.trim() ?? '';
+                decoration: const InputDecoration(
+                  hintText: 'Yanıtınızı yazın',
 
-              if (content.isEmpty) {
-                return 'Yanıt metnini yazın.';
-              }
+                  border: OutlineInputBorder(),
+                ),
 
-              if (content.characters.length > _maxLength) {
-                return 'Yanıt en fazla 280 karakter olabilir.';
-              }
+                validator: (value) {
+                  final text = value?.trim() ?? '';
 
-              return null;
-            },
+                  if (text.isEmpty) {
+                    return 'Yanıt boş bırakılamaz.';
+                  }
+
+                  if (text.length > _maxLength) {
+                    return 'Yanıt en fazla $_maxLength karakter olabilir.';
+                  }
+
+                  return null;
+                },
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton(
+                  onPressed: _isSubmitting ? null : _submitReply,
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Yanıtla'),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerRight,
-            child: FilledButton.icon(
-              onPressed: _isSubmitting ? null : _submitReply,
-              icon: _isSubmitting
-                  ? const SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.send_outlined),
-              label: const Text('Yanıtla'),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildReplyCard(PulsePost reply, ThemeData theme) {
+  Widget _buildReplyCard(BuildContext context, PulsePost reply) {
+    final theme = Theme.of(context);
+
     final avatarUrl = reply.author.avatarUrl;
 
     final isPostOwner = reply.author.username == _post.author.username;
 
     return Card(
+      margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             CircleAvatar(
+              radius: 20,
               backgroundImage: avatarUrl == null
                   ? null
                   : NetworkImage(avatarUrl),
@@ -535,41 +578,35 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
                 children: <Widget>[
                   Wrap(
                     spacing: 8,
-                    runSpacing: 4,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: <Widget>[
                       Text(
                         reply.author.displayName,
                         style: theme.textTheme.titleSmall,
                       ),
+                      Text(
+                        '@${reply.author.username}',
+                        style: theme.textTheme.bodySmall,
+                      ),
                       if (isPostOwner)
-                        DecoratedBox(
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: theme.colorScheme.secondaryContainer,
                             borderRadius: BorderRadius.circular(999),
                           ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            child: Text(
-                              'Gönderi sahibi',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: theme.colorScheme.onSecondaryContainer,
-                              ),
-                            ),
+                          child: Text(
+                            'Gönderi sahibi',
+                            style: theme.textTheme.labelSmall,
                           ),
                         ),
                     ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '@${reply.author.username}',
-                    style: theme.textTheme.bodySmall,
-                  ),
                   const SizedBox(height: 8),
-                  Text(reply.content, style: theme.textTheme.bodyMedium),
+                  Text(reply.content),
                 ],
               ),
             ),
@@ -579,10 +616,10 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
     );
   }
 
-  List<Widget> _buildReplyCollectionSlivers(ThemeData theme) {
+  List<Widget> _buildReplyCollectionSlivers(BuildContext context) {
     if (_isLoadingReplies) {
-      return <Widget>[
-        const SliverToBoxAdapter(
+      return const <Widget>[
+        SliverToBoxAdapter(
           child: Padding(
             padding: EdgeInsets.symmetric(vertical: 32),
 
@@ -596,24 +633,12 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
       return <Widget>[
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            padding: const EdgeInsets.symmetric(vertical: 24),
             child: Column(
               children: <Widget>[
-                Icon(
-                  Icons.error_outline,
-                  size: 40,
-                  color: theme.colorScheme.error,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  _repliesError!,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.error,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                FilledButton(
+                Text(_repliesError!, textAlign: TextAlign.center),
+                const SizedBox(height: 8),
+                OutlinedButton(
                   onPressed: _loadReplies,
                   child: const Text('Tekrar dene'),
                 ),
@@ -625,47 +650,21 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
     }
 
     if (_replies.isEmpty) {
-      return <Widget>[
+      return const <Widget>[
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: Column(
-              children: <Widget>[
-                Icon(
-                  Icons.chat_bubble_outline,
-                  size: 48,
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(height: 16),
-                Text('Henüz yanıt yok', style: theme.textTheme.titleLarge),
-                const SizedBox(height: 8),
-                const Text('İlk yanıtı sen yaz.'),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: () => _replyFocusNode.requestFocus(),
-                  child: const Text('Yanıtla'),
-                ),
-              ],
-            ),
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: Text('Henüz yanıt yok.')),
           ),
         ),
       ];
     }
 
     return <Widget>[
-      SliverPadding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-        sliver: SliverList.builder(
-          itemCount: _replies.length,
-          itemBuilder: (context, index) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: index == _replies.length - 1 ? 0 : 8,
-              ),
-              child: _buildReplyCard(_replies[index], theme),
-            );
-          },
-        ),
+      SliverList(
+        delegate: SliverChildBuilderDelegate((context, index) {
+          return _buildReplyCard(context, _replies[index]);
+        }, childCount: _replies.length),
       ),
     ];
   }
@@ -677,74 +676,61 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          tooltip: 'Geri',
           onPressed: _close,
           icon: const Icon(Icons.arrow_back),
         ),
         title: const Text('Gönderi'),
-        actions: <Widget>[
-          if (_post.canDelete)
-            IconButton(
-              tooltip: 'Gönderiyi sil',
-              onPressed: _isSubmitting ? null : _deletePost,
-              icon: const Icon(Icons.delete_outline),
-            ),
-        ],
       ),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: CustomScrollView(
-              slivers: <Widget>[
-                SliverPadding(
-                  padding: const EdgeInsets.all(16),
-                  sliver: SliverToBoxAdapter(child: _buildPostCard(theme)),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  sliver: SliverToBoxAdapter(child: _buildReplyForm(theme)),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  sliver: SliverToBoxAdapter(
-                    key: _repliesKey,
-                    child: Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: Text(
-                            'Yanıtlar',
-                            style: theme.textTheme.titleLarge,
-                          ),
-                        ),
-                        if (!_isLoadingReplies && _repliesError == null)
-                          Text(
-                            '${_replies.length}',
-                            style: theme.textTheme.titleMedium,
-                          ),
-                      ],
+      body: CustomScrollView(
+        slivers: <Widget>[
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            sliver: SliverToBoxAdapter(child: _buildPostCard(theme)),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            sliver: SliverToBoxAdapter(child: _buildReplyForm(theme)),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            sliver: SliverToBoxAdapter(
+              child: Container(
+                key: _repliesKey,
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        'Yanıtlar',
+                        style: theme.textTheme.titleLarge,
+                      ),
                     ),
-                  ),
+                    Text('${_post.replyCount}'),
+                  ],
                 ),
-                ..._buildReplyCollectionSlivers(theme),
-              ],
+              ),
             ),
           ),
-        ),
+          ..._buildReplyCollectionSlivers(context),
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+        ],
       ),
     );
   }
 
-  static String _readError(DioException exception, String fallback) {
-    final data = exception.response?.data;
+  static String _readError(DioException error, String fallback) {
+    final data = error.response?.data;
 
     if (data is Map) {
       final json = Map<String, dynamic>.from(data);
-      final message = json['error'] ?? json['message'];
+      final message = json['message'] ?? json['detail'] ?? json['error'];
 
       if (message is String && message.trim().isNotEmpty) {
-        return message.trim();
+        return message;
       }
+    }
+
+    if (data is String && data.trim().isNotEmpty) {
+      return data;
     }
 
     return fallback;
@@ -818,7 +804,10 @@ class _PostLikesPageState extends State<_PostLikesPage> {
 
       setState(() {
         _isLoading = false;
-        _errorMessage = _readError(error, 'Beğenenler yüklenemedi.');
+        _errorMessage = _PostDetailPageState._readError(
+          error,
+          'Beğenenler yüklenemedi.',
+        );
       });
     } on FormatException {
       if (!mounted) {
@@ -832,102 +821,8 @@ class _PostLikesPageState extends State<_PostLikesPage> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('Beğenenler')),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: _buildBody(theme),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBody(ThemeData theme) {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_errorMessage != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Icon(
-                Icons.error_outline,
-                size: 48,
-                color: theme.colorScheme.error,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                _errorMessage!,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.error,
-                ),
-              ),
-              const SizedBox(height: 16),
-              FilledButton(onPressed: _load, child: const Text('Tekrar dene')),
-            ],
-          ),
-        ),
-      );
-    }
-
-    if (_users.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Icon(
-                Icons.favorite_border,
-                size: 48,
-                color: theme.colorScheme.primary,
-              ),
-              const SizedBox(height: 16),
-              Text('Henüz beğeni yok', style: theme.textTheme.titleLarge),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: _users.length,
-      separatorBuilder: (context, index) {
-        return const Divider(height: 1);
-      },
-      itemBuilder: (context, index) {
-        final user = _users[index];
-        final avatarUrl = user.avatarUrl;
-
-        return ListTile(
-          leading: CircleAvatar(
-            backgroundImage: avatarUrl == null ? null : NetworkImage(avatarUrl),
-            child: avatarUrl == null
-                ? Text(_initialForName(user.displayName))
-                : null,
-          ),
-          title: Text(user.displayName),
-          subtitle: Text('@${user.username}'),
-        );
-      },
-    );
-  }
-
-  static String _initialForName(String displayName) {
-    final normalized = displayName.trim();
+  String _initialForName(String value) {
+    final normalized = value.trim();
 
     if (normalized.isEmpty) {
       return '?';
@@ -936,19 +831,70 @@ class _PostLikesPageState extends State<_PostLikesPage> {
     return normalized.substring(0, 1).toUpperCase();
   }
 
-  static String _readError(DioException exception, String fallback) {
-    final data = exception.response?.data;
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Beğenenler')),
 
-    if (data is Map) {
-      final json = Map<String, dynamic>.from(data);
-      final message = json['error'] ?? json['message'];
+      body: Builder(
+        builder: (context) {
+          if (_isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-      if (message is String && message.trim().isNotEmpty) {
-        return message.trim();
-      }
-    }
+          if (_errorMessage != null) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Text(_errorMessage!, textAlign: TextAlign.center),
+                    const SizedBox(height: 12),
+                    OutlinedButton(
+                      onPressed: _load,
+                      child: const Text('Tekrar dene'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
 
-    return fallback;
+          if (_users.isEmpty) {
+            return const Center(child: Text('Henüz beğenen yok.'));
+          }
+
+          return RefreshIndicator(
+            onRefresh: _load,
+            child: ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(),
+              itemCount: _users.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final user = _users[index];
+                final avatarUrl = user.avatarUrl;
+
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundImage: avatarUrl == null
+                        ? null
+                        : NetworkImage(avatarUrl),
+                    child: avatarUrl == null
+                        ? Text(
+                            _initialForName(user.displayName ?? user.username),
+                          )
+                        : null,
+                  ),
+                  title: Text(user.displayName ?? '@${user.username}'),
+                  subtitle: Text('@${user.username}'),
+                );
+              },
+            ),
+          );
+        },
+      ),
+    );
   }
 }
 
@@ -956,14 +902,14 @@ class _PostLikeUser {
   const _PostLikeUser({
     required this.username,
 
-    required this.displayName,
+    this.displayName,
 
     this.avatarUrl,
   });
 
   final String username;
 
-  final String displayName;
+  final String? displayName;
 
   final String? avatarUrl;
 
@@ -989,42 +935,38 @@ class _PostLikeUser {
 
     for (final item in items) {
       if (item is! Map) {
-        throw const FormatException('Beğenen kullanıcı verisi geçerli değil.');
+        throw const FormatException('Beğenen kullanıcı bilgisi geçerli değil.');
       }
 
-      var json = Map<String, dynamic>.from(item);
-      final nestedUser = json['user'];
+      final source = Map<String, dynamic>.from(item);
+      final nestedUser = source['user'];
 
-      if (nestedUser is Map) {
-        json = Map<String, dynamic>.from(nestedUser);
-      }
+      final json = nestedUser is Map
+          ? Map<String, dynamic>.from(nestedUser)
+          : source;
 
       final usernameValue =
           json['username'] ?? json['userName'] ?? json['handle'];
-      final displayNameValue = json['displayName'] ?? json['name'];
-      final avatarValue =
-          json['avatarUrl'] ?? json['profilePhotoUrl'] ?? json['photoUrl'];
 
       if (usernameValue is! String || usernameValue.trim().isEmpty) {
         throw const FormatException('Beğenen kullanıcı adı geçerli değil.');
       }
 
-      final username = usernameValue.trim();
+      final displayNameValue = json['displayName'] ?? json['name'];
 
-      final displayName =
-          displayNameValue is String && displayNameValue.trim().isNotEmpty
-          ? displayNameValue.trim()
-          : username;
-
-      final avatarUrl = avatarValue is String && avatarValue.trim().isNotEmpty
-          ? avatarValue.trim()
-          : null;
+      final avatarValue =
+          json['avatarUrl'] ?? json['profilePhotoUrl'] ?? json['photoUrl'];
 
       users.add(
         _PostLikeUser(
-          username: username,
-          displayName: displayName,
-          avatarUrl: avatarUrl,
+          username: usernameValue.trim(),
+          displayName:
+              displayNameValue is String && displayNameValue.trim().isNotEmpty
+              ? displayNameValue.trim()
+              : null,
+          avatarUrl: avatarValue is String && avatarValue.trim().isNotEmpty
+              ? avatarValue.trim()
+              : null,
         ),
       );
     }
