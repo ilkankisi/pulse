@@ -396,9 +396,9 @@ PostDetailBody
     │           │       validator: nonEmpty
     │           │   )
     │           └── FilledButton("Yanıtla")
-├── replies collection
-│   ├── loading: SliverList(skeleton reply cards)
-│   ├── success: SliverList
+    ├── replies collection
+    │   ├── loading: SliverList(skeleton reply cards)
+    │   ├── success: SliverList(oldest → newest)
 │   │   └── reply Card
     │   │       └── Row
     │   │           ├── CircleAvatar
@@ -428,12 +428,26 @@ fluttertemplates kaynağı: Social / Comments Thread — https://fluttertemplate
 fluttertemplates kaynağı: Social / User Search — https://fluttertemplates.dev/widgets/social
 
 Kurallar:
-Yanıt sayacı tap'i yeni PostDetail route'u oluşturmaz; mevcut Yanıtlar bölümünü görünür alana getirir.
-Yanıt koleksiyonu yüklenirken ana gönderi görünür kalır.
-Beğenenler koleksiyonundaki kullanıcı satırı profile gider.
-Boş başarılı koleksiyon veya kayıt-yok semantiğindeki 404 empty state'tir; ağ/5xx error state'tir.
+Yanıt sayacı tap'i yeni PostDetail route'u oluşturmaz; mevcut Yanıtlar bölümünü görünür alana getirir. Canonical navigation hedefi bu aynı-route Yanıtlar koleksiyonudur.
+Yanıt koleksiyonu yüklenirken ana gönderi görünür kalır. Loading yalnız Yanıtlar alt koleksiyonuna uygulanır.
+Beğenenler koleksiyonundaki kullanıcı satırı profile gider. `likeCount` tap'inin canonical navigation hedefi AppBar başlığı "Beğenenler" olan bu koleksiyon route'udur.
+Boş başarılı koleksiyon veya kayıt-yok semantiğindeki 404 empty state'tir; ağ/5xx error state'tir. Retry yalnız başarısız alt koleksiyonu yeniden yükler.
 Alt koleksiyon hatası ana gönderiyi hata ekranıyla değiştirmez.
 Empty durumda boş SliverList yerine state panel gösterilir.
+
+Yanıtlar success sırası eskiden yeniye doğrudur: ilk öğe en eski, listenin son öğesi en yeni yanıttır. API farklı sırada dönerse sunum katmanı bu görünür sırayı normalize eder; ters kronolojik gösterim kullanılmaz.
+
+Yanıtlar koleksiyonunda `replyCount > 0` iken ilk fetch'in boş liste dönmesi doğrudan empty state'e çevrilmez. Bu durum sayaç ile koleksiyonun tutarsızlığıdır; bir kez koleksiyon retry/refetch yapılır. Refetch sonrası gerçek başarılı boş sonuç veya kayıt-yok semantiğindeki 404 gelirse empty state gösterilir.
+
+Beğenenler koleksiyonunda `likeCount > 0` iken ilk fetch'in boş liste dönmesi doğrudan "Henüz beğeni yok" empty state'ine çevrilmez. Bir kez koleksiyon retry/refetch yapılır; yalnız doğrulanmış başarılı boş sonuç veya kayıt-yok semantiğindeki 404 empty state'tir.
+
+`replyCount == 0` için Yanıtlar, `likeCount == 0` için Beğenenler koleksiyonu ilk başarılı boş cevapta doğrudan kendi empty state'ini gösterebilir.
+
+Yanıtlar için görünür içerik yapısı `SliverList`, Beğenenler için görünür içerik yapısı `ListView` olarak sabittir; loading placeholder'ları da aynı koleksiyon ailesinin scroll yapısını korur.
+
+Success state'te mevcut koleksiyon öğeleri gösterilir; ayrıca genel başarı paneli veya success snackbar eklenmez. Mutation snackbar'ları koleksiyon fetch success state'inden ayrıdır.
+
+Retry CTA metni her iki koleksiyon hata durumunda "Tekrar Dene"dir. Yanıtlar retry'si PostDetail route'unu yeniden açmaz; Beğenenler retry'si mevcut Beğenenler route'unda kalır.
 
 Yanıt composer aynı PostDetail route'unda, ana gönderi ile Yanıtlar koleksiyonu arasında bulunur; ayrı compose route'u veya ikinci FAB oluşturulmaz.
 
