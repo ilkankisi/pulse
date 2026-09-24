@@ -150,6 +150,7 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
 
       setState(() {
         _likeUsers = List<_PostLikeUser>.unmodifiable(canonicalLikes);
+        _post = _post.copyWith(likeCount: canonicalLikes.length);
       });
     } on DioException catch (error) {
       if (error.response?.statusCode == 401) {
@@ -214,6 +215,7 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
 
       setState(() {
         _likeUsers = List<_PostLikeUser>.unmodifiable(refreshedLikeUsers);
+        _post = _post.copyWith(likeCount: refreshedLikeUsers.length);
         _isSubmitting = false;
         _changed = true;
       });
