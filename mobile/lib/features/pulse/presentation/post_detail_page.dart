@@ -257,23 +257,12 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
     try {
       final repository = ref.read(pulseRepositoryProvider);
 
-      final createdReply = await repository.createReply(
+      await repository.createReply(
         postId: _post.id,
         request: CreateReplyRequest(content: _replyController.text),
       );
 
-      List<PulsePost>? canonicalReplies;
-
-      try {
-        canonicalReplies = await repository.getReplies(_post.id);
-      } on DioException catch (error) {
-        if (error.response?.statusCode == 401) {
-          await widget.onUnauthorized();
-          return;
-        }
-      } on FormatException {
-        canonicalReplies = null;
-      }
+      final canonicalReplies = await repository.getReplies(_post.id);
 
       if (!mounted) {
         return;
@@ -281,8 +270,7 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
 
       _replyController.clear();
 
-      final nextReplies =
-          canonicalReplies ?? <PulsePost>[..._replies, createdReply];
+      final nextReplies = canonicalReplies;
 
       setState(() {
         _replies = List<PulsePost>.unmodifiable(nextReplies);
