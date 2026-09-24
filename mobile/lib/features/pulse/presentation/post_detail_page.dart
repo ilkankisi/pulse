@@ -1,19 +1,24 @@
 import 'package:dio/dio.dart';
+
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/network/api_client.dart';
 import '../data/pulse_repository.dart';
+
 import '../domain/pulse_models.dart';
 
 class PostDetailPage extends ConsumerStatefulWidget {
   const PostDetailPage({
     required this.post,
+
     required this.onUnauthorized,
+
     super.key,
   });
 
   final PulsePost post;
+
   final Future<void> Function() onUnauthorized;
 
   @override
@@ -24,21 +29,31 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
   static const int _maxLength = 280;
 
   final _formKey = GlobalKey<FormState>();
+
   final _replyController = TextEditingController();
+
   final _replyFocusNode = FocusNode();
+
   final _repliesKey = GlobalKey();
 
   late PulsePost _post;
+
   List<PulsePost> _replies = const <PulsePost>[];
+
   bool _isLoadingReplies = true;
+
   bool _isSubmitting = false;
+
   bool _changed = false;
+
   String? _errorMessage;
+
   String? _repliesError;
 
   @override
   void initState() {
     super.initState();
+
     _post = widget.post;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -51,7 +66,9 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
   @override
   void dispose() {
     _replyController.dispose();
+
     _replyFocusNode.dispose();
+
     super.dispose();
   }
 
@@ -105,6 +122,24 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
     }
   }
 
+  Future<void> _openLikes() async {
+    if (!mounted) {
+      return;
+    }
+
+    final repository = ref.read(pulseRepositoryProvider);
+
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => _PostLikesPage(
+          postId: _post.id,
+          repository: repository,
+          onUnauthorized: widget.onUnauthorized,
+        ),
+      ),
+    );
+  }
+
   void _scrollToReplies() {
     final repliesContext = _repliesKey.currentContext;
 
@@ -116,24 +151,6 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
       repliesContext,
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeOut,
-    );
-  }
-
-  Future<void> _openLikes() async {
-    if (!mounted) {
-      return;
-    }
-
-    final dio = ref.read(dioProvider);
-
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (context) => _PostLikesPage(
-          postId: _post.id,
-          dio: dio,
-          onUnauthorized: widget.onUnauthorized,
-        ),
-      ),
     );
   }
 
@@ -186,6 +203,16 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
         _post = previous;
         _isSubmitting = false;
         _errorMessage = _readError(error, 'Beğeni güncellenemedi.');
+      });
+    } on FormatException {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _post = previous;
+        _isSubmitting = false;
+        _errorMessage = 'Beğeni güncellenemedi.';
       });
     }
   }
@@ -241,15 +268,9 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
         _isSubmitting = false;
       });
 
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) {
-          return;
-        }
-
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Yanıt gönderildi.')));
-      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Yanıt gönderildi.')));
     } on DioException catch (error) {
       if (error.response?.statusCode == 401) {
         await widget.onUnauthorized();
@@ -279,16 +300,22 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
   Future<void> _deletePost() async {
     final confirmed = await showDialog<bool>(
       context: context,
+
       builder: (context) => AlertDialog(
         title: const Text('Gönderi silinsin mi?'),
+
         content: const Text('Bu işlem geri alınamaz.'),
+
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
+
             child: const Text('Vazgeç'),
           ),
+
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
+
             child: const Text('Sil'),
           ),
         ],
@@ -407,6 +434,15 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
                 ),
               ],
             ),
+            if (_errorMessage != null) ...<Widget>[
+              const SizedBox(height: 8),
+              Text(
+                _errorMessage!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -416,19 +452,30 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
   Widget _buildReplyForm(ThemeData theme) {
     return Form(
       key: _formKey,
+
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
+
         children: <Widget>[
           Text('Yanıtla', style: theme.textTheme.titleLarge),
+
           const SizedBox(height: 12),
+
           TextFormField(
             controller: _replyController,
+
             focusNode: _replyFocusNode,
+
             enabled: !_isSubmitting,
+
             minLines: 3,
+
             maxLines: 6,
+
             maxLength: _maxLength,
+
             decoration: const InputDecoration(hintText: 'Yanıtını yaz'),
+
             validator: (value) {
               final content = value?.trim() ?? '';
 
@@ -443,15 +490,6 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
               return null;
             },
           ),
-          if (_errorMessage != null) ...<Widget>[
-            const SizedBox(height: 8),
-            Text(
-              _errorMessage!,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.error,
-              ),
-            ),
-          ],
           const SizedBox(height: 12),
           Align(
             alignment: Alignment.centerRight,
@@ -473,6 +511,7 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
 
   Widget _buildReplyCard(PulsePost reply, ThemeData theme) {
     final avatarUrl = reply.author.avatarUrl;
+
     final isPostOwner = reply.author.username == _post.author.username;
 
     return Card(
@@ -546,6 +585,7 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
         const SliverToBoxAdapter(
           child: Padding(
             padding: EdgeInsets.symmetric(vertical: 32),
+
             child: Center(child: CircularProgressIndicator()),
           ),
         ),
@@ -714,12 +754,16 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
 class _PostLikesPage extends StatefulWidget {
   const _PostLikesPage({
     required this.postId,
-    required this.dio,
+
+    required this.repository,
+
     required this.onUnauthorized,
   });
 
   final int postId;
-  final Dio dio;
+
+  final PulseRepository repository;
+
   final Future<void> Function() onUnauthorized;
 
   @override
@@ -728,18 +772,16 @@ class _PostLikesPage extends StatefulWidget {
 
 class _PostLikesPageState extends State<_PostLikesPage> {
   List<_PostLikeUser> _users = const <_PostLikeUser>[];
+
   bool _isLoading = true;
+
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _load();
-      }
-    });
+    _load();
   }
 
   Future<void> _load() async {
@@ -753,11 +795,8 @@ class _PostLikesPageState extends State<_PostLikesPage> {
     });
 
     try {
-      final response = await widget.dio.get<dynamic>(
-        '/api/v1/posts/${widget.postId}/likes',
-      );
-
-      final users = _parseLikeUsers(response.data);
+      final response = await widget.repository.getPostLikes(widget.postId);
+      final users = _PostLikeUser.fromResponse(response);
 
       if (!mounted) {
         return;
@@ -777,21 +816,9 @@ class _PostLikesPageState extends State<_PostLikesPage> {
         return;
       }
 
-      if (error.response?.statusCode == 404) {
-        setState(() {
-          _users = const <_PostLikeUser>[];
-          _isLoading = false;
-          _errorMessage = null;
-        });
-        return;
-      }
-
       setState(() {
         _isLoading = false;
-        _errorMessage = _PostDetailPageState._readError(
-          error,
-          'Beğeniler yüklenemedi.',
-        );
+        _errorMessage = _readError(error, 'Beğenenler yüklenemedi.');
       });
     } on FormatException {
       if (!mounted) {
@@ -800,49 +827,26 @@ class _PostLikesPageState extends State<_PostLikesPage> {
 
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Beğeniler okunamadı.';
+        _errorMessage = 'Beğenenler yüklenemedi.';
       });
     }
   }
 
-  List<_PostLikeUser> _parseLikeUsers(dynamic data) {
-    final source = _extractList(data);
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
 
-    return source
-        .map<_PostLikeUser>((item) {
-          if (item is! Map) {
-            throw const FormatException('Beğeni kullanıcı kaydı geçersiz.');
-          }
-
-          return _PostLikeUser.fromJson(Map<String, dynamic>.from(item));
-        })
-        .toList(growable: false);
-  }
-
-  List<dynamic> _extractList(dynamic data) {
-    if (data is List) {
-      return data;
-    }
-
-    if (data is Map) {
-      final json = Map<String, dynamic>.from(data);
-
-      for (final key in <String>[
-        'items',
-        'users',
-        'likes',
-        'data',
-        'results',
-      ]) {
-        final value = json[key];
-
-        if (value is List) {
-          return value;
-        }
-      }
-    }
-
-    throw const FormatException('Beğeni listesi geçersiz.');
+    return Scaffold(
+      appBar: AppBar(title: const Text('Beğenenler')),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: _buildBody(theme),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildBody(ThemeData theme) {
@@ -866,7 +870,7 @@ class _PostLikesPageState extends State<_PostLikesPage> {
               Text(
                 _errorMessage!,
                 textAlign: TextAlign.center,
-                style: theme.textTheme.bodyLarge?.copyWith(
+                style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.error,
                 ),
               ),
@@ -901,16 +905,19 @@ class _PostLikesPageState extends State<_PostLikesPage> {
     return ListView.separated(
       padding: const EdgeInsets.all(16),
       itemCount: _users.length,
-      separatorBuilder: (_, _) => const Divider(height: 1),
+      separatorBuilder: (context, index) {
+        return const Divider(height: 1);
+      },
       itemBuilder: (context, index) {
         final user = _users[index];
+        final avatarUrl = user.avatarUrl;
 
         return ListTile(
           leading: CircleAvatar(
-            backgroundImage: user.avatarUrl == null
-                ? null
-                : NetworkImage(user.avatarUrl!),
-            child: user.avatarUrl == null ? Text(user.initial) : null,
+            backgroundImage: avatarUrl == null ? null : NetworkImage(avatarUrl),
+            child: avatarUrl == null
+                ? Text(_initialForName(user.displayName))
+                : null,
           ),
           title: Text(user.displayName),
           subtitle: Text('@${user.username}'),
@@ -919,82 +926,109 @@ class _PostLikesPageState extends State<_PostLikesPage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+  static String _initialForName(String displayName) {
+    final normalized = displayName.trim();
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Beğenenler')),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: _buildBody(theme),
-          ),
-        ),
-      ),
-    );
+    if (normalized.isEmpty) {
+      return '?';
+    }
+
+    return normalized.substring(0, 1).toUpperCase();
+  }
+
+  static String _readError(DioException exception, String fallback) {
+    final data = exception.response?.data;
+
+    if (data is Map) {
+      final json = Map<String, dynamic>.from(data);
+      final message = json['error'] ?? json['message'];
+
+      if (message is String && message.trim().isNotEmpty) {
+        return message.trim();
+      }
+    }
+
+    return fallback;
   }
 }
 
 class _PostLikeUser {
   const _PostLikeUser({
     required this.username,
+
     required this.displayName,
-    required this.avatarUrl,
+
+    this.avatarUrl,
   });
 
   final String username;
+
   final String displayName;
+
   final String? avatarUrl;
 
-  String get initial {
-    final normalized = displayName.trim();
+  static List<_PostLikeUser> fromResponse(dynamic data) {
+    dynamic items = data;
 
-    if (normalized.isNotEmpty) {
-      return normalized.substring(0, 1).toUpperCase();
+    if (data is Map) {
+      final json = Map<String, dynamic>.from(data);
+
+      items =
+          json['items'] ??
+          json['users'] ??
+          json['likes'] ??
+          json['data'] ??
+          json['results'];
     }
 
-    final normalizedUsername = username.trim();
-
-    if (normalizedUsername.isNotEmpty) {
-      return normalizedUsername.substring(0, 1).toUpperCase();
+    if (items is! List) {
+      throw const FormatException('Beğenenler yanıtı geçerli değil.');
     }
 
-    return '?';
-  }
+    final users = <_PostLikeUser>[];
 
-  factory _PostLikeUser.fromJson(Map<String, dynamic> json) {
-    final nestedUser = json['user'];
+    for (final item in items) {
+      if (item is! Map) {
+        throw const FormatException('Beğenen kullanıcı verisi geçerli değil.');
+      }
 
-    final source = nestedUser is Map
-        ? Map<String, dynamic>.from(nestedUser)
-        : json;
+      var json = Map<String, dynamic>.from(item);
+      final nestedUser = json['user'];
 
-    final usernameValue =
-        source['username'] ?? source['userName'] ?? source['handle'];
+      if (nestedUser is Map) {
+        json = Map<String, dynamic>.from(nestedUser);
+      }
 
-    if (usernameValue is! String || usernameValue.trim().isEmpty) {
-      throw const FormatException(
-        'Beğeni kullanıcısının username alanı geçersiz.',
+      final usernameValue =
+          json['username'] ?? json['userName'] ?? json['handle'];
+      final displayNameValue = json['displayName'] ?? json['name'];
+      final avatarValue =
+          json['avatarUrl'] ?? json['profilePhotoUrl'] ?? json['photoUrl'];
+
+      if (usernameValue is! String || usernameValue.trim().isEmpty) {
+        throw const FormatException('Beğenen kullanıcı adı geçerli değil.');
+      }
+
+      final username = usernameValue.trim();
+
+      final displayName =
+          displayNameValue is String && displayNameValue.trim().isNotEmpty
+          ? displayNameValue.trim()
+          : username;
+
+      final avatarUrl = avatarValue is String && avatarValue.trim().isNotEmpty
+          ? avatarValue.trim()
+          : null;
+
+      users.add(
+        _PostLikeUser(
+          username: username,
+          displayName: displayName,
+          avatarUrl: avatarUrl,
+        ),
       );
     }
 
-    final displayNameValue =
-        source['displayName'] ?? source['name'] ?? usernameValue;
-
-    final avatarValue =
-        source['avatarUrl'] ?? source['profilePhotoUrl'] ?? source['photoUrl'];
-
-    return _PostLikeUser(
-      username: usernameValue.trim(),
-      displayName:
-          displayNameValue is String && displayNameValue.trim().isNotEmpty
-          ? displayNameValue.trim()
-          : usernameValue.trim(),
-      avatarUrl: avatarValue is String && avatarValue.trim().isNotEmpty
-          ? avatarValue.trim()
-          : null,
-    );
+    return List<_PostLikeUser>.unmodifiable(users);
   }
 }
