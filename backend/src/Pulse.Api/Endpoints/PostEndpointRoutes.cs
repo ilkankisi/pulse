@@ -46,13 +46,17 @@ public static class PostEndpointRoutes
             .WithName("LikePost");
         
         app.MapGet(
-                "/api/v1/posts/{postId}/likes",
-                GetPostLikesAsync)
-            .RequireAuthorization()
-        .Produces<LikeResponse>(StatusCodes.Status200OK)
-        .Produces(StatusCodes.Status401Unauthorized)
-        .Produces(StatusCodes.Status404NotFound)
-            .WithName("GetPostLikes");
+        "/api/v1/posts/{postId}/likes",
+        GetPostLikesAsync)
+        .RequireAuthorization()
+            .Produces<LikeResponse>(
+                StatusCodes.Status200OK,
+                contentType: "application/json")
+            .Produces(
+                StatusCodes.Status401Unauthorized)
+            .Produces(
+                StatusCodes.Status404NotFound)
+        .WithName("GetPostLikes");
         
         app.MapDelete(
                 "/api/v1/posts/{postId}/likes",
