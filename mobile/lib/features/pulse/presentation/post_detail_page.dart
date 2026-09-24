@@ -206,11 +206,17 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
         await repository.likePost(previous.id);
       }
 
+      final refreshedLikePayload = await repository.getPostLikes(previous.id);
+      final refreshedLikeUsers = _PostLikeUser.fromResponse(
+        refreshedLikePayload,
+      );
+
       if (!mounted) {
         return;
       }
 
       setState(() {
+        _post = _post.copyWith(likeCount: refreshedLikeUsers.length);
         _isSubmitting = false;
         _changed = true;
       });
@@ -270,11 +276,9 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
 
       _replyController.clear();
 
-      final nextReplies = canonicalReplies;
-
       setState(() {
-        _replies = List<PulsePost>.unmodifiable(nextReplies);
-        _post = _post.copyWith(replyCount: nextReplies.length);
+        _replies = List<PulsePost>.unmodifiable(canonicalReplies);
+        _post = _post.copyWith(replyCount: canonicalReplies.length);
         _repliesError = null;
         _isLoadingReplies = false;
         _changed = true;
