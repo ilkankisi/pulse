@@ -381,15 +381,25 @@ Widget hierarchy:
 ```
 PostDetailBody
 └── CustomScrollView
+├── SliverToBoxAdapter
+│   └── PostCard
+│       └── Row
+│           ├── reply action + tappable replyCount
+│           └── like action + tappable likeCount
     ├── SliverToBoxAdapter
-    │   └── PostCard
+    │   └── Form(replyComposer)
     │       └── Row
-    │           ├── reply action + tappable replyCount
-    │           └── like action + tappable likeCount
-    ├── replies collection
-    │   ├── loading: SliverList(skeleton reply cards)
-    │   ├── success: SliverList
-    │   │   └── reply Card
+    │           ├── Expanded
+    │           │   └── TextFormField(
+    │           │       labelText: "Yanıt yaz",
+    │           │       keyboardType: text,
+    │           │       validator: nonEmpty
+    │           │   )
+    │           └── FilledButton("Yanıtla")
+├── replies collection
+│   ├── loading: SliverList(skeleton reply cards)
+│   ├── success: SliverList
+│   │   └── reply Card
     │   │       └── Row
     │   │           ├── CircleAvatar
     │   │           └── Expanded
@@ -418,18 +428,50 @@ fluttertemplates kaynağı: Social / Comments Thread — https://fluttertemplate
 fluttertemplates kaynağı: Social / User Search — https://fluttertemplates.dev/widgets/social
 
 Kurallar:
-
 Yanıt sayacı tap'i yeni PostDetail route'u oluşturmaz; mevcut Yanıtlar bölümünü görünür alana getirir.
-
 Yanıt koleksiyonu yüklenirken ana gönderi görünür kalır.
-
 Beğenenler koleksiyonundaki kullanıcı satırı profile gider.
-
 Boş başarılı koleksiyon veya kayıt-yok semantiğindeki 404 empty state'tir; ağ/5xx error state'tir.
-
 Alt koleksiyon hatası ana gönderiyi hata ekranıyla değiştirmez.
-
 Empty durumda boş SliverList yerine state panel gösterilir.
+
+Yanıt composer aynı PostDetail route'unda, ana gönderi ile Yanıtlar koleksiyonu arasında bulunur; ayrı compose route'u veya ikinci FAB oluşturulmaz.
+
+"Yanıtla" CTA'sı yalnız geçerli, boş olmayan içerikte aktif olur; mutation sürerken disabled/loading olur ve ikinci kez gönderilemez.
+
+Başarılı yanıt oluşturulduğunda composer temizlenir, Yanıtlar koleksiyonu güncellenir ve snackbar metni "Yanıtın paylaşıldı." olur.
+
+Yanıtlar empty state:
+- başlık: "Henüz yanıt yok"
+- açıklama: "Bu gönderiye ilk yanıtı sen yazabilirsin."
+- birincil CTA: yok; yazma aksiyonu üstteki reply composer'dır.
+
+Yanıtlar error state:
+- ağ/5xx başlık: "Yanıtlar yüklenemedi"
+- açıklama: "Bağlantını kontrol edip tekrar deneyebilirsin."
+- CTA: "Tekrar Dene"
+- retry yalnız Yanıtlar koleksiyonunu yeniden yükler; ana gönderi ve composer görünür kalır.
+
+Beğenenler empty state:
+- başlık: "Henüz beğeni yok"
+- açıklama: "Bu gönderiyi henüz kimse beğenmedi."
+- birincil CTA: yok.
+
+Beğenenler error state:
+- ağ/5xx başlık: "Beğenenler yüklenemedi"
+- açıklama: "Bağlantını kontrol edip tekrar deneyebilirsin."
+- CTA: "Tekrar Dene"
+
+Beğenenler success state kullanıcı satırlarından oluşur; ayrı success snackbar gösterilmez.
+
+Yanıtlar ve Beğenenler için kayıt-yok anlamındaki 404 hata metni göstermeden ilgili empty state'e dönüşür.
+
+401 durumunda koleksiyon empty/error metni kullanılmaz; mevcut auth akışı tetiklenir.
+
+App bar vs body CTA:
+- PostDetail AppBar içinde yanıt oluşturma CTA'sı bulunmaz.
+- Yanıt oluşturmanın tek birincil aksiyonu body içindeki reply composer'da "Yanıtla" butonudur.
+- Beğenenler route'unda oluşturma CTA'sı veya FAB bulunmaz.
 
 Empty state
 
