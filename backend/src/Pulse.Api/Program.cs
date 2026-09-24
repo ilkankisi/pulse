@@ -224,7 +224,8 @@ PostEndpoints.CreateReplyAsync)
 app.MapGet(
 "/api/v1/posts/{postId}/replies",
 PostEndpoints.GetRepliesAsync)
-.RequireAuthorization();
+.RequireAuthorization()
+.WithName("GetPostReplies");
 app.MapPost(
 "/api/v1/posts/{postId}/likes",
 PostEndpoints.LikePostAsync)
