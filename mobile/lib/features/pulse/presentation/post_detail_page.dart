@@ -154,7 +154,7 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
         await widget.onUnauthorized();
       }
     } on FormatException {
-      // Beğenenler koleksiyonu kendi hata durumunu gösterir.
+      // Beğenenler sayfası kendi hata durumunu gösterir.
     }
   }
 
@@ -186,12 +186,7 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
     final previous = _post;
 
     setState(() {
-      _post = _post.copyWith(
-        isLiked: !_post.isLiked,
-        likeCount: _post.isLiked
-            ? (_post.likeCount > 0 ? _post.likeCount - 1 : 0)
-            : _post.likeCount + 1,
-      );
+      _post = _post.copyWith(isLiked: !_post.isLiked);
       _isSubmitting = true;
       _errorMessage = null;
     });
@@ -278,8 +273,8 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
       setState(() {
         _replies = List<PulsePost>.unmodifiable(canonicalReplies);
         _post = _post.copyWith(replyCount: canonicalReplies.length);
-        _repliesError = null;
         _isLoadingReplies = false;
+        _repliesError = null;
         _changed = true;
         _isSubmitting = false;
       });
@@ -308,7 +303,7 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
 
       setState(() {
         _isSubmitting = false;
-        _errorMessage = 'Yanıt bilgisi okunamadı.';
+        _errorMessage = 'Yanıt gönderilemedi.';
       });
     }
   }
@@ -338,18 +333,16 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
       ),
     );
 
-    if (!mounted || confirmed != true) {
+    if (confirmed != true) {
       return;
     }
 
     try {
       await ref.read(pulseRepositoryProvider).deletePost(_post.id);
 
-      if (!mounted) {
-        return;
+      if (mounted) {
+        Navigator.of(context).pop(true);
       }
-
-      Navigator.of(context).pop(true);
     } on DioException catch (error) {
       if (error.response?.statusCode == 401) {
         await widget.onUnauthorized();
@@ -370,296 +363,6 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
     Navigator.of(context).pop(_changed);
   }
 
-  String _initialForName(String displayName) {
-    final normalized = displayName.trim();
-
-    if (normalized.isEmpty) {
-      return '?';
-    }
-
-    return normalized.substring(0, 1).toUpperCase();
-  }
-
-  Widget _buildPostCard(ThemeData theme) {
-    final avatarUrl = _post.author.avatarUrl;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
-              children: <Widget>[
-                CircleAvatar(
-                  radius: 24,
-                  backgroundImage: avatarUrl == null
-                      ? null
-                      : NetworkImage(avatarUrl),
-                  child: avatarUrl == null
-                      ? Text(_initialForName(_post.author.displayName))
-                      : null,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        _post.author.displayName,
-                        style: theme.textTheme.titleMedium,
-                      ),
-                      Text(
-                        '@${_post.author.username}',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
-                if (_post.canDelete)
-                  IconButton(
-                    tooltip: 'Gönderiyi sil',
-                    onPressed: _isSubmitting ? null : _deletePost,
-                    icon: const Icon(Icons.delete_outline),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(_post.content, style: theme.textTheme.bodyLarge),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 4,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: <Widget>[
-                IconButton(
-                  tooltip: _post.isLiked ? 'Beğeniyi kaldır' : 'Beğen',
-                  onPressed: _isSubmitting ? null : _toggleLike,
-                  icon: Icon(
-                    _post.isLiked ? Icons.favorite : Icons.favorite_border,
-                  ),
-                ),
-                TextButton(
-                  onPressed: _openLikes,
-                  child: Text('${_post.likeCount} beğeni'),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  tooltip: 'Yanıtla',
-                  onPressed: () {
-                    _replyFocusNode.requestFocus();
-                  },
-                  icon: const Icon(Icons.chat_bubble_outline),
-                ),
-                TextButton(
-                  onPressed: _scrollToReplies,
-                  child: Text('${_post.replyCount} yanıt'),
-                ),
-              ],
-            ),
-            if (_errorMessage != null) ...<Widget>[
-              const SizedBox(height: 8),
-              Text(
-                _errorMessage!,
-                style: TextStyle(color: theme.colorScheme.error),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildReplyForm(ThemeData theme) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-
-        child: Form(
-          key: _formKey,
-
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-
-            children: <Widget>[
-              Text('Yanıt yaz', style: theme.textTheme.titleMedium),
-
-              const SizedBox(height: 12),
-
-              TextFormField(
-                controller: _replyController,
-
-                focusNode: _replyFocusNode,
-
-                maxLength: _maxLength,
-
-                maxLines: 4,
-
-                minLines: 2,
-
-                enabled: !_isSubmitting,
-
-                decoration: const InputDecoration(
-                  hintText: 'Yanıtınızı yazın',
-
-                  border: OutlineInputBorder(),
-                ),
-
-                validator: (value) {
-                  final text = value?.trim() ?? '';
-
-                  if (text.isEmpty) {
-                    return 'Yanıt boş bırakılamaz.';
-                  }
-
-                  if (text.length > _maxLength) {
-                    return 'Yanıt en fazla $_maxLength karakter olabilir.';
-                  }
-
-                  return null;
-                },
-              ),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerRight,
-                child: FilledButton(
-                  onPressed: _isSubmitting ? null : _submitReply,
-                  child: _isSubmitting
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Yanıtla'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildReplyCard(BuildContext context, PulsePost reply) {
-    final theme = Theme.of(context);
-
-    final avatarUrl = reply.author.avatarUrl;
-
-    final isPostOwner = reply.author.username == _post.author.username;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            CircleAvatar(
-              radius: 20,
-              backgroundImage: avatarUrl == null
-                  ? null
-                  : NetworkImage(avatarUrl),
-              child: avatarUrl == null
-                  ? Text(_initialForName(reply.author.displayName))
-                  : null,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Wrap(
-                    spacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: <Widget>[
-                      Text(
-                        reply.author.displayName,
-                        style: theme.textTheme.titleSmall,
-                      ),
-                      Text(
-                        '@${reply.author.username}',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                      if (isPostOwner)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.secondaryContainer,
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            'Gönderi sahibi',
-                            style: theme.textTheme.labelSmall,
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(reply.content),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  List<Widget> _buildReplyCollectionSlivers(BuildContext context) {
-    if (_isLoadingReplies) {
-      return const <Widget>[
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 32),
-
-            child: Center(child: CircularProgressIndicator()),
-          ),
-        ),
-      ];
-    }
-
-    if (_repliesError != null) {
-      return <Widget>[
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            child: Column(
-              children: <Widget>[
-                Text(_repliesError!, textAlign: TextAlign.center),
-                const SizedBox(height: 8),
-                OutlinedButton(
-                  onPressed: _loadReplies,
-                  child: const Text('Tekrar dene'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ];
-    }
-
-    if (_replies.isEmpty) {
-      return const <Widget>[
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 24),
-            child: Center(child: Text('Henüz yanıt yok.')),
-          ),
-        ),
-      ];
-    }
-
-    return <Widget>[
-      SliverList(
-        delegate: SliverChildBuilderDelegate((context, index) {
-          return _buildReplyCard(context, _replies[index]);
-        }, childCount: _replies.length),
-      ),
-    ];
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -667,64 +370,412 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
+          tooltip: 'Geri',
           onPressed: _close,
           icon: const Icon(Icons.arrow_back),
         ),
         title: const Text('Gönderi'),
+        actions: <Widget>[
+          if (_post.canDelete)
+            IconButton(
+              tooltip: 'Gönderiyi sil',
+              onPressed: _isSubmitting ? null : _deletePost,
+              icon: const Icon(Icons.delete_outline),
+            ),
+        ],
       ),
-      body: CustomScrollView(
-        slivers: <Widget>[
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            sliver: SliverToBoxAdapter(child: _buildPostCard(theme)),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            sliver: SliverToBoxAdapter(child: _buildReplyForm(theme)),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            sliver: SliverToBoxAdapter(
-              child: Container(
-                key: _repliesKey,
-                child: Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: Text(
-                        'Yanıtlar',
-                        style: theme.textTheme.titleLarge,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: CustomScrollView(
+              slivers: <Widget>[
+                SliverPadding(
+                  padding: const EdgeInsets.all(16),
+                  sliver: SliverToBoxAdapter(
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Row(
+                              children: <Widget>[
+                                _Avatar(
+                                  displayName: _post.author.displayName,
+                                  avatarUrl: _post.author.avatarUrl,
+                                  radius: 24,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      Text(
+                                        _post.author.displayName,
+                                        style: theme.textTheme.titleMedium,
+                                      ),
+                                      Text(
+                                        '@${_post.author.username}',
+                                        style: theme.textTheme.bodySmall,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              _post.content,
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: <Widget>[
+                                IconButton(
+                                  tooltip: _post.isLiked
+                                      ? 'Beğeniyi kaldır'
+                                      : 'Beğen',
+                                  onPressed: _isSubmitting ? null : _toggleLike,
+                                  icon: Icon(
+                                    _post.isLiked
+                                        ? Icons.favorite
+                                        : Icons.favorite_border,
+                                    color: _post.isLiked
+                                        ? theme.colorScheme.tertiary
+                                        : null,
+                                  ),
+                                ),
+                                _CountAction(
+                                  tooltip: 'Beğenenleri göster',
+                                  label: '${_post.likeCount} beğeni',
+                                  onTap: _openLikes,
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  tooltip: 'Yanıtları göster',
+                                  onPressed: _scrollToReplies,
+                                  icon: const Icon(Icons.chat_bubble_outline),
+                                ),
+                                _CountAction(
+                                  tooltip: 'Yanıtları göster',
+                                  label: '${_post.replyCount} yanıt',
+                                  onTap: _scrollToReplies,
+                                ),
+                              ],
+                            ),
+                            if (_errorMessage != null) ...<Widget>[
+                              const SizedBox(height: 8),
+                              Text(
+                                _errorMessage!,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.error,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
                     ),
-                    Text('${_post.replyCount}'),
-                  ],
+                  ),
                 ),
-              ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  sliver: SliverToBoxAdapter(
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          Text('Yanıtla', style: theme.textTheme.titleLarge),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _replyController,
+                            focusNode: _replyFocusNode,
+                            enabled: !_isSubmitting,
+                            minLines: 3,
+                            maxLines: 6,
+                            maxLength: _maxLength,
+                            decoration: const InputDecoration(
+                              hintText: 'Yanıtını yaz',
+                            ),
+                            validator: (value) {
+                              final content = value?.trim() ?? '';
+
+                              if (content.isEmpty) {
+                                return 'Yanıt metnini yazın.';
+                              }
+
+                              if (content.characters.length > _maxLength) {
+                                return 'Yanıt en fazla 280 karakter olabilir.';
+                              }
+
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: FilledButton.icon(
+                              onPressed: _isSubmitting ? null : _submitReply,
+                              icon: _isSubmitting
+                                  ? const SizedBox.square(
+                                      dimension: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.send_outlined),
+                              label: const Text('Yanıtla'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  key: _repliesKey,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                    child: Text('Yanıtlar', style: theme.textTheme.titleLarge),
+                  ),
+                ),
+                if (_isLoadingReplies)
+                  const SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  )
+                else if (_repliesError != null)
+                  SliverToBoxAdapter(
+                    child: _CollectionState(
+                      icon: Icons.wifi_off_outlined,
+                      title: 'Yanıtlar yüklenemedi',
+                      description: _repliesError!,
+                      actionLabel: 'Tekrar Dene',
+                      onAction: _loadReplies,
+                    ),
+                  )
+                else if (_replies.isEmpty)
+                  SliverToBoxAdapter(
+                    child: _CollectionState(
+                      icon: Icons.chat_bubble_outline,
+                      title: 'Henüz yanıt yok',
+                      description: 'İlk yanıtı sen yaz.',
+                      actionLabel: 'Yanıtla',
+                      onAction: () {
+                        _replyFocusNode.requestFocus();
+                      },
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    sliver: SliverList.separated(
+                      itemCount: _replies.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final reply = _replies[index];
+
+                        return Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                _Avatar(
+                                  displayName: reply.author.displayName,
+                                  avatarUrl: reply.author.avatarUrl,
+                                  radius: 20,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      Row(
+                                        children: <Widget>[
+                                          Expanded(
+                                            child: Text(
+                                              reply.author.displayName,
+                                              style: theme.textTheme.titleSmall,
+                                            ),
+                                          ),
+                                          Text(
+                                            '@${reply.author.username}',
+                                            style: theme.textTheme.bodySmall,
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(reply.content),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+              ],
             ),
           ),
-          ..._buildReplyCollectionSlivers(context),
-          const SliverToBoxAdapter(child: SizedBox(height: 24)),
-        ],
+        ),
       ),
     );
   }
 
-  static String _readError(DioException error, String fallback) {
-    final data = error.response?.data;
+  static String _readError(DioException exception, String fallback) {
+    final data = exception.response?.data;
 
     if (data is Map) {
       final json = Map<String, dynamic>.from(data);
-      final message = json['message'] ?? json['detail'] ?? json['error'];
+      final message = json['error'] ?? json['message'];
 
       if (message is String && message.trim().isNotEmpty) {
-        return message;
+        return message.trim();
       }
     }
 
-    if (data is String && data.trim().isNotEmpty) {
-      return data;
+    return fallback;
+  }
+}
+
+class _CountAction extends StatelessWidget {
+  const _CountAction({
+    required this.tooltip,
+
+    required this.label,
+
+    required this.onTap,
+  });
+
+  final String tooltip;
+
+  final String label;
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+
+        onTap: onTap,
+
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+
+            child: Center(child: Text(label)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CollectionState extends StatelessWidget {
+  const _CollectionState({
+    required this.icon,
+
+    required this.title,
+
+    required this.description,
+
+    this.actionLabel,
+
+    this.onAction,
+  });
+
+  final IconData icon;
+
+  final String title;
+
+  final String description;
+
+  final String? actionLabel;
+
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+      child: Column(
+        children: <Widget>[
+          Icon(icon, size: 48, color: theme.colorScheme.primary),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: theme.textTheme.titleLarge,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(description, textAlign: TextAlign.center),
+          if (actionLabel != null && onAction != null) ...<Widget>[
+            const SizedBox(height: 16),
+            OutlinedButton(onPressed: onAction, child: Text(actionLabel!)),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _Avatar extends StatelessWidget {
+  const _Avatar({
+    required this.displayName,
+
+    required this.avatarUrl,
+
+    required this.radius,
+  });
+
+  final String displayName;
+
+  final String? avatarUrl;
+
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final normalizedAvatarUrl = avatarUrl?.trim();
+
+    return CircleAvatar(
+      radius: radius,
+      backgroundImage:
+          normalizedAvatarUrl == null || normalizedAvatarUrl.isEmpty
+          ? null
+          : NetworkImage(normalizedAvatarUrl),
+      child: normalizedAvatarUrl == null || normalizedAvatarUrl.isEmpty
+          ? Text(_initial(displayName))
+          : null,
+    );
+  }
+
+  static String _initial(String value) {
+    final normalized = value.trim();
+
+    if (normalized.isEmpty) {
+      return '?';
     }
 
-    return fallback;
+    return normalized.substring(0, 1).toUpperCase();
   }
 }
 
@@ -752,13 +803,17 @@ class _PostLikesPageState extends State<_PostLikesPage> {
 
   bool _isLoading = true;
 
-  String? _errorMessage;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
 
-    _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _load();
+      }
+    });
   }
 
   Future<void> _load() async {
@@ -768,12 +823,12 @@ class _PostLikesPageState extends State<_PostLikesPage> {
 
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
+      _error = null;
     });
 
     try {
-      final response = await widget.repository.getPostLikes(widget.postId);
-      final users = _PostLikeUser.fromResponse(response);
+      final rawLikes = await widget.repository.getPostLikes(widget.postId);
+      final users = _PostLikeUser.fromResponse(rawLikes);
 
       if (!mounted) {
         return;
@@ -795,7 +850,7 @@ class _PostLikesPageState extends State<_PostLikesPage> {
 
       setState(() {
         _isLoading = false;
-        _errorMessage = _PostDetailPageState._readError(
+        _error = _PostDetailPageState._readError(
           error,
           'Beğenenler yüklenemedi.',
         );
@@ -807,83 +862,72 @@ class _PostLikesPageState extends State<_PostLikesPage> {
 
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Beğenenler yüklenemedi.';
+        _error = 'Beğenenler yüklenemedi.';
       });
     }
   }
 
-  String _initialForName(String value) {
-    final normalized = value.trim();
-
-    if (normalized.isEmpty) {
-      return '?';
-    }
-
-    return normalized.substring(0, 1).toUpperCase();
-  }
-
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Beğenenler')),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: Builder(
+              builder: (context) {
+                if (_isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-      body: Builder(
-        builder: (context) {
-          if (_isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+                if (_error != null) {
+                  return _CollectionState(
+                    icon: Icons.wifi_off_outlined,
+                    title: 'Beğenenler yüklenemedi',
+                    description: _error!,
+                    actionLabel: 'Tekrar Dene',
+                    onAction: _load,
+                  );
+                }
 
-          if (_errorMessage != null) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    Text(_errorMessage!, textAlign: TextAlign.center),
-                    const SizedBox(height: 12),
-                    OutlinedButton(
-                      onPressed: _load,
-                      child: const Text('Tekrar dene'),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
+                if (_users.isEmpty) {
+                  return const _CollectionState(
+                    icon: Icons.favorite_border,
+                    title: 'Henüz beğeni yok',
+                    description: 'Bu gönderiyi henüz kimse beğenmedi.',
+                  );
+                }
 
-          if (_users.isEmpty) {
-            return const Center(child: Text('Henüz beğenen yok.'));
-          }
+                return ListView.separated(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: _users.length,
+                  separatorBuilder: (context, index) =>
+                      const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final user = _users[index];
 
-          return RefreshIndicator(
-            onRefresh: _load,
-            child: ListView.separated(
-              physics: const AlwaysScrollableScrollPhysics(),
-              itemCount: _users.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
-              itemBuilder: (context, index) {
-                final user = _users[index];
-                final avatarUrl = user.avatarUrl;
-
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundImage: avatarUrl == null
-                        ? null
-                        : NetworkImage(avatarUrl),
-                    child: avatarUrl == null
-                        ? Text(
-                            _initialForName(user.displayName ?? user.username),
-                          )
-                        : null,
-                  ),
-                  title: Text(user.displayName ?? '@${user.username}'),
-                  subtitle: Text('@${user.username}'),
+                    return ListTile(
+                      minVerticalPadding: 12,
+                      leading: _Avatar(
+                        displayName: user.displayName,
+                        avatarUrl: user.avatarUrl,
+                        radius: 22,
+                      ),
+                      title: Text(
+                        user.displayName,
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      subtitle: Text('@${user.username}'),
+                    );
+                  },
                 );
               },
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
@@ -893,14 +937,14 @@ class _PostLikeUser {
   const _PostLikeUser({
     required this.username,
 
-    this.displayName,
+    required this.displayName,
 
-    this.avatarUrl,
+    required this.avatarUrl,
   });
 
   final String username;
 
-  final String? displayName;
+  final String displayName;
 
   final String? avatarUrl;
 
@@ -910,12 +954,7 @@ class _PostLikeUser {
     if (data is Map) {
       final json = Map<String, dynamic>.from(data);
 
-      items =
-          json['items'] ??
-          json['users'] ??
-          json['likes'] ??
-          json['data'] ??
-          json['results'];
+      items = json['items'] ?? json['users'] ?? json['likes'] ?? json['data'];
     }
 
     if (items is! List) {
@@ -926,35 +965,32 @@ class _PostLikeUser {
 
     for (final item in items) {
       if (item is! Map) {
-        throw const FormatException('Beğenen kullanıcı bilgisi geçerli değil.');
+        throw const FormatException('Beğenen kullanıcı geçerli değil.');
       }
 
-      final source = Map<String, dynamic>.from(item);
-      final nestedUser = source['user'];
+      final raw = Map<String, dynamic>.from(item);
+      final nestedUser = raw['user'];
 
       final json = nestedUser is Map
           ? Map<String, dynamic>.from(nestedUser)
-          : source;
+          : raw;
 
-      final usernameValue =
-          json['username'] ?? json['userName'] ?? json['handle'];
+      final usernameValue = json['username'];
+      final displayNameValue =
+          json['displayName'] ?? json['name'] ?? usernameValue;
+      final avatarValue = json['avatarUrl'] ?? json['profileImageUrl'];
 
-      if (usernameValue is! String || usernameValue.trim().isEmpty) {
-        throw const FormatException('Beğenen kullanıcı adı geçerli değil.');
+      if (usernameValue is! String ||
+          usernameValue.trim().isEmpty ||
+          displayNameValue is! String ||
+          displayNameValue.trim().isEmpty) {
+        throw const FormatException('Beğenen kullanıcı geçerli değil.');
       }
-
-      final displayNameValue = json['displayName'] ?? json['name'];
-
-      final avatarValue =
-          json['avatarUrl'] ?? json['profilePhotoUrl'] ?? json['photoUrl'];
 
       users.add(
         _PostLikeUser(
           username: usernameValue.trim(),
-          displayName:
-              displayNameValue is String && displayNameValue.trim().isNotEmpty
-              ? displayNameValue.trim()
-              : null,
+          displayName: displayNameValue.trim(),
           avatarUrl: avatarValue is String && avatarValue.trim().isNotEmpty
               ? avatarValue.trim()
               : null,
