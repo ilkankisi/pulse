@@ -138,11 +138,7 @@ class PulseRepository {
     final createdReply = PulsePost.fromJson(_asJsonMap(response.data));
 
     try {
-      final canonicalResponse = await _dio.get<dynamic>(
-        '/api/v1/posts/$postId/replies',
-      );
-
-      final canonicalReplies = PulseFeed.fromJson(canonicalResponse.data).posts;
+      final canonicalReplies = await getReplies(postId);
 
       for (final reply in canonicalReplies) {
         if (reply.id == createdReply.id) {
@@ -168,6 +164,7 @@ class PulseRepository {
     final canonicalLikesResponse = await _dio.get<dynamic>(
       '/api/v1/posts/$postId/likes',
     );
+
     final canonicalLikes = canonicalLikesResponse.data;
 
     if (canonicalLikes == null) {
@@ -181,6 +178,7 @@ class PulseRepository {
     final canonicalUnlikeLikesResponse = await _dio.get<dynamic>(
       '/api/v1/posts/$postId/likes',
     );
+
     final canonicalUnlikeLikes = canonicalUnlikeLikesResponse.data;
 
     if (canonicalUnlikeLikes == null) {
@@ -307,6 +305,7 @@ class PulseRepository {
 
     if (data is Map) {
       final json = Map<String, dynamic>.from(data);
+
       items = json['items'] ?? json['users'] ?? json['data'];
     }
 
