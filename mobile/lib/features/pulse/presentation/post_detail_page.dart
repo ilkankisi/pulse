@@ -40,6 +40,8 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
 
   List<PulsePost> _replies = const <PulsePost>[];
 
+  List<_PostLikeUser>? _likeUsers;
+
   bool _isLoadingReplies = true;
 
   bool _isSubmitting = false;
@@ -148,7 +150,7 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
       }
 
       setState(() {
-        _post = _post.copyWith(likeCount: canonicalLikes.length);
+        _likeUsers = List<_PostLikeUser>.unmodifiable(canonicalLikes);
       });
     } on DioException catch (error) {
       if (error.response?.statusCode == 401) {
@@ -212,7 +214,7 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
       }
 
       setState(() {
-        _post = _post.copyWith(likeCount: refreshedLikeUsers.length);
+        _likeUsers = List<_PostLikeUser>.unmodifiable(refreshedLikeUsers);
         _isSubmitting = false;
         _changed = true;
       });
@@ -451,7 +453,8 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
                                 ),
                                 _CountAction(
                                   tooltip: 'Beğenenleri göster',
-                                  label: '${_post.likeCount} beğeni',
+                                  label:
+                                      '${_likeUsers?.length ?? _post.likeCount} beğeni',
                                   onTap: _openLikes,
                                 ),
                                 const SizedBox(width: 8),
