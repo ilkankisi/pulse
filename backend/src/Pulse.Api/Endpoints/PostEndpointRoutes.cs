@@ -46,13 +46,13 @@ public static class PostEndpointRoutes
             .WithName("LikePost");
         
         app.MapGet(
-                "/api/v1/posts/{postId}/likes",
-                GetPostLikesAsync)
-            .RequireAuthorization()
-        .Produces<LikeResponse>(StatusCodes.Status200OK)
-        .Produces(StatusCodes.Status401Unauthorized)
-        .Produces(StatusCodes.Status404NotFound)
-            .WithName("GetPostLikes");
+        "/api/v1/posts/{postId}/likes",
+        GetPostLikesAsync)
+        .RequireAuthorization()
+            .Produces<LikeResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound)
+        .WithName("GetPostLikes");
         
         app.MapDelete(
                 "/api/v1/posts/{postId}/likes",
@@ -60,19 +60,19 @@ public static class PostEndpointRoutes
             .RequireAuthorization()
             .WithName("UnlikePost");
         return app;
-    }
+        }
         
-        private static async Task<IResult> GetPostLikesAsync(
+    private static async Task<IResult> GetPostLikesAsync(
         int postId,
         ClaimsPrincipal principal,
         PulseDbContext dbContext,
         CancellationToken cancellationToken)
-    {
-        if (!PostEndpoints.TryGetUserId(
-                principal,
-                out var userId))
         {
-        return Results.Unauthorized();
+        if (!PostEndpoints.TryGetUserId(
+        principal,
+        out var userId))
+        {
+            return Results.Unauthorized();
         }
         
         var postExists = await dbContext.Posts
