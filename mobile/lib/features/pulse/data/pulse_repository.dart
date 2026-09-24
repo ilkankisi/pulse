@@ -93,7 +93,7 @@ class PulseRepository {
 
   Future<List<PulsePost>> getReplies(int postId) async {
     try {
-      final response = await _dio.get<dynamic>('/api/v1/posts/$postId/replies');
+      final response = await _dio.get<dynamic>(ApiRoutes.postReplies(postId));
 
       return PulseFeed.fromJson(response.data).posts;
     } on DioException catch (error) {
