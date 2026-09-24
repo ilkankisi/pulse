@@ -68,13 +68,11 @@ public static class PostEndpointRoutes
         PulseDbContext dbContext,
         CancellationToken cancellationToken)
     {
-        var userIdValue =
-            principal.FindFirst(ClaimTypes.NameIdentifier)?.Value
-            ?? principal.FindFirst("sub")?.Value;
-        
-        if (!int.TryParse(userIdValue, out var userId))
+        if (!PostEndpoints.TryGetUserId(
+                principal,
+                out var userId))
         {
-            return Results.Unauthorized();
+        return Results.Unauthorized();
         }
         
         var postExists = await dbContext.Posts
