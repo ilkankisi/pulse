@@ -87,7 +87,7 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
     try {
       final replies = await ref
           .read(pulseRepositoryProvider)
-          .getReplies(_post.id);
+          .getPostReplies(_post.id);
 
       if (!mounted) {
         return;
@@ -270,7 +270,7 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
 
       final canonicalReplies = await ref
           .read(pulseRepositoryProvider)
-          .getReplies(_post.id);
+          .getPostReplies(_post.id);
 
       if (!mounted) {
         return;
