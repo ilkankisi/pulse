@@ -105,10 +105,6 @@ class PulseRepository {
     }
   }
 
-  Future<List<PulsePost>> getPostReplies(int postId) {
-    return getReplies(postId);
-  }
-
   Future<PulsePost> createReply({
     required int postId,
 
@@ -149,11 +145,29 @@ class PulseRepository {
   }
 
   Future<void> likePost(int postId) async {
-    await _dio.post<void>(ApiRoutes.postLikes(postId));
+    await _dio.post<void>('/api/v1/posts/$postId/likes');
+
+    final canonicalResponse = await _dio.get<dynamic>(
+      '/api/v1/posts/$postId/likes',
+    );
+    final canonicalLikes = canonicalResponse.data;
+
+    if (canonicalLikes == null) {
+      throw const FormatException('Beğeni listesi okunamadı.');
+    }
   }
 
   Future<void> unlikePost(int postId) async {
-    await _dio.delete<void>(ApiRoutes.postLikes(postId));
+    await _dio.delete<void>('/api/v1/posts/$postId/likes');
+
+    final canonicalResponse = await _dio.get<dynamic>(
+      '/api/v1/posts/$postId/likes',
+    );
+    final canonicalLikes = canonicalResponse.data;
+
+    if (canonicalLikes == null) {
+      throw const FormatException('Beğeni listesi okunamadı.');
+    }
   }
 
   Future<PulseProfile?> getMyProfile() async {
