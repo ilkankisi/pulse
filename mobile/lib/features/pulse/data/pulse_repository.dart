@@ -161,7 +161,9 @@ class PulseRepository {
   Future<dynamic> likePost(int postId) async {
     await _dio.post<void>('/api/v1/posts/$postId/likes');
 
-    return getPostLikes(postId);
+    final canonicalLikes = await getPostLikes(postId);
+
+    return canonicalLikes;
   }
 
   Future<dynamic> unlikePost(int postId) async {
