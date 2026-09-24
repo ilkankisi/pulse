@@ -105,6 +105,24 @@ class PulseRepository {
     }
   }
 
+  Future<dynamic> getPostLikes(int postId) async {
+    try {
+      final response = await _dio.get<dynamic>('/api/v1/posts/$postId/likes');
+
+      if (response.data == null) {
+        throw const FormatException('Beğeni listesi okunamadı.');
+      }
+
+      return response.data;
+    } on DioException catch (error) {
+      if (_isNotFound(error)) {
+        return const <dynamic>[];
+      }
+
+      rethrow;
+    }
+  }
+
   Future<PulsePost> createReply({
     required int postId,
 
