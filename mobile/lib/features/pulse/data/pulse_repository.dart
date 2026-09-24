@@ -163,14 +163,7 @@ class PulseRepository {
   Future<dynamic> likePost(int postId) async {
     await _dio.post<void>('/api/v1/posts/$postId/likes');
 
-    final likeReadResponse = await _dio.get<dynamic>(
-      '/api/v1/posts/$postId/likes',
-    );
-    final canonicalLikes = likeReadResponse.data;
-
-    if (canonicalLikes == null) {
-      throw const FormatException('Beğeni listesi okunamadı.');
-    }
+    final canonicalLikes = await getPostLikes(postId);
 
     return canonicalLikes;
   }
