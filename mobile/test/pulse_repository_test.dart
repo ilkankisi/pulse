@@ -95,7 +95,9 @@ void main() {
 
       data: <String, dynamic>{
         'displayName': 'İlkan',
+
         'bio': 'Flutter geliştirici',
+
         'avatarUrl': null,
       },
     );
@@ -127,13 +129,11 @@ void main() {
 
     adapter.onGet(
       ApiRoutes.postLikes(10),
-
       (server) => server.reply(200, <dynamic>[]),
     );
 
     adapter.onDelete(
       ApiRoutes.postLikes(10),
-
       (server) => server.reply(204, null),
     );
 
@@ -198,7 +198,6 @@ void main() {
 
     adapter.onDelete(
       ApiRoutes.profileFollow('ada'),
-
       (server) => server.reply(204, null),
     );
 
@@ -219,9 +218,12 @@ void main() {
         'items': <Map<String, dynamic>>[
           <String, dynamic>{
             ..._postJson(id: 12),
+
             'author': <String, dynamic>{
               'id': 8,
+
               'username': 'ada',
+
               'displayName': 'Ada',
             },
           },
@@ -281,9 +283,13 @@ void main() {
         'items': <Map<String, dynamic>>[
           <String, dynamic>{
             'id': 8,
+
             'username': 'ada',
+
             'displayName': 'Ada',
+
             'avatarUrl': null,
+
             'isFollowedByCurrentUser': false,
           },
         ],
@@ -307,9 +313,13 @@ void main() {
           'items': <Map<String, dynamic>>[
             <String, dynamic>{
               'id': 8,
+
               'username': 'ada',
+
               'displayName': 'Ada',
+
               'avatarUrl': null,
+
               'isFollowedByCurrentUser': false,
             },
           ],
