@@ -174,7 +174,7 @@ class PulseRepository {
     return canonicalLikes;
   }
 
-  Future<void> unlikePost(int postId) async {
+  Future<dynamic> unlikePost(int postId) async {
     await _dio.delete<void>('/api/v1/posts/$postId/likes');
 
     final canonicalUnlikeLikesResponse = await _dio.get<dynamic>(
@@ -186,6 +186,8 @@ class PulseRepository {
     if (canonicalUnlikeLikes == null) {
       throw const FormatException('Beğeni listesi okunamadı.');
     }
+
+    return canonicalUnlikeLikes;
   }
 
   Future<PulseProfile?> getMyProfile() async {
