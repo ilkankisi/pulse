@@ -208,13 +208,6 @@ PostEndpoints.CreatePostAsync)
 .RequireAuthorization()
 .WithName("CreatePost");
 
-app.MapGet(
-        "/api/v1/posts/{postId}",
-        GetPostAsync)
-    .Produces<PostResponse>(StatusCodes.Status200OK)
-    .Produces(StatusCodes.Status404NotFound)
-    .RequireAuthorization()
-    .WithName("GetPost");
 app.MapDelete(
 "/api/v1/posts/{postId}",
 PostEndpoints.DeletePostAsync)
@@ -240,8 +233,6 @@ PostEndpoints.LikePostAsync)
 app.MapGet(
         "/api/v1/posts/{postId}/likes",
         GetPostLikesAsync)
-    .Produces<LikeResponse>(StatusCodes.Status200OK)
-    .Produces(StatusCodes.Status404NotFound)
     .RequireAuthorization()
     .WithName("GetPostLikes");
 app.MapDelete(

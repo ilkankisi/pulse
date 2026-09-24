@@ -125,7 +125,8 @@ StringComparer.Ordinal)
 
 "DELETE /api/v1/posts/{postId}",
 
-"GET /api/v1/posts/{postId}/replies",
+            "GET /api/v1/posts/{postId}/likes",
+            "GET /api/v1/posts/{postId}/replies",
 
 "POST /api/v1/posts/{postId}/replies",
 
