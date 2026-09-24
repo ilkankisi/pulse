@@ -195,13 +195,10 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
     try {
       final repository = ref.read(pulseRepositoryProvider);
 
-      if (previous.isLiked) {
-        await repository.unlikePost(previous.id);
-      } else {
-        await repository.likePost(previous.id);
-      }
+      final refreshedLikePayload = previous.isLiked
+          ? await repository.unlikePost(previous.id)
+          : await repository.likePost(previous.id);
 
-      final refreshedLikePayload = await repository.getPostLikes(previous.id);
       final refreshedLikeUsers = _PostLikeUser.fromResponse(
         refreshedLikePayload,
       );
