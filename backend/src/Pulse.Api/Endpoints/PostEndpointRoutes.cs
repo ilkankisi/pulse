@@ -40,28 +40,29 @@ public static class PostEndpointRoutes
             .WithName("GetPostReplies");
 
         app.MapPost(
-        "/api/v1/posts/{postId}/likes",
-        PostEndpoints.LikePostAsync)
-        .RequireAuthorization()
-        .WithName("LikePost");
+                "/api/v1/posts/{postId}/likes",
+                PostEndpoints.LikePostAsync)
+            .RequireAuthorization()
+            .WithName("LikePost");
+        
         app.MapGet(
-        "/api/v1/posts/{postId}/likes",
-        GetPostLikesAsync)
-        .RequireAuthorization()
-            .Produces<LikeResponse>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status404NotFound)
-        .WithName("GetPostLikes");
+                "/api/v1/posts/{postId}/likes",
+                GetPostLikesAsync)
+            .RequireAuthorization()
+        .Produces<LikeResponse>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status404NotFound)
+            .WithName("GetPostLikes");
         
         app.MapDelete(
-        "/api/v1/posts/{postId}/likes",
-        PostEndpoints.UnlikePostAsync)
-        .RequireAuthorization()
-        .WithName("UnlikePost");
-
+                "/api/v1/posts/{postId}/likes",
+                PostEndpoints.UnlikePostAsync)
+            .RequireAuthorization()
+            .WithName("UnlikePost");
         return app;
-        }
-    private static async Task<IResult> GetPostLikesAsync(
+    }
+        
+        private static async Task<IResult> GetPostLikesAsync(
         int postId,
         ClaimsPrincipal principal,
         PulseDbContext dbContext,
