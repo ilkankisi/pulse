@@ -94,7 +94,6 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
 
       setState(() {
         _replies = List<PulsePost>.unmodifiable(replies);
-        _post = _post.copyWith(replyCount: replies.length);
         _isLoadingReplies = false;
       });
     } on DioException catch (error) {
@@ -275,7 +274,6 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
 
       setState(() {
         _replies = List<PulsePost>.unmodifiable(canonicalReplies);
-        _post = _post.copyWith(replyCount: canonicalReplies.length);
         _isLoadingReplies = false;
         _repliesError = null;
         _changed = true;
@@ -464,7 +462,8 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
                                 ),
                                 _CountAction(
                                   tooltip: 'Yanıtları göster',
-                                  label: '${_post.replyCount} yanıt',
+                                  label:
+                                      '${_isLoadingReplies ? _post.replyCount : _replies.length} yanıt',
                                   onTap: _scrollToReplies,
                                 ),
                               ],
