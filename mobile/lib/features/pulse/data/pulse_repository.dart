@@ -95,9 +95,9 @@ class PulseRepository {
     try {
       final response = await _dio.get<dynamic>(ApiRoutes.postReplies(postId));
 
-      final replies = PulseFeed.fromJson(response.data).posts;
-
-      return List<PulsePost>.unmodifiable(replies);
+      return List<PulsePost>.unmodifiable(
+        PulseFeed.fromJson(response.data).posts,
+      );
     } on DioException catch (error) {
       if (_isNotFound(error)) {
         return const <PulsePost>[];
