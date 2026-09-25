@@ -91,7 +91,7 @@ class PulseRepository {
     await _dio.delete<void>(ApiRoutes.post(postId));
   }
 
-  Future<List<PulsePost>> getPostReplies(int postId) async {
+  Future<List<PulsePost>> getReplies(int postId) async {
     try {
       final response = await _dio.get<dynamic>(ApiRoutes.postReplies(postId));
 
@@ -140,7 +140,7 @@ class PulseRepository {
     final createdReply = PulsePost.fromJson(_asJsonMap(response.data));
 
     try {
-      final canonicalReplies = await getPostReplies(postId);
+      final canonicalReplies = await getReplies(postId);
 
       for (final reply in canonicalReplies) {
         if (reply.id == createdReply.id) {
