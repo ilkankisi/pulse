@@ -85,8 +85,9 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
     });
 
     try {
-      final repliesRepository = ref.read(pulseRepositoryProvider);
-      final replies = await repliesRepository.getReplies(_post.id);
+      final replies = await ref
+          .read(pulseRepositoryProvider)
+          .getReplies(_post.id);
 
       if (!mounted) {
         return;
@@ -261,7 +262,9 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
         request: CreateReplyRequest(content: _replyController.text.trim()),
       );
 
-      final canonicalReplies = await repository.getReplies(_post.id);
+      final canonicalReplies = await ref
+          .read(pulseRepositoryProvider)
+          .getReplies(_post.id);
 
       if (!mounted) {
         return;
