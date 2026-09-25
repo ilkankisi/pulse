@@ -132,7 +132,7 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
 
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (context) => _PostLikesPage(
+        builder: (context) => PostLikesPage(
           postId: _post.id,
           repository: repository,
           onUnauthorized: widget.onUnauthorized,
@@ -156,7 +156,7 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
         await widget.onUnauthorized();
       }
     } on FormatException {
-      // Beğenenler sayfası kendi hata durumunu gösterir.
+      // Beğenenler ekranı kendi hata durumunu gösterir.
     }
   }
 
@@ -186,9 +186,9 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
     }
 
     final previous = _post;
+    final nextIsLiked = !previous.isLiked;
 
     setState(() {
-      _post = _post.copyWith(isLiked: !_post.isLiked);
       _isSubmitting = true;
       _errorMessage = null;
     });
@@ -210,12 +210,20 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
       }
 
       setState(() {
+        _post = previous.copyWith(isLiked: nextIsLiked);
         _likeUsers = List<_PostLikeUser>.unmodifiable(refreshedLikeUsers);
         _isSubmitting = false;
         _changed = true;
       });
     } on DioException catch (error) {
       if (error.response?.statusCode == 401) {
+        if (mounted) {
+          setState(() {
+            _post = previous;
+            _isSubmitting = false;
+          });
+        }
+
         await widget.onUnauthorized();
         return;
       }
@@ -285,6 +293,12 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
       ).showSnackBar(const SnackBar(content: Text('Yanıt gönderildi.')));
     } on DioException catch (error) {
       if (error.response?.statusCode == 401) {
+        if (mounted) {
+          setState(() {
+            _isSubmitting = false;
+          });
+        }
+
         await widget.onUnauthorized();
         return;
       }
@@ -722,13 +736,15 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
   }
 }
 
-class _PostLikesPage extends StatefulWidget {
-  const _PostLikesPage({
+class PostLikesPage extends StatefulWidget {
+  const PostLikesPage({
     required this.postId,
 
     required this.repository,
 
     required this.onUnauthorized,
+
+    super.key,
   });
 
   final int postId;
@@ -738,10 +754,10 @@ class _PostLikesPage extends StatefulWidget {
   final Future<void> Function() onUnauthorized;
 
   @override
-  State<_PostLikesPage> createState() => _PostLikesPageState();
+  State<PostLikesPage> createState() => _PostLikesPageState();
 }
 
-class _PostLikesPageState extends State<_PostLikesPage> {
+class _PostLikesPageState extends State<PostLikesPage> {
   List<_PostLikeUser> _users = const <_PostLikeUser>[];
 
   bool _isLoading = true;
@@ -787,6 +803,7 @@ class _PostLikesPageState extends State<_PostLikesPage> {
       }
 
       setState(() {
+        _users = const <_PostLikeUser>[];
         _isLoading = false;
         _errorMessage = 'Beğenenler yüklenemedi.';
       });
@@ -796,6 +813,7 @@ class _PostLikesPageState extends State<_PostLikesPage> {
       }
 
       setState(() {
+        _users = const <_PostLikeUser>[];
         _isLoading = false;
         _errorMessage = 'Beğenenler yüklenemedi.';
       });
