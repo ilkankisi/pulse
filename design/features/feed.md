@@ -41,6 +41,38 @@ Gönderinin sahibine silme aksiyonu gösterilebilir.
 Başkasının gönderisinde “Şikâyet Et” güvenlik aksiyonu bulunabilir.
 
 Like durumu API cevabıyla senkronize edilir.
+Sosyal Etkileşim Fazı:
+
+Ana Akış ve Gönderi Detayı,
+design/features/social-interaction.md
+ile aynı
+SocialPostCard
+Post/Repost/Quote semantiğini kullanır.
+
+Normal Post:
+
+
+RichPostText → PostMediaPreview → SocialActionBar
+
+Repost:
+
+
+repost context → repost actor metadata → OriginalPostCard → parent SocialActionBar
+
+Quote:
+
+
+quote author/text → quote PostMediaPreview → OriginalPostCard → parent SocialActionBar
+
+
+OriginalPostCard
+original gönderiyi parent karta flatten etmez ve ikinci bir
+SocialActionBar
+göstermez. Repost ve Quote aksiyonları parent
+SocialActionBar
+üzerinde kalır. Gönderi Detayı aynı hierarchy'yi kullanır; replies ana gönderinin
+SocialActionBar
+bileşeninden sonra render edilir.
 
 Empty durumda boş SliverList yerine state panel gösterilir.
 

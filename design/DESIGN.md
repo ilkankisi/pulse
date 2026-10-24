@@ -446,6 +446,38 @@ Gönderinin sahibine silme aksiyonu gösterilebilir.
 Başkasının gönderisinde “Şikâyet Et” güvenlik aksiyonu bulunabilir.
 
 Like durumu API cevabıyla senkronize edilir.
+Sosyal Etkileşim Fazı:
+
+Ana Akış ve Gönderi Detayı,
+design/features/social-interaction.md
+ile aynı
+SocialPostCard
+Post/Repost/Quote semantiğini kullanır.
+
+Normal Post:
+
+
+RichPostText → PostMediaPreview → SocialActionBar
+
+Repost:
+
+
+repost context → repost actor metadata → OriginalPostCard → parent SocialActionBar
+
+Quote:
+
+
+quote author/text → quote PostMediaPreview → OriginalPostCard → parent SocialActionBar
+
+
+OriginalPostCard
+original gönderiyi parent karta flatten etmez ve ikinci bir
+SocialActionBar
+göstermez. Repost ve Quote aksiyonları parent
+SocialActionBar
+üzerinde kalır. Gönderi Detayı aynı hierarchy'yi kullanır; replies ana gönderinin
+SocialActionBar
+bileşeninden sonra render edilir.
 
 Empty durumda boş SliverList yerine state panel gösterilir.
 
@@ -1476,6 +1508,14 @@ Algoritmik For You feed
 İkinci root navigation
 Public bookmark count
 Acceptance Checklist
+- Sosyal Etkileşim Fazı'nın canonical tasarım kaynağı
+design/features/social-interaction.md
+dosyasıdır;
+design/features/*.md
+design/DESIGN.md
+üretilir ve generated
+design/DESIGN.md
+doğrudan düzenlenmez.
 Feed ve Post Detail aynı
 SocialPostCard
 Post/Repost/Quote semantiğini ve hierarchy'sini kullanır.
@@ -1553,7 +1593,7 @@ PostMediaPreview
 ; somut giriş noktaları ve mevcut navigation/back-stack korunumu →
 Navigation korunumu ve orphan kontrolü
 .
-Acceptance kriterlerinin her biri yalnız checklist'te adının geçmesiyle değil, ilgili evidence bloğunda görünür UI davranışı, state/geçiş veya navigation hedefi tanımlandığında karşılanmış sayılır. Her Acceptance Checklist kriteri karşılık gelen Acceptance Evidence başlığına birebir izlenebilir olmalıdır; ilgili evidence bulunmuyorsa kriter tamamlanmış veya doğrulanmış kabul edilmez.
+Acceptance kriterlerinin doğrulanması yalnız checklist'te adlarının geçmesine dayanmaz. Her kriter; checklist'teki beklenen davranış, karşılık gelen Acceptance Evidence başlığı ve evidence içindeki somut render hierarchy, görünür UI davranışı, state/geçiş veya navigation hedefi birlikte eşleştiğinde karşılanmış sayılır. Bu üçlü eşleşme kurulamazsa kriter tamamlanmış veya doğrulanmış kabul edilmez.
 Feed ve Post Detail repost / quote
 Feed ve Post Detail aynı
 SocialPostCard
