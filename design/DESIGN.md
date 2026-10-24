@@ -312,6 +312,95 @@ Oturum kontrolü loading; 401 login akışına gider.
 ## Navigation
 Drawer, bottom nav ve FAB ile ana ekranlar arası geçiş.
 
+### Sosyal Etkileşim Fazı navigation bağlantıları
+
+Yeni sosyal etkileşim ekranları mevcut root navigation üzerine alt akış olarak bağlanır; NavigationBar/NavigationDrawer destination listesi genişletilmez.
+
+| Kaynak ekran | Tetikleyici UI | Hedef | Geri dönüş / sonuç davranışı |
+| --- | --- | --- | --- |
+| Feed |
+SocialActionBar
+→ Repost →
+Alıntıla
+|
+QuoteComposer(originalPost)
+| Başarılı submit sonrası kaynak Feed'e dönülür ve canonical sonuçla kart yenilenir. İptal/back kaynak Feed'e taslak göndermeden döner. Submit error Composer üzerinde kalır; quote text/media taslağı korunur. |
+| Post Detail |
+SocialActionBar
+→ Repost →
+Alıntıla
+|
+QuoteComposer(originalPost)
+| Başarılı submit sonrası kaynak Post Detail bağlamına dönülür ve canonical sonuç yenilenir. İptal/back aynı Post Detail'e döner. Submit error Composer üzerinde kalır ve taslak korunur. |
+| Feed |
+SocialActionBar
+→ Repost toggle | Mevcut Feed kartı | Repost add/remove için ayrı ekran açılmaz. Loading yalnız ilgili action üzerinde kalır; success canonical karta uygulanır; error kaynak Feed'de kalır ve son başarılı state korunur. |
+| Post Detail |
+SocialActionBar
+→ Repost toggle | Mevcut Post Detail | Repost add/remove için yeni route açılmaz. Loading yalnız action seviyesindedir; success mevcut detayı günceller; error aynı Post Detail'de kalır. |
+| Notifications | Mention notification item |
+PostDetail(post.id)
+| Back kullanıcıyı aynı Notifications listesi bağlamına döndürür. Mention notification'ın post hedefi yok ancak actor profili canonical hedef olarak veriliyorsa mevcut
+ProfilePage(actor.username)
+kullanılır; yeni profil ekranı oluşturulmaz. |
+| Notifications | Like veya Reply notification item |
+PostDetail(post.id)
+| Back Notifications ekranındaki kaynak liste bağlamına döner. |
+| Notifications | Follow notification item |
+ProfilePage(actor.username)
+| Back Notifications ekranındaki kaynak liste bağlamına döner. |
+| Feed / Post Detail / diğer
+RichPostText
+kullanan ekran | Tıklanabilir
+@username
+|
+ProfilePage(username)
+| Back kullanıcıyı mention'ın açıldığı kaynak ekran ve stack bağlamına döndürür. |
+| Feed / Post Detail / diğer
+RichPostText
+kullanan ekran | Tıklanabilir
+#tag
+|
+HashtagPostsPage(tag)
+| Back hashtag'i açan kaynak ekrana döner. Hashtag Posts yeni root destination veya trends ekranı değildir. |
+| Hashtag Posts |
+SocialPostCard
+|
+PostDetail(post.id)
+| Back aynı
+HashtagPostsPage(tag)
+sonuç listesine döner. |
+| Profil/Hesap |
+Kaydedilenler
+action |
+BookmarksPage
+| Back kaynak Profil/Hesap bağlamına döner. Kaydedilenler root destination değildir. |
+| Kaydedilenler |
+SocialPostCard
+|
+PostDetail(post.id)
+| Back aynı Kaydedilenler listesine döner. Bookmark remove işlemi yeni route açmaz; success canonical listeyi günceller, error kaynak ekranda kalır. |
+
+Kurallar:
+
+-
+QuoteComposer
+,
+NotificationsPage
+,
+HashtagPostsPage
+ve
+BookmarksPage
+yalnız route tanımı olarak bırakılmaz; yukarıdaki mevcut UI giriş noktalarından erişilebilir.
+- Feed ve Post Detail repost toggle işlemi mevcut ekran üzerinde mutation'dır; duplicate navigation oluşturmaz.
+- Quote Composer açılırken original post route bağlamı taşınır; original içerik quote taslağına flatten edilmez.
+- Başarılı quote submit kaynak Feed/Post Detail bağlamına döner; hata Composer'ı kapatmaz.
+- Back/cancel mevcut navigation stack'i pop eder; kaynak ekran yeniden root stack'e eklenmez.
+- Aktif route gereksiz yere ikinci kez push edilmez.
+- Ana Akış, Profil, Followers/Following, Safety, Moderation ve mevcut FAB composer navigation davranışları korunur.
+- Yeni root destination ve ikinci root navigation oluşturulmaz.
+- Bu bağlantılar nedeniyle Sosyal Etkileşim Fazı kapsamında orphan ekran bulunmaz.
+
 ---
 
 # Feature: Ana akış ve gönderi detayı
@@ -539,6 +628,68 @@ Ana Akış home; kart tap → Gönderi Detayı; FAB → composer.
 ---
 
 # Feature: Gönderi oluşturma
+
+## Media composer state contract
+
+Composer en az tek görsel attachment destekler.
+
+State ve görünür UI davranışı:
+
+-
+empty
+: Görsel seçili değildir; media picker kullanılabilir.
+-
+selected
+: Seçilen görsel local preview olarak görünür; kullanıcı kaldırabilir veya upload başlatabilir.
+-
+uploading
+: Preview korunur, attachment üzerinde progress/loading görünür; aynı görsel tekrar upload edilemez ve media içeren submit tamamlanmaz.
+-
+uploaded
+: Canonical media kimliği alınmıştır; gönderi submit edilebilir.
+-
+uploadError
+: Preview ve gönderi metni korunur; item-level hata ile
+Tekrar Dene
+ve kaldırma aksiyonları görünür.
+-
+removing
+: Yalnız attachment üzerinde removing/loading gösterilir.
+
+Geçişler:
+
+- Görsel seç:
+empty → selected
+.
+- Upload:
+selected → uploading → uploaded|uploadError
+.
+- Retry:
+uploadError → uploading → uploaded|uploadError
+.
+- Kaldır:
+selected|uploaded|uploadError → removing → empty
+.
+- Remove başarısızsa mevcut preview/state korunur ve attachment seviyesinde hata gösterilir.
+- Submit başarısızsa text ve başarılı media attachment state'i korunur; Composer sıfırlanmaz.
+
+Başarılı normal gönderim canonical post sonucunu oluşturduktan sonra mevcut Composer akışı kapanır ve kullanıcı kaynak Feed bağlamına döner; Feed kartındaki görsel
+text → media preview → action bar
+hiyerarşisinde görünür.
+
+## Quote Composer
+
+Quote Composer mevcut Composer state contract'ını kullanır ancak original gönderi referansını sabit
+OriginalPostCard
+olarak ayrıca gösterir.
+
+- Quote text/media original gönderi içeriğine flatten edilmez.
+- Quote attachment yalnız yeni quote gönderisine aittir; original post media ile birleştirilmez.
+- Başarılı submit kaynak Feed/Post Detail bağlamına canonical quote sonucu ile döner.
+- Submit başarısızsa Composer açık kalır; quote text, seçili/yüklenmiş media ve
+OriginalPostCard
+korunur.
+- İptal/back yeni quote oluşturmadan onu açan Feed/Post Detail bağlamına döner.
 
 ## Scope
 280 karakterlik gönderi ve yanıt composer.
@@ -1295,77 +1446,128 @@ Drawer Moderasyon destination (moderator rolü).
 
 ---
 
-# Feature: Sosyal Etkileşim Fazı
-
-## Scope
-
+Feature: Sosyal Etkileşim Fazı
+Scope
 Bu feature mevcut Pulse uygulamasına sosyal etkileşim davranışlarını ekler.
-
 Korunan davranışlar:
-
-- Mevcut Material 3 tasarım sistemi
-- Mevcut root navigation
-- Mevcut back-stack davranışı
-- Profil
-- Feed
-- Composer
-- Followers/Following
-- Safety
-- Moderation
-- Mevcut FAB composer giriş noktası
-
+Mevcut Material 3 tasarım sistemi
+Mevcut root navigation
+Mevcut back-stack davranışı
+Profil
+Feed
+Composer
+Followers/Following
+Safety
+Moderation
+Mevcut FAB composer giriş noktası
 Kapsam:
-
-- Repost ve Quote
-- Notifications
-- Mention ve hashtag navigation
-- Bookmark / Kaydedilenler
-- En az tek görselli media composer
-- Feed ve Post Detail media preview
-
+Repost ve Quote
+Notifications
+Mention ve hashtag navigation
+Bookmark / Kaydedilenler
+En az tek görselli media composer
+Feed ve Post Detail media preview
 Kapsam dışı:
-
-- DM / özel mesaj
-- Poll / anket
-- Hashtag trendleri / trend keşif ekranı
-- Algoritmik For You feed
-- Çok seviyeli thread
-- İkinci root navigation
-- Public bookmark count
-
-## Acceptance Checklist
-
-- Feed ve Post Detail aynı `SocialPostCard` Post/Repost/Quote semantiğini ve hierarchy'sini kullanır.
-- Repost aksiyonu `idle-not-reposted`, `loading-add`, `reposted`, `loading-remove`, `error` state'lerini tanımlar.
-- Quote aksiyonu `idle`, `opening-composer`, `submitting`, `success`, `error` state'lerini tanımlar.
-- Notifications; Like, Reply, Follow ve Mention event'lerini, read/unread davranışını ve loading/empty/error/success state'lerini tanımlar.
-- `@username` → `ProfilePage(username)` ve `#tag` → `HashtagPostsPage(tag)` navigation davranışı açıktır.
-- Bookmark save/remove state'leri tanımlıdır ve `BookmarksPage` mevcut Profil/Hesap alanından erişilebilirdir.
-- Composer en az tek görsel için select, remove, upload/loading, upload error/retry ve submit-preservation davranışlarını tanımlar.
-- Feed ve Post Detail için Post/Repost/Quote media preview hierarchy'si açıkça ayrılmıştır.
-- `NotificationsPage`, `BookmarksPage`, `HashtagPostsPage` ve `QuoteComposer` mevcut UI içindeki somut giriş noktalarından açılır; orphan ekran oluşturulmaz.
-- Mevcut root navigation, back-stack, Ana Akış, Profil, Followers/Following, Safety, Moderation ve FAB composer davranışları korunur.
-- Yeni root destination ve ikinci root navigation oluşturulmaz.
-- DM, poll, hashtag trends/trend keşfi ve algoritmik For You feed açıkça kapsam dışıdır.
-- Modular compile başarısı aşağıdaki içerik acceptance kriterlerinin yerine geçmez.
-
-## Acceptance Evidence
-
-### Feed ve Post Detail repost / quote
-
-Feed ve Post Detail aynı `SocialPostCard` Post/Repost/Quote semantiğini kullanır.
-
+DM / özel mesaj
+Poll / anket
+Hashtag trendleri / trend keşif ekranı
+Algoritmik For You feed
+Çok seviyeli thread
+İkinci root navigation
+Public bookmark count
+Acceptance Checklist
+Feed ve Post Detail aynı
+SocialPostCard
+Post/Repost/Quote semantiğini ve hierarchy'sini kullanır.
+Repost aksiyonu
+idle-not-reposted
+,
+loading-add
+,
+reposted
+,
+loading-remove
+,
+error
+state'lerini tanımlar.
+Quote aksiyonu
+idle
+,
+opening-composer
+,
+submitting
+,
+success
+,
+error
+state'lerini tanımlar.
+Notifications; Like, Reply, Follow ve Mention event'lerini, read/unread davranışını ve loading/empty/error/success state'lerini tanımlar.
+@username
+→
+ProfilePage(username)
+ve
+#tag
+→
+HashtagPostsPage(tag)
+navigation davranışı açıktır.
+Bookmark save/remove state'leri tanımlıdır ve
+BookmarksPage
+mevcut Profil/Hesap alanından erişilebilirdir.
+Composer en az tek görsel için select, remove, upload/loading, upload error/retry ve submit-preservation davranışlarını tanımlar.
+Feed ve Post Detail için Post/Repost/Quote media preview hierarchy'si açıkça ayrılmıştır.
+NotificationsPage
+,
+BookmarksPage
+,
+HashtagPostsPage
+ve
+QuoteComposer
+mevcut UI içindeki somut giriş noktalarından açılır; orphan ekran oluşturulmaz.
+Mevcut root navigation, back-stack, Ana Akış, Profil, Followers/Following, Safety, Moderation ve FAB composer davranışları korunur.
+Yeni root destination ve ikinci root navigation oluşturulmaz.
+DM, poll, hashtag trends/trend keşfi ve algoritmik For You feed açıkça kapsam dışıdır.
+Modular compile başarısı teslimat için gerekli teknik önkoşuldur; ancak tek başına bu feature'ın içerik acceptance kriterlerini karşılamaz. Repost/quote, notifications, mention/hashtag navigation, bookmarks, media interaction ve navigation/orphan davranışları ilgili Acceptance Evidence bloklarında ayrıca doğrulanmadan görev tamamlanmış sayılmaz; colors/typography veya diğer görsel token değişiklikleri de bu doğrulamanın yerine geçmez.
+design/features/feed.md
+Ana Akış ve Gönderi Detayı yüzeyleri bu dosyada tanımlanan Post/Repost/Quote semantiği,
+OriginalPostCard
+, parent
+SocialActionBar
+ve
+PostMediaPreview
+hierarchy kriterleriyle uyumlu olmalıdır.
+Acceptance Evidence
+Acceptance Checklist doğrulaması aşağıdaki mevcut evidence bloklarından yapılır: repost/quote görünümü ve action state'leri →
+Feed ve Post Detail repost / quote
+; notification türleri, read/unread ve ekran state'leri →
+Notifications
+; mention/hashtag hedefleri →
+Mention ve hashtag navigation
+; bookmark save/remove ve Kaydedilenler erişimi →
+Bookmark / Kaydedilenler
+; görsel attachment lifecycle ve preview hierarchy →
+Composer media lifecycle
+,
+Quote Composer
+ve
+PostMediaPreview
+; somut giriş noktaları ve mevcut navigation/back-stack korunumu →
+Navigation korunumu ve orphan kontrolü
+.
+Acceptance kriterlerinin her biri yalnız checklist'te adının geçmesiyle değil, ilgili evidence bloğunda görünür UI davranışı, state/geçiş veya navigation hedefi tanımlandığında karşılanmış sayılır. Her Acceptance Checklist kriteri karşılık gelen Acceptance Evidence başlığına birebir izlenebilir olmalıdır; ilgili evidence bulunmuyorsa kriter tamamlanmış veya doğrulanmış kabul edilmez.
+Feed ve Post Detail repost / quote
+Feed ve Post Detail aynı
+SocialPostCard
+Post/Repost/Quote semantiğini kullanır.
+design/features/feed.md
+içindeki Ana Akış ve Gönderi Detayı bu semantiği bozmaz; temel feed kartı bu feature aktifken aşağıdaki hierarchy ile genişletilir.
 Normal Post:
-
-```text
+Düz metin
 SocialPostCard
 ├── author header
 ├── RichPostText
 ├── PostMediaPreview
 └── SocialActionBar
-
 Repost:
-
 SocialPostCard(kind: Repost)
 ├── repost context
 ├── repost actor metadata
@@ -1374,42 +1576,30 @@ SocialPostCard(kind: Repost)
 │   ├── RichPostText
 │   └── original media
 └── parent SocialActionBar
-
 Repost kuralları:
-
 Original içerik parent karta flatten edilmez.
-
 Original içerik ile repost actor metadata birbirine karıştırılmaz.
-
 OriginalPostCard ikinci bir SocialActionBar göstermez.
-
 OriginalPostCard → PostDetail(originalPost.id).
-
-Feed ve Post Detail aynı repost hierarchy'sini kullanır.
-
+Feed ve Post Detail aynı repost hierarchy'sini kullanır. Repost görünümü
+repost context → repost actor metadata → OriginalPostCard → parent SocialActionBar
+sırasındadır; original gönderi parent karta flatten edilmez.
 Quote:
-
 SocialPostCard(kind: Quote)
 ├── quote author
 ├── quote RichPostText
 ├── quote media
 ├── OriginalPostCard
 └── parent SocialActionBar
-
 Quote kuralları:
-
 Quote metni ile original içerik ayrı render edilir.
-
 Quote media original media ile birleştirilmez.
-
 Quote post'un aksiyonları parent SocialActionBar üzerinde kalır.
-
 OriginalPostCard original gönderiye aittir.
-
-Feed ve Post Detail aynı quote hierarchy'sini kullanır.
-
+Feed ve Post Detail aynı quote hierarchy'sini kullanır. Quote görünümü
+quote author/text → quote media → OriginalPostCard → parent SocialActionBar
+sırasındadır; quote ve original içerik ayrı render edilir.
 Post Detail:
-
 PostDetail
 ├── author context
 ├── RichPostText
@@ -1417,550 +1607,308 @@ PostDetail
 ├── OriginalPostCard
 ├── SocialActionBar
 └── replies
-
 Post Detail kuralları:
-
 Normal Post, Repost ve Quote ayrımı Feed ile aynıdır.
-
 Replies, ana gönderinin SocialActionBar bileşeninden sonra render edilir.
-
 Action loading ana post içeriğini gizlemez.
-
 Action-level error tüm Post Detail ekranını error state'e dönüştürmez.
-
 SocialActionBar
-
 Aksiyon sırası:
-
 Reply
-
 Repost / Quote
-
 Like
-
 Bookmark
-
 Repost state:
-
 idle-not-reposted
-
 loading-add
-
 reposted
-
 loading-remove
-
 error
-
 Quote state:
-
 idle
-
 opening-composer
-
 submitting
-
 success
-
 error
-
 Bookmark state:
-
 idle-unselected
-
 loading-add
-
 selected
-
 loading-remove
-
 error
-
 Kurallar:
-
 Loading yalnız ilgili action üzerinde görünür.
-
 Loading sırasında aynı mutation duplicate submit edilemez.
-
 Mutation error mevcut başarılı kart içeriğini silmez.
-
-Repost kaldırma başarısız olursa son başarılı reposted state korunur.
-
-Quote submit başarısız olursa quote taslağı ve varsa media attachment state'i korunur.
-
+Repost add akışı
+idle-not-reposted → loading-add → reposted
+, remove akışı
+reposted → loading-remove → idle-not-reposted
+şeklindedir. Add/remove error yalnız ilgili action'da gösterilir; Repost kaldırma başarısız olursa son başarılı reposted state korunur.
+Quote aksiyonu
+idle → opening-composer → submitting → success
+akışını kullanır. Submit error action/composer seviyesinde kalır; Quote submit başarısız olursa quote taslağı ve varsa media attachment state'i korunur.
 Bookmark state canonical API sonucundan gelir.
-
 Public bookmark count gösterilmez.
-
 Notifications
-
 Notification ekranı mevcut app shell notification girişinden açılır.
-
 NotificationListItem
 ├── actor avatar
 ├── event summary
 ├── optional post preview
 ├── timestamp
 └── unread indicator
-
 Desteklenen türler:
-
 Like
-
 Reply
-
 Follow
-
 Mention
-
 Read/unread:
-
 Unread notification görünür unread indicator kullanır.
-
 Read notification normal surface kullanır.
-
 Unread item açıldığında yalnız ilgili notification read mutation state'ine geçer.
-
 Read mutation sırasında tüm liste loading state'e dönmez.
-
 Read mutation başarısız olursa mevcut liste korunur ve notification unread kalır.
-
 Read mutation başarılı olduğunda unread indicator kaldırılır.
-
 Notification target navigation:
-
 Like → PostDetail(post.id)
-
 Reply → PostDetail(post.id)
-
 Mention → PostDetail(post.id)
-
 Follow → ProfilePage(actor.username)
-
 Screen states:
-
 Loading:
-
 Initial loading sırasında empty state gösterilmez.
-
 Önceki kullanıcıya ait notification verisi gösterilmez.
-
 Empty:
-
 Başlık: "Henüz bildirim yok"
-
 Error:
-
 Başlık: "Bildirimler yüklenemedi"
-
 CTA: "Tekrar Dene"
-
 Success:
-
 Like, Reply, Follow ve Mention event'leri gösterilir.
-
 Read/unread state item seviyesinde görünür.
-
-Ortak kurallar:
-
 401 merkezi login/session akışına gider.
-
 403 empty değildir.
-
 Ağ/5xx empty değildir.
-
 Mention ve hashtag navigation
-
 RichPostText metin içindeki etkileşimli mention ve hashtag span'larını ayırır.
-
 Kurallar:
-
 @username → ProfilePage(username)
-
 #tag → HashtagPostsPage(tag)
-
 Yalnız geçerli ve tıklanabilir @username span'ı profile route üretir.
-
 Düz metin içindeki bağımsız @ karakteri navigation üretmez.
-
 Tıklanan hashtag değeri HashtagPostsPage(tag) route bağlamına taşınır.
-
 Hashtag Posts yeni root destination değildir.
-
 Hashtag Posts trend/trending ekranı değildir.
-
 RichPostText navigation mevcut root navigation ve back-stack üzerinde çalışır.
-
 Hashtag Posts screen states:
-
 Loading:
-
 Initial hashtag loading görünür.
-
 Loading sırasında empty state gösterilmez.
-
 Empty:
-
 Başlık: "Bu etikette gönderi yok"
-
 Error:
-
 Başlık: "Gönderiler yüklenemedi"
-
 CTA: "Tekrar Dene"
-
 Success:
-
 Sonuçlar SocialPostCard ile render edilir.
-
 Kart → PostDetail(post.id).
-
 Bookmark / Kaydedilenler
-
 Bookmark SocialActionBar içinde save/remove olarak çalışır.
-
 Save/remove davranışı:
-
 Unselected → save.
-
 Save sırasında state loading-add.
-
 Save başarılı → selected.
-
 Selected → remove.
-
 Remove sırasında state loading-remove.
-
 Remove başarılı → idle-unselected.
-
 Save/remove mutation sırasında duplicate submit engellenir.
-
 Save/remove başarısız olduğunda son başarılı bookmark state'i korunur.
-
 Bookmark state canonical API sonucuyla senkronize edilir.
-
 Public bookmark count gösterilmez.
-
 Kaydedilenler mevcut Profil/Hesap alanından açılır.
-
 BookmarksPage
 └── state
-    ├── loading
-    ├── empty
-    ├── error
-    └── SocialPostCard[]
-
+├── loading
+├── empty
+├── error
+└── SocialPostCard[]
 Kaydedilenler screen states:
-
 Loading:
-
 Skeleton/loading state kullanılır.
-
 Initial loading sırasında empty gösterilmez.
-
 Empty:
-
 Başlık: "Henüz kaydedilen gönderi yok"
-
 Error:
-
 Başlık: "Kaydedilenler yüklenemedi"
-
 CTA: "Tekrar Dene"
-
 Success:
-
 SocialPostCard kullanılır.
-
 Kart → PostDetail(post.id).
-
 Kaydedilenler içinden bookmark kaldırma başarılı olduğunda ilgili kart canonical backend sonucuna göre listeden kaldırılır veya liste yeniden senkronize edilir.
-
 Navigation:
-
 Kaydedilenler root destination değildir.
-
 Profil/Hesap action → BookmarksPage.
-
 Geri navigasyon kullanıcıyı kaynak Profil/Hesap bağlamına döndürür.
-
 Composer media lifecycle
-
 Composer:
-
 Composer
 ├── text input
 ├── media preview
 ├── media picker
 └── submit
-
 Attachment state:
-
 empty
-
 selected
-
 uploading
-
 uploaded
-
 uploadError
-
 removing
-
 State geçişleri:
-
 empty → görsel seçimi → selected
-
 selected → upload başlangıcı → uploading
-
 uploading → başarılı upload → uploaded
-
 uploading → upload hatası → uploadError
-
 selected / uploaded / uploadError → remove → removing
-
 removing → başarılı remove → empty
-
 Kurallar:
-
 En az tek görsel desteklenir.
-
 Görsel seçildikten sonra local preview gösterilir.
-
 Local preview API media kimliği değildir.
-
 uploading sırasında progress/loading affordance görünür.
-
 Aynı attachment upload sırasında tekrar upload edilemez.
-
 Canonical media kimliği yalnız upload başarıyla uploaded state'ine geçtiğinde submit için kullanılabilir.
-
 Upload tamamlanmadan media id kullanılmaz.
-
 Upload error text taslağını silmez.
-
 Upload error local preview'ı silmez.
-
-uploadError durumunda retry veya remove yapılabilir.
-
+uploadError durumunda local preview ve text taslağı korunur; retry
+uploadError → uploading
+, remove
+uploadError → removing → empty
+geçişini kullanır.
 Remove sırasında attachment üzerinde loading/removing affordance gösterilir.
-
 Remove başarılı olduğunda attachment empty olur; text taslağı korunur.
-
 Remove başarısız olduğunda mevcut attachment preview/state korunur ve item-level hata gösterilir.
-
 selected, uploading, uploadError veya removing durumundaki media, tamamlanmış media submit'i olarak kabul edilmez.
-
 Submit error text ve media state'ini korur.
-
 Media mutation error tüm composer'ı sıfırlamaz.
-
 Quote Composer:
-
 QuoteComposer
 ├── text input
 ├── own media attachment
 ├── OriginalPostCard
 └── submit
-
 Quote Composer kuralları:
-
 Original preview sabittir.
-
 Quote content original content ile flatten edilmez.
-
 Quote media lifecycle normal composer ile aynıdır.
-
 Quote attachment quote post'a aittir.
-
 Quote attachment original post media'sı ile birleştirilmez.
-
 Quote submit error quote text ve media state'ini korur.
-
 PostMediaPreview
-
 Feed ve Post Detail aynı PostMediaPreview bileşen ailesini kullanır.
-
 Hierarchy:
-
 Normal Post:
-
 RichPostText
 → PostMediaPreview
 → SocialActionBar
-
 Repost:
-
 repost context
 → OriginalPostCard
 → SocialActionBar
-
 Quote:
-
 quote RichPostText
 → quote PostMediaPreview
 → OriginalPostCard
 → SocialActionBar
-
 Kurallar:
-
 Aspect ratio korunur.
-
 Tek görsel preview kartın mevcut içerik genişliğini aşmaz.
-
 Normal Post media'sı post text'i ile SocialActionBar arasında kalır.
-
 Repost'ta original media yalnız OriginalPostCard içinde gösterilir.
-
 Quote'ta quote sahibinin media'sı OriginalPostCard öncesinde gösterilir.
-
 Quote original media'sı yalnız OriginalPostCard içinde kalır.
-
-Feed ve Post Detail aynı media hierarchy'sini kullanır.
-
+Feed ve Post Detail aynı media hierarchy'sini kullanır: normal post
+RichPostText → PostMediaPreview → SocialActionBar
+, repost
+repost context → OriginalPostCard → SocialActionBar
+, quote
+quote RichPostText → quote PostMediaPreview → OriginalPostCard → SocialActionBar
+. Media loading veya preview error ana post içeriğini gizlemez ve full-screen error üretmez.
+`design/features/feed.md` içindeki temel gönderi kartı ve Gönderi Detayı hierarchy'si bu media katmanlarını atlamaz; sosyal etkileşim fazı aktifken Feed ve Post Detail render sırası bu bölümdeki canonical sıra ile aynı kalır.
 Media loading post text'ini veya SocialActionBar'ı gizlemez.
-
 Media preview hatası tüm Feed/Post Detail ekranını error state'e dönüştürmez.
-
 Media preview hatası preview alanında item-level fallback/error olarak gösterilir.
-
 Feed screen states
-
 Loading:
-
 Initial loading sırasında empty gösterilmez.
-
 Success:
-
 Normal Post, Repost ve Quote tanımlanan hierarchy ile render edilir.
-
 Media içeren postlarda PostMediaPreview doğru seviyede render edilir.
-
 Error:
-
 Mutation hataları full-screen Feed error oluşturmaz.
-
 Önceki başarılı kart state'i korunur.
-
 Ağ/5xx initial load hatası empty state değildir.
-
 Post Detail screen states
-
 Loading:
-
 Action loading ana postu gizlemez.
-
 Media loading ana post metnini gizlemez.
-
 Success:
-
 Post/Repost/Quote hierarchy Feed ile aynıdır.
-
 Replies SocialActionBar sonrasında kalır.
-
 Error:
-
 Action-level hata item seviyesinde kalır.
-
 Media-level hata preview seviyesinde kalır.
-
 Ana gönderi initial load ağ/5xx hatası empty state değildir.
-
 Navigation korunumu ve orphan kontrolü
-
 Yeni ekran ve akış giriş noktaları:
-
 Notifications:
-
 Mevcut app shell notification girişi → NotificationsPage.
-
 Kaydedilenler:
-
 Mevcut Profil/Hesap alanındaki action → BookmarksPage.
-
 Hashtag Posts:
-
 RichPostText içindeki #tag → HashtagPostsPage(tag).
-
 Mention:
-
 RichPostText içindeki @username → mevcut ProfilePage(username).
-
 Quote Composer:
-
 SocialActionBar → Repost → Alıntıla → QuoteComposer(originalPost).
-
 Post Detail:
-
 Post card → PostDetail(post.id).
-
 OriginalPostCard → PostDetail(originalPost.id).
-
 Like/Reply/Mention notification target → PostDetail(post.id).
-
 Kaydedilenler kartı → PostDetail(post.id).
-
 Hashtag Posts kartı → PostDetail(post.id).
-
 Follow notification:
-
 Follow notification target → ProfilePage(actor.username).
-
 Orphan-screen kuralları:
-
 NotificationsPage mevcut app shell girişinden erişilebilir.
-
 BookmarksPage mevcut Profil/Hesap alanından erişilebilir.
-
 HashtagPostsPage RichPostText hashtag aksiyonundan erişilebilir.
-
 QuoteComposer SocialActionBar repost/quote akışından erişilebilir.
-
 Yeni ekranların hiçbiri yalnız route tanımlı olup UI giriş noktası bulunmayan orphan ekran değildir.
-
 Navigation korunumu:
-
 Mevcut root navigation korunur.
-
 Mevcut NavigationBar/NavigationDrawer destination yapısı korunur.
-
 Yeni root destination oluşturulmaz.
-
 İkinci root navigation oluşturulmaz.
-
 Mevcut back-stack korunur.
-
 Geri navigasyon her yeni alt ekrandan onu açan kaynak bağlama döner.
-
 Aktif route gereksiz yere yeniden stack'e eklenmez.
-
 Ana Akış davranışı korunur.
-
 Profil davranışı korunur.
-
 Followers/Following davranışları korunur.
-
 Safety davranışı korunur.
-
 Moderation davranışı korunur.
-
 Mevcut FAB composer davranışı korunur.
-
 Components
-
 SocialPostCard
-
 Normal Post:
-
 SocialPostCard
 ├── author header
 ├── RichPostText
 ├── PostMediaPreview
 └── SocialActionBar
-
 Repost:
-
 SocialPostCard(kind: Repost)
 ├── repost context
 ├── repost actor metadata
@@ -1969,32 +1917,21 @@ SocialPostCard(kind: Repost)
 │   ├── RichPostText
 │   └── original media
 └── parent SocialActionBar
-
 Kurallar:
-
 Original içerik parent karta flatten edilmez.
-
 Original kart ikinci SocialActionBar göstermez.
-
 OriginalPostCard → PostDetail(originalPost.id).
-
 Quote:
-
 SocialPostCard(kind: Quote)
 ├── quote author
 ├── quote RichPostText
 ├── quote media
 ├── OriginalPostCard
 └── parent SocialActionBar
-
 Kurallar:
-
 Quote içeriği ile original içerik ayrıdır.
-
 Quote media original media ile birleştirilmez.
-
 Post Detail
-
 PostDetail
 ├── author context
 ├── RichPostText
@@ -2002,362 +1939,188 @@ PostDetail
 ├── OriginalPostCard
 ├── SocialActionBar
 └── replies
-
 Kurallar:
-
 Feed ve Post Detail aynı Post/Repost/Quote semantiğini kullanır.
-
 Replies SocialActionBar sonrasında render edilir.
-
 SocialActionBar
-
 Aksiyon sırası:
-
 Reply
-
 Repost / Quote
-
 Like
-
 Bookmark
-
 Repost state:
-
 idle-not-reposted
-
 loading-add
-
 reposted
-
 loading-remove
-
 error
-
 Quote state:
-
 idle
-
 opening-composer
-
 submitting
-
 success
-
 error
-
 Bookmark state:
-
 idle-unselected
-
 loading-add
-
 selected
-
 loading-remove
-
 error
-
 Kurallar:
-
 Loading yalnız ilgili action üzerindedir.
-
 Duplicate submit engellenir.
-
 Error başarılı state'i silmez.
-
 Bookmark state canonical API sonucundan gelir.
-
 Public bookmark count gösterilmez.
-
 Notifications
-
 NotificationListItem
 ├── actor avatar
 ├── event summary
 ├── optional post preview
 ├── timestamp
 └── unread indicator
-
 Desteklenen türler:
-
 Like
-
 Reply
-
 Follow
-
 Mention
-
 Read/unread:
-
 Unread indicator görünür.
-
 Read normal surface kullanır.
-
 Read mutation yalnız ilgili notification item'ını etkiler.
-
 Composer Media
-
 Composer
 ├── text input
 ├── media preview
 ├── media picker
 └── submit
-
 Attachment state:
-
 empty
-
 selected
-
 uploading
-
 uploaded
-
 uploadError
-
 removing
-
 Kurallar:
-
 En az bir görsel desteklenir.
-
 Upload tamamlanmadan media kimliği kullanılmaz.
-
 Local preview API kimliği değildir.
-
 Upload error text taslağını silmez.
-
 Submit error text ve media state'ini korur.
-
 Quote Composer
-
 QuoteComposer
 ├── text input
 ├── own media attachment
 ├── OriginalPostCard
 └── submit
-
 Kurallar:
-
 Original preview sabittir.
-
 Quote content original content ile flatten edilmez.
-
 Media lifecycle normal composer ile aynıdır.
-
 PostMediaPreview
-
 Feed ve Post Detail aynı media preview bileşen ailesini kullanır.
-
 Hierarchy:
-
 Post: text → media → SocialActionBar
-
 Repost: repost context → OriginalPostCard → SocialActionBar
-
 Quote: quote text → quote media → OriginalPostCard → SocialActionBar
-
 Kurallar:
-
 Aspect ratio korunur.
-
 Screen states
-
 Feed
-
 Loading:
-
 Initial loading sırasında empty gösterilmez.
-
 Success:
-
 Normal Post, Repost ve Quote doğru hierarchy ile render edilir.
-
 Error:
-
 Mutation hataları full-screen Feed error oluşturmaz.
-
 Önceki başarılı kart state'i korunur.
-
 Post Detail
-
 Loading:
-
 Action loading ana postu gizlemez.
-
 Success:
-
 Replies SocialActionBar sonrasında kalır.
-
 Error:
-
 Action-level hata item seviyesinde kalır.
-
 Notifications
-
 Loading:
-
 Initial loading sırasında empty gösterilmez.
-
 Empty:
-
 Başlık: "Henüz bildirim yok"
-
 Error:
-
 Başlık: "Bildirimler yüklenemedi"
-
 CTA: "Tekrar Dene"
-
 Success:
-
 Like, Reply, Follow ve Mention gösterilir.
-
 Read/unread state görünür.
-
 Kaydedilenler
-
 Loading:
-
 Skeleton/loading state kullanılır.
-
 Empty:
-
 Başlık: "Henüz kaydedilen gönderi yok"
-
 Error:
-
 Başlık: "Kaydedilenler yüklenemedi"
-
 CTA: "Tekrar Dene"
-
 Success:
-
 SocialPostCard kullanılır.
-
 Hashtag Posts
-
 Loading:
-
 Initial hashtag loading gösterilir.
-
 Empty:
-
 Başlık: "Bu etikette gönderi yok"
-
 Error:
-
 Başlık: "Gönderiler yüklenemedi"
-
 CTA: "Tekrar Dene"
-
 Success:
-
 SocialPostCard ile render edilir.
-
 Composer Media
-
 States:
-
 empty
-
 selected
-
 uploading
-
 uploaded
-
 uploadError
-
 removing
-
 Kurallar:
-
 Upload tamamlanmadan media içeren submit tamamlanmaz.
-
 Submit error text ve media state'ini korur.
-
-Ortak state kuralları
-
 401 merkezi login/session akışına gider.
-
 403 empty değildir.
-
 Ağ/5xx empty değildir.
-
 Mutation error başarılı içeriği silmez.
-
 Navigation
-
 Mevcut root navigation korunur.
-
 Giriş noktaları:
-
 Notifications:
-
 App shell notification girişinden açılır.
-
 Kaydedilenler:
-
 Profil/Hesap alanından açılır.
-
 Hashtag Posts:
-
 RichPostText içindeki #tag üzerinden açılır.
-
 Quote Composer:
-
 SocialActionBar → Repost → Alıntıla.
-
 Post Detail:
-
 Post card.
-
 OriginalPostCard.
-
 Notification target.
-
 Kaydedilenler kartı.
-
 Hashtag result kartı.
-
 Kurallar:
-
 @username → ProfilePage(username).
-
 #tag → HashtagPostsPage(tag).
-
 Post card → PostDetail(post.id).
-
 OriginalPostCard → PostDetail(originalPost.id).
-
 Yeni ekranlar orphan değildir.
-
 Mevcut root navigation ve back-stack korunur.
-
 İkinci root navigation oluşturulmaz.
-
 Korunan navigation:
-
 Ana Akış
-
 Profil
-
 Followers/Following
-
 Safety
-
 Moderation
-
 FAB composer
-
 Navigation eklenmeyen kapsam:
-
 DM
-
 Poll
-
 Hashtag trends / trend keşfi
-
 Algoritmik For You feed

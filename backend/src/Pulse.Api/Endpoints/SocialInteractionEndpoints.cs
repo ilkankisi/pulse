@@ -300,7 +300,6 @@ public static class SocialInteractionEndpoints
 
         return Results.NoContent();
     }
-
     private static async Task<IResult> CreateQuoteAsync(
         int postId,
         CreateQuoteRequest request,
@@ -566,7 +565,6 @@ public static class SocialInteractionEndpoints
                 items,
                 nextCursor));
     }
-
     private static async Task<IResult> GetNotificationsAsync(
         ClaimsPrincipal principal,
         PulseDbContext db,
@@ -832,7 +830,6 @@ public static class SocialInteractionEndpoints
                 "Only image and video media are supported.",
                 "file");
         }
-
         await using var stream =
             file.OpenReadStream();
 
@@ -1113,7 +1110,6 @@ public static class SocialInteractionEndpoints
                 field));
     }
 }
-
 internal static class SocialInteractionService
 {
     private static readonly Regex MentionRegex =

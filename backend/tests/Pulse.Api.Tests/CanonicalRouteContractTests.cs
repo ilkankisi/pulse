@@ -181,9 +181,9 @@ public sealed class CanonicalRouteContractTests
                 continue;
             }
 
-            segments[index] = string.Concat(
-                segment.AsSpan(0, colonIndex),
-                Convert.ToChar(125));
+            segments[index] =
+                segment[..colonIndex]
+                + Convert.ToChar(125);
         }
 
         return string.Join(
